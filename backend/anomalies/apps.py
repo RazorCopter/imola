@@ -1,0 +1,6 @@
+from django.apps import AppConfig
+
+
+class AnomaliesConfig(AppConfig):
+    name = "anomalies"
+    verbose_name = "Anomalie"

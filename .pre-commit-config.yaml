@@ -1,0 +1,63 @@
+# Installazione: pip install pre-commit && pre-commit install
+minimum_pre_commit_version: "3.5.0"
+default_language_version:
+  python: python3.12
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+        exclude: ^frontend/tsconfig.*\.json$
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=512"]
+      - id: detect-private-key
+      # Rete di sicurezza: il seed con i dati reali del fornitore non deve entrare in git.
+      - id: forbid-new-submodules
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+        stages: [manual]
+
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        files: ^backend/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        files: ^backend/
+        additional_dependencies:
+          - django-stubs[compatible-mypy]
+          - djangorestframework-stubs
+          - types-jsonschema
+        args: ["--config-file=backend/pyproject.toml"]
+
+  - repo: local
+    hooks:
+      - id: no-real-seed
+        name: il seed reale non va versionato
+        entry: python scripts/check_no_real_seed.py
+        language: system
+        pass_filenames: true
+
+      - id: frontend-lint
+        name: eslint e prettier
+        entry: bash -c "cd frontend && npx eslint $(echo) && npx prettier --check \"src/**/*.{ts,tsx,css,json}\""
+        language: system
+        files: ^frontend/src/
+        pass_filenames: false

@@ -1,0 +1,43 @@
+# Backend Django + gunicorn.
+FROM python:3.12-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    DJANGO_SETTINGS_MODULE=config.settings.prod
+
+# postgresql-client serve a manage.py backup (pg_dump); gzip e tar sono gia presenti.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-client curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY backend/requirements.txt backend/requirements-dev.txt ./
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+FROM base AS dev
+RUN pip install -r requirements-dev.txt
+COPY backend/ /app/
+RUN useradd --uid 10001 --create-home app && mkdir -p /app/media /app/staticfiles \
+    && chown -R app:app /app
+USER app
+EXPOSE 8000
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+FROM base AS prod
+COPY backend/ /app/
+RUN useradd --uid 10001 --create-home app \
+    && mkdir -p /app/media /app/staticfiles \
+    && chown -R app:app /app
+USER app
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -fsS http://localhost:8000/health || exit 1
+CMD ["gunicorn", "config.wsgi:application", \
+     "--bind", "0.0.0.0:8000", \
+     "--workers", "3", \
+     "--threads", "2", \
+     "--timeout", "120", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-"]

@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "seed_schema_v1.json",
+  "title": "Seed import gestione fornitore - v1",
+  "type": "object",
+  "required": ["meta", "configurazione", "persone", "progetti", "canoni", "wallet", "snapshot_ppm", "anomalie_aperte"],
+  "additionalProperties": true,
+  "$defs": {
+    "gg": { "type": "number" },
+    "ggNull": { "type": ["number", "null"] },
+    "data": { "type": ["string", "null"], "format": "date" },
+    "affidabilita": { "enum": ["CERTO", "DA_VERIFICARE"] },
+    "verifiche": { "type": "array", "items": { "type": "string" } },
+    "testoNull": { "type": ["string", "null"] }
+  },
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["schema_version", "generato_il", "data_riferimento_dati"],
+      "properties": {
+        "schema_version": { "const": "1.0.0" },
+        "generato_il": { "type": "string", "format": "date" },
+        "data_riferimento_dati": { "type": "string", "format": "date" },
+        "fonte_principale": { "type": "string" },
+        "fonti_secondarie": { "type": "array", "items": { "type": "string" } },
+        "note": { "type": "string" }
+      }
+    },
+    "configurazione": {
+      "type": "object",
+      "required": ["fornitore", "cliente", "ore_per_giornata", "tolleranza_riconciliazione_gg", "regola_scadenza_residui"],
+      "properties": {
+        "fornitore": { "type": "object", "required": ["codice", "ragione_sociale"] },
+        "cliente": { "type": "object", "required": ["codice", "ragione_sociale"] },
+        "unita_misura": { "const": "giornata_uomo" },
+        "ore_per_giornata": { "type": "number" },
+        "granularita_ppm_gg": { "type": "number" },
+        "tolleranza_riconciliazione_gg": { "type": "number" },
+        "regola_scadenza_residui": {
+          "type": "object",
+          "required": ["si_applica_a", "anno_base", "anni_validita_dopo_chiusura", "fatturazione_influisce"],
+          "properties": {
+            "si_applica_a": { "const": "PROGETTI_CON_CONSUNTIVAZIONE_CHIUSA" },
+            "anno_base": { "const": "ANNO_DATA_CHIUSURA_CONSUNTIVAZIONE" },
+            "anni_validita_dopo_chiusura": { "type": "integer", "minimum": 0 },
+            "fatturazione_influisce": { "const": false }
+          }
+        }
+      }
+    },
+    "persone": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["nome", "organizzazione"],
+        "properties": {
+          "nome": { "type": "string" },
+          "organizzazione": { "enum": ["BMED", "IMOLA"] },
+          "email": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "progetti": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["codice", "titolo", "tipo_contratto", "gg_budget", "gg_consumati_su_progetto", "stato_offerta", "stato_consuntivazione", "stato_fatturazione", "affidabilita"],
+        "properties": {
+          "codice": { "type": "string", "minLength": 3 },
+          "titolo": { "type": "string" },
+          "tipo_contratto": { "enum": ["CANONE", "AQL", "CORPO", "PPM", "ATTIVITA"] },
+          "codice_aro": { "$ref": "#/$defs/testoNull" },
+          "codice_rda": { "$ref": "#/$defs/testoNull" },
+          "deliverable": { "$ref": "#/$defs/testoNull" },
+          "referente_bmed": { "$ref": "#/$defs/testoNull" },
+          "referente_imola": { "$ref": "#/$defs/testoNull" },
+          "gg_budget": { "$ref": "#/$defs/gg" },
+          "gg_consumati_su_progetto": { "$ref": "#/$defs/gg" },
+          "gg_wallet_storico_gia_usati": { "$ref": "#/$defs/gg" },
+          "data_inizio": { "$ref": "#/$defs/data" },
+          "data_fine_prevista": { "$ref": "#/$defs/data" },
+          "milestone_fatturazione": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["data_prevista", "stato"],
+              "properties": {
+                "data_prevista": { "$ref": "#/$defs/data" },
+                "stato": { "enum": ["PIANIFICATA", "FATTURATA", "SPOSTATA", "ANNULLATA", "DA_VERIFICARE"] }
+              }
+            }
+          },
+          "stato_offerta": { "enum": ["INVIATA", "ACCETTATA", "SCADUTA", "NON_ACCETTATA"] },
+          "stato_consuntivazione": { "enum": ["NON_AVVIATO", "ATTIVO", "CHIUSO", "DA_VERIFICARE"] },
+          "data_chiusura_consuntivazione": { "$ref": "#/$defs/data" },
+          "anno_riferimento_residuo": { "type": ["integer", "null"] },
+          "stato_fatturazione": { "enum": ["DA_FATTURARE", "PARZIALE", "TOTALE", "NON_FATTURABILE", "DA_VERIFICARE"] },
+          "stato_excel_originale": { "$ref": "#/$defs/testoNull" },
+          "note": { "$ref": "#/$defs/testoNull" },
+          "affidabilita": { "$ref": "#/$defs/affidabilita" },
+          "punti_da_verificare": { "$ref": "#/$defs/verifiche" }
+        }
+      }
+    },
+    "canoni": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["codice_progetto", "semestre", "monte_gg", "sottoattivita"],
+        "properties": {
+          "codice_progetto": { "type": "string" },
+          "semestre": { "type": "string", "pattern": "^[0-9]{4}-S[12]$" },
+          "monte_gg": { "type": "number" },
+          "data_estrazione": { "$ref": "#/$defs/data" },
+          "formula_target": {
+            "type": "object",
+            "properties": {
+              "base_gg": { "type": "number" },
+              "gg_per_settimana": { "type": "number" },
+              "settimane_trascorse": { "type": "integer" },
+              "cap_al_monte": { "type": "boolean" }
+            }
+          },
+          "sottoattivita": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["titolo", "gg_consuntivati"],
+              "properties": {
+                "ufficio": { "enum": ["EA", "SA", "TA", "CROSS", null] },
+                "titolo": { "type": "string" },
+                "gg_consuntivati": { "$ref": "#/$defs/gg" },
+                "stima_trimestre": { "$ref": "#/$defs/ggNull" },
+                "forecast_residuo_31_12": { "$ref": "#/$defs/ggNull" },
+                "note": { "$ref": "#/$defs/testoNull" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "wallet": {
+      "type": "object",
+      "required": ["anno", "attivita", "allocazioni"],
+      "properties": {
+        "anno": { "type": "integer" },
+        "attivita": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["codice", "titolo", "tipo"],
+            "properties": {
+              "codice": { "type": "string" },
+              "titolo": { "type": "string" },
+              "tipo": { "enum": ["PROGETTO", "ATTIVITA", "REDMINE"] },
+              "referente_bmed": { "$ref": "#/$defs/testoNull" },
+              "referente_imola": { "$ref": "#/$defs/testoNull" },
+              "note": { "$ref": "#/$defs/testoNull" }
+            }
+          }
+        },
+        "allocazioni": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id_import", "anno_wallet", "progetto_origine", "attivita", "gg_allocati", "gg_consumati_iniziali", "stato", "affidabilita"],
+            "properties": {
+              "id_import": { "type": "string" },
+              "anno_wallet": { "type": "integer" },
+              "progetto_origine": { "type": ["string", "null"] },
+              "attivita": { "type": "string" },
+              "gg_allocati": { "$ref": "#/$defs/gg" },
+              "gg_consumati_iniziali": { "$ref": "#/$defs/gg" },
+              "stato": { "enum": ["APERTA", "CHIUSA"] },
+              "note": { "$ref": "#/$defs/testoNull" },
+              "affidabilita": { "$ref": "#/$defs/affidabilita" },
+              "punti_da_verificare": { "$ref": "#/$defs/verifiche" }
+            }
+          }
+        }
+      }
+    },
+    "snapshot_ppm": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tipo", "data_estrazione", "righe"],
+        "properties": {
+          "tipo": { "enum": ["PPM_WALLET", "PPM_CANONE", "PPM_PROGETTI"] },
+          "titolo": { "type": "string" },
+          "data_estrazione": { "type": "string" },
+          "file_origine": { "type": "string" },
+          "righe": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["codice_progetto", "gg_previsti", "gg_totali"],
+              "properties": {
+                "codice_progetto": { "type": "string" },
+                "responsabile_imola": { "$ref": "#/$defs/testoNull" },
+                "stato_ppm": { "type": "string" },
+                "gg_previsti": { "type": "number" },
+                "gg_residui": { "type": "number" },
+                "gg_totali": { "type": "number" }
+              }
+            }
+          },
+          "totali": { "type": "object" }
+        }
+      }
+    },
+    "anomalie_aperte": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id_import", "severita", "ambito", "descrizione", "stato"],
+        "properties": {
+          "id_import": { "type": "string" },
+          "severita": { "enum": ["ALTA", "MEDIA", "BASSA"] },
+          "ambito": { "enum": ["WALLET", "PROGETTO", "CANONE", "RICONCILIAZIONE", "DOPPIO_CONTEGGIO", "ANAGRAFICA"] },
+          "descrizione": { "type": "string" },
+          "codice_progetto": { "type": ["string", "null"] },
+          "stato": { "enum": ["APERTA", "IN_VERIFICA", "RISOLTA", "ACCETTATA"] }
+        }
+      }
+    }
+  }
+}

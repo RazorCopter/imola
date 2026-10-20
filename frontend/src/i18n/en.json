@@ -1,0 +1,142 @@
+{
+  "app": {
+    "name": "",
+    "subtitle": "",
+    "loading": "",
+    "empty": "",
+    "retry": "",
+    "save": "",
+    "cancel": "",
+    "confirm": "",
+    "close": "",
+    "search": "",
+    "commandPalette": "",
+    "theme": {
+      "light": "",
+      "dark": "",
+      "system": ""
+    },
+    "density": {
+      "label": "",
+      "compact": "",
+      "comfortable": ""
+    }
+  },
+  "nav": {
+    "dashboard": "",
+    "projects": "",
+    "wallet": "",
+    "canone": "",
+    "reconciliation": "",
+    "anomalies": "",
+    "review": "",
+    "admin": ""
+  },
+  "auth": {
+    "signIn": "",
+    "username": "",
+    "password": "",
+    "signOut": "",
+    "sessionExpiredTitle": "",
+    "sessionExpiredBody": "",
+    "signInAgain": "",
+    "invalidCredentials": ""
+  },
+  "units": {
+    "days": "",
+    "daysLong": ""
+  },
+  "project": {
+    "code": "",
+    "title": "",
+    "contractType": "",
+    "clientOwner": "",
+    "supplierOwner": "",
+    "budget": "",
+    "consumed": "",
+    "wallet": "",
+    "residual": "",
+    "progress": "",
+    "timesheetStatus": "",
+    "billingStatus": "",
+    "offerStatus": "",
+    "residualExpiry": "",
+    "reliability": "",
+    "close": "",
+    "closureDate": "",
+    "closureDateFromPlanned": ""
+  },
+  "wallet": {
+    "available": "",
+    "allocated": "",
+    "consumed": "",
+    "expiring": "",
+    "expired": "",
+    "potential": "",
+    "newAllocation": "",
+    "closeAllocation": "",
+    "reassign": "",
+    "source": "",
+    "activity": "",
+    "noSource": ""
+  },
+  "canone": {
+    "total": "",
+    "consumed": "",
+    "target": "",
+    "delta": "",
+    "forecast": "",
+    "office": "",
+    "quarterEstimate": "",
+    "forecastRemaining": "",
+    "underuse": "",
+    "overuse": "",
+    "onTrack": ""
+  },
+  "anomaly": {
+    "open": "",
+    "severity": "",
+    "scope": "",
+    "status": "",
+    "take": "",
+    "resolve": "",
+    "accept": "",
+    "resolutionNote": "",
+    "supersededBy": ""
+  },
+  "status": {
+    "NON_AVVIATO": "",
+    "ATTIVO": "",
+    "CHIUSO": "",
+    "DA_VERIFICARE": "",
+    "DA_FATTURARE": "",
+    "PARZIALE": "",
+    "TOTALE": "",
+    "NON_FATTURABILE": "",
+    "INVIATA": "",
+    "ACCETTATA": "",
+    "SCADUTA": "",
+    "NON_ACCETTATA": "",
+    "VALIDO": "",
+    "IN_SCADENZA": "",
+    "SCADUTO": "",
+    "APERTA": "",
+    "CHIUSA": "",
+    "ALTA": "",
+    "MEDIA": "",
+    "BASSA": "",
+    "CERTO": ""
+  },
+  "dashboard": {
+    "title": "",
+    "whatToDoNow": "",
+    "activeProjects": "",
+    "reconciliationDelta": "",
+    "lastSnapshot": ""
+  },
+  "errors": {
+    "generic": "",
+    "stale": "",
+    "network": ""
+  }
+}

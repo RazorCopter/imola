@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Token di colore. Il tema scuro è il default di sistema se l'utente lo preferisce,
+ * e resta forzabile con data-theme="dark" / "light" dal toggle.
+ */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 10%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 243 75% 59%;
+    --accent: 243 75% 59%;
+    --accent-foreground: 0 0% 100%;
+    --accent-subtle: 243 100% 97%;
+    --ok: 142 71% 36%;
+    --ok-subtle: 142 76% 95%;
+    --warn: 32 95% 44%;
+    --warn-subtle: 48 96% 94%;
+    --danger: 0 72% 51%;
+    --danger-subtle: 0 86% 97%;
+    --shadow: 240 10% 10%;
+    --radius: 0.5rem;
+  }
+
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --background: 240 10% 7%;
+      --foreground: 240 6% 94%;
+      --card: 240 8% 10%;
+      --card-foreground: 240 6% 94%;
+      --muted: 240 6% 15%;
+      --muted-foreground: 240 5% 65%;
+      --border: 240 6% 20%;
+      --input: 240 6% 20%;
+      --ring: 243 85% 70%;
+      --accent: 243 85% 68%;
+      --accent-foreground: 240 10% 7%;
+      --accent-subtle: 243 40% 18%;
+      --ok: 142 60% 52%;
+      --ok-subtle: 142 35% 16%;
+      --warn: 38 92% 58%;
+      --warn-subtle: 32 40% 17%;
+      --danger: 0 72% 62%;
+      --danger-subtle: 0 40% 18%;
+      --shadow: 0 0% 0%;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --background: 240 10% 7%;
+    --foreground: 240 6% 94%;
+    --card: 240 8% 10%;
+    --card-foreground: 240 6% 94%;
+    --muted: 240 6% 15%;
+    --muted-foreground: 240 5% 65%;
+    --border: 240 6% 20%;
+    --input: 240 6% 20%;
+    --ring: 243 85% 70%;
+    --accent: 243 85% 68%;
+    --accent-foreground: 240 10% 7%;
+    --accent-subtle: 243 40% 18%;
+    --ok: 142 60% 52%;
+    --ok-subtle: 142 35% 16%;
+    --warn: 38 92% 58%;
+    --warn-subtle: 32 40% 17%;
+    --danger: 0 72% 62%;
+    --danger-subtle: 0 40% 18%;
+    --shadow: 0 0% 0%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings:
+      "cv11" 1,
+      "ss01" 1;
+  }
+
+  /* I numeri contabili vanno sempre allineati e monospaziati in colonna. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    @apply text-right font-mono;
+  }
+
+  code,
+  .code {
+    @apply font-mono text-[0.9em];
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .skeleton {
+    @apply animate-pulse rounded-md bg-muted;
+  }
+}

@@ -1,0 +1,40 @@
+# --- dati reali del fornitore: NON versionare ---
+data/seed/*.json
+data/uploads/
+backend/media/
+!data/seed/.gitkeep
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# node
+node_modules/
+frontend/dist/
+frontend/coverage/
+playwright-report/
+test-results/
+.vite/
+
+# ambiente / build
+.env
+.env.local
+*.log
+backend/staticfiles/
+backups/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

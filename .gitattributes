@@ -1,0 +1,7 @@
+# Normalizzazione dei fine riga: nel repository sempre LF.
+* text=auto eol=lf
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.svg text eol=lf
