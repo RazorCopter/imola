@@ -9,6 +9,7 @@ import { DaysValue } from "@/components/DaysValue";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState } from "@/components/UiState";
 import { api } from "@/lib/api";
+import { NewProjectDialog } from "./NewProjectDialog";
 
 export interface ProjectBalance {
   id: string;
@@ -106,11 +107,14 @@ export function ProjectsPage() {
 
   return (
     <section className="space-y-4">
-      <header>
-        <h1 className="text-xl font-semibold">Progetti</h1>
-        <p className="text-sm text-muted-foreground">
-          Budget, consumi e residui calcolati dal ledger.
-        </p>
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Progetti</h1>
+          <p className="text-sm text-muted-foreground">
+            Budget, consumi e residui calcolati dal ledger.
+          </p>
+        </div>
+        <NewProjectDialog />
       </header>
       <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-card p-3">
         <label className="flex min-w-64 flex-1 items-center gap-2 rounded-md border border-input px-3">

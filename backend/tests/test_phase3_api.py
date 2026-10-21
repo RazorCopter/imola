@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import pytest
+from django.contrib.auth.models import Group
 from rest_framework.test import APIClient
 
 from canone.models import Canone
+from core import roles
+from projects.models import Project
 from tests.factories import ProjectFactory, UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -36,3 +39,45 @@ def test_canone_index_richiede_autenticazione():
 
     assert response.status_code == 401
     assert response.json()["code"] == "session_expired"
+
+
+def test_responsabile_puo_creare_un_progetto_dal_wizard():
+    roles.ensure_groups()
+    user = UserFactory()
+    user.groups.add(Group.objects.get(name=roles.MANAGER))
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.post(
+        "/api/v1/projects",
+        {
+            "code": "IM-NEW",
+            "title": "Progetto creato dal wizard",
+            "contract_type": "AQL",
+            "budget_days": "12.5000",
+            "start_date": "2026-10-01",
+            "planned_end_date": "2026-12-31",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    project = Project.objects.get(code="IM-NEW")
+    assert str(project.budget_days) == "12.5000"
+    assert response.json()["version"] == 1
+
+
+def test_fornitore_non_puo_creare_un_progetto():
+    roles.ensure_groups()
+    user = UserFactory()
+    user.groups.add(Group.objects.get(name=roles.SUPPLIER))
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.post(
+        "/api/v1/projects",
+        {"code": "NO", "title": "Negato", "contract_type": "AQL", "budget_days": "1"},
+        format="json",
+    )
+
+    assert response.status_code == 403

@@ -67,6 +67,62 @@ class SettingsView(APIView):
         return self.get(request)
 
 
+class ProjectListCreateView(APIView):
+    """Elenco anagrafico e creazione guidata dei progetti."""
+
+    permission_classes = [ReadOnlyOrLedgerWriter]
+
+    @extend_schema(responses={200: dict})
+    def get(self, request):
+        from projects.models import Project
+
+        rows = Project.objects.select_related("client_owner", "supplier_owner").order_by("code")
+        return Response(
+            {
+                "results": [
+                    {
+                        "id": row.id,
+                        "codice": row.code,
+                        "titolo": row.title,
+                        "tipo_contratto": row.contract_type,
+                    }
+                    for row in rows
+                ],
+                "count": rows.count(),
+            }
+        )
+
+    @extend_schema(request=dict, responses={201: dict})
+    def post(self, request):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        from projects.models import Project
+
+        allowed_fields = {
+            "code",
+            "title",
+            "contract_type",
+            "budget_days",
+            "start_date",
+            "planned_end_date",
+            "offer_status",
+            "timesheet_status",
+            "billing_status",
+            "notes",
+        }
+        data = {key: value for key, value in request.data.items() if key in allowed_fields}
+        project = Project(**data)
+        try:
+            project.full_clean()
+            project.save()
+        except DjangoValidationError as exc:
+            return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"id": project.id, "codice": project.code, "version": project.version},
+            status=status.HTTP_201_CREATED,
+        )
+
+
 class ProjectBalancesView(APIView):
     """Vista calcolata project_balance, con stato di scadenza del residuo (R2)."""
 

@@ -20,6 +20,7 @@ urlpatterns = [
     path("auth/session", auth_views.SessionView.as_view(), name="session"),
     path("settings", domain_views.SettingsView.as_view(), name="settings"),
     path("anomalies", domain_views.AnomalyListView.as_view(), name="anomaly-list"),
+    path("projects", domain_views.ProjectListCreateView.as_view(), name="project-list-create"),
     path("projects/balances", domain_views.ProjectBalancesView.as_view(), name="project-balances"),
     path(
         "projects/review-queue",
