@@ -195,7 +195,7 @@ def wallet_year_balance(
                 )
             continue
 
-        if project.timesheet_status != TimesheetStatus.CHIUSO or not project.actual_closure_date:
+        if project.timesheet_status == TimesheetStatus.CHIUSO and project.actual_closure_date:
             validity = residual_validity(
                 timesheet_status=project.timesheet_status,
                 closure_date=project.actual_closure_date,
@@ -215,9 +215,10 @@ def wallet_year_balance(
             years_valid_after_closure=years_valid_after_closure,
             expiring_window_days=expiring_window_days,
         )
-        balance.buckets[validity.state].add(
-            project.code, project.residual_days, validity.expires_on, validity.reason
-        )
+        if validity.state == ResidualState.DA_VERIFICARE:
+            balance.buckets[ResidualState.DA_VERIFICARE].add(
+                project.code, project.residual_days, validity.expires_on, validity.reason
+            )
 
     balance.unallocated_valid_days = balance.buckets[ResidualState.VALIDO].days
     balance.unallocated_expiring_days = balance.buckets[ResidualState.IN_SCADENZA].days

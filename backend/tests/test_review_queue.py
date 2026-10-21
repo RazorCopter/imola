@@ -232,8 +232,12 @@ def test_review_queue_sul_seed_reale(seed_file: Path):
     for item in da_verificare:
         assert item["data_chiusura_proposta"].year == 2025
         assert item["scadenza_potenziale"] == date(2026, 12, 31)
-        assert item["in_scadenza_entro_90gg"] is True
-        assert item["avviso_scadenza"].endswith("utilizzabili fino al 31/12/2026.")
+        if item["residuo"] > Decimal("0.0000"):
+            assert item["in_scadenza_entro_90gg"] is True
+            assert item["avviso_scadenza"].endswith("utilizzabili fino al 31/12/2026.")
+        else:
+            assert item["in_scadenza_entro_90gg"] is False
+            assert item["avviso_scadenza"] is None
 
     expected_closed_dates = {
         expected_closed[0]: date(2026, 6, 30),

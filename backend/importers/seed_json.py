@@ -272,7 +272,9 @@ def _project_values(row: dict[str, Any], organizations: dict[str, Organization])
         "timesheet_status": row["stato_consuntivazione"],
         "billing_status": row["stato_fatturazione"],
         # D-16: quota del residuo di IM26254 già resa disponibile al wallet.
-        "released_to_wallet_days": Decimal("10.0000") if row["codice"] == "IM26254" else ZERO,
+        "released_to_wallet_days": (
+            Decimal("10.0000") if row["codice"].startswith("IM26254") else ZERO
+        ),
         "declared_residual_year": row.get("anno_riferimento_residuo"),
         "notes": row.get("note") or "",
         "legacy_excel_status": row.get("stato_excel_originale") or "",

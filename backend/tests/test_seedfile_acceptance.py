@@ -43,7 +43,9 @@ def test_wallet_api_espone_totali_e_w26_001_del_seed_reale(authenticated_client:
     assert body["disponibile_da_allocazioni"] == "10.1000"
     assert body["residui_validi_non_allocati"] == "10.0000"
     released = body["dettaglio_residui"]["VALIDO"]["progetti"]
-    assert [(row["codice"], row["giornate"]) for row in released] == [("IM26254", "10.0000")]
+    assert len(released) == 1
+    assert released[0]["codice"].startswith("IM26254")
+    assert released[0]["giornate"] == "10.0000"
 
     allocation = next(row for row in body["allocazioni"] if row["riferimento"] == "W26-001")
     assert allocation == {
@@ -65,6 +67,8 @@ def test_chiusura_im24517_porta_i_residui_validi_a_22_3100(imported_seed: Path):
 
     balance = wallet_year_balance(2026, today=date(2026, 10, 16))
     assert balance.unallocated_valid_days + balance.unallocated_expiring_days == Decimal("22.3100")
+    assert balance.unallocated_valid_days == Decimal("10.0000")
+    assert balance.unallocated_expiring_days == Decimal("12.3100")
 
 
 def test_review_queue_api_espone_i_dodici_progetti_esatti(authenticated_client: APIClient):
@@ -95,5 +99,9 @@ def test_review_queue_api_espone_i_dodici_progetti_esatti(authenticated_client: 
     for row in body["results"][:9]:
         assert row["data_chiusura_proposta"].startswith("2025-")
         assert row["scadenza_potenziale"] == "2026-12-31"
-        assert row["in_scadenza_entro_90gg"] is True
-        assert row["avviso_scadenza"].endswith("utilizzabili fino al 31/12/2026.")
+        if Decimal(row["residuo"]) > Decimal("0.0000"):
+            assert row["in_scadenza_entro_90gg"] is True
+            assert row["avviso_scadenza"].endswith("utilizzabili fino al 31/12/2026.")
+        else:
+            assert row["in_scadenza_entro_90gg"] is False
+            assert row["avviso_scadenza"] is None

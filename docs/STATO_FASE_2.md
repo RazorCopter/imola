@@ -13,7 +13,8 @@ docker compose exec -T backend pytest -q
 
 Atteso: stack healthy e test suite completamente verde (test Fase 1 + test Fase 2 + rifiniture residui, coda di revisione, anomalie seed e script PowerShell).
 La verifica ufficiale gira ora nei container previsti dal progetto: Python 3.12 e PostgreSQL 16. Il venv locale Python 3.13 e PostgreSQL portatile restano solo fallback.
-Verifica Docker del 21/10/2026: Python 3.12.15, PostgreSQL 16.15, healthcheck nginx/backend HTTP 200, 231 test superati e 4 test `seedfile` saltati perché il seed reale non era presente in `data/seed/`.
+Verifica Docker del 21/10/2026: Python 3.12.15, PostgreSQL 16.15, healthcheck nginx/backend HTTP 200, 235 test superati e 0 test saltati, con verifica completa sul seed reale in `data/seed/seed_imola_2026-10-16.json`.
+PASSI 5, 6 e 7 verificati: import dry-run, apply, reimport idempotente (0 creati/0 aggiornati), rollback con 348 record eliminati e reimport finale; trigger append-only verificato su UPDATE/DELETE negati; API via nginx verificate per sessione 401, wallet balance, review-queue (12 progetti senza avvisi per residui <= 0), anomalie AN-001…AN-011 e riconciliazione PPM.
 Rifiniture applicate: `released_to_wallet_days` con endpoint `POST /projects/{id}/release-to-wallet`, D-16 per IM26254 (10 gg), residui validi non allocati coerenti, soppressione avviso scadenza coda di revisione per residui non positivi, `external_ref` per anomalie seed e `scripts/pg-local.ps1`.
 Controlli di qualità verificati nel container: Ruff, Black, `python manage.py check --deploy` e migrazioni senza discrepanze. Il check deploy termina con codice 0 ma conserva warning noti sullo schema OpenAPI e sulle impostazioni HTTPS locali.
 

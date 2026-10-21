@@ -4,6 +4,16 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
 
 ## [Non rilasciato]
 
+### Fase 2 — verifica seed in Docker
+
+**Verificato**
+
+- Presenza del file seed reale `data/seed/seed_imola_2026-10-16.json` montato in sola lettura nel container.
+- Suite di accettazione completa: 235 test superati, 0 skipped, inclusi i 4 test marcati `seedfile`.
+- PASSO 5: simulazione dry-run, applicazione, reimport idempotente (0 creati, 0 aggiornati), rollback atomico e reimport finale con 348 record creati e 13 scarti.
+- PASSO 6: verifiche SQL sul database PostgreSQL 16 del container e violazione tentativi UPDATE/DELETE bloccati dal trigger append-only dei consuntivi.
+- PASSO 7: autenticazione via nginx con sessione 401 per richieste anonime, bilancio wallet 2026 con 130.8900 allocati, 120.7900 consumati, 10.1000 disponibili, 10.0000 residui validi non allocati, 42.5400 potenziali e 70.9150 progetti in corso; coda di revisione con 12 progetti senza avvisi per residui non positivi; 11 anomalie seed con external_ref `AN-001`…`AN-011`; riconciliazione PPM con 40 righe analizzate.
+
 ### Fase 2 — rifiniture residui e coda di revisione
 
 **Aggiunto**
