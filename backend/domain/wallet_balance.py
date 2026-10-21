@@ -77,6 +77,7 @@ class WalletYearBalance:
     unallocated_expired_days: Decimal = ZERO
     unverified_potential_days: Decimal = ZERO
     ongoing_project_residual_days: Decimal = ZERO
+    ongoing_project_overrun_days: Decimal = ZERO
     buckets: dict[str, ResidualBucket] = field(default_factory=dict)
     allocations: list[dict] = field(default_factory=list)
 
@@ -89,6 +90,14 @@ class WalletYearBalance:
     def available_with_project_residuals(self) -> Decimal:
         """Alias interno deprecato; l'API espone `capienza_wallet_potenziale`."""
         return self.potential_wallet_capacity
+
+    @property
+    def budget_residuo_progetti_in_corso(self) -> Decimal:
+        return self.ongoing_project_residual_days
+
+    @property
+    def sforamenti_progetti_in_corso(self) -> Decimal:
+        return self.ongoing_project_overrun_days
 
     @property
     def potential_wallet_capacity(self) -> Decimal:
@@ -111,6 +120,7 @@ class WalletYearBalance:
             "residui_validi_non_allocati": self.unallocated_valid_days,
             "residui_in_scadenza": self.unallocated_expiring_days,
             "budget_residuo_progetti_in_corso": self.ongoing_project_residual_days,
+            "sforamenti_progetti_in_corso": self.ongoing_project_overrun_days,
             "residui_scaduti": self.unallocated_expired_days,
             "residui_potenziali_da_verificare": self.unverified_potential_days,
             "allocazioni": self.allocations,
@@ -174,25 +184,37 @@ def wallet_year_balance(
 
     from projects.models import ContractType, TimesheetStatus
 
-    projects = (
-        project_balance_qs().filter(residual_days__gt=0).exclude(contract_type=ContractType.CANONE)
-    )
+    projects = project_balance_qs().exclude(contract_type=ContractType.CANONE)
     for project in projects:
         if project.timesheet_status == TimesheetStatus.ATTIVO:
-            balance.ongoing_project_residual_days = quantize_days(
-                balance.ongoing_project_residual_days + project.residual_days
-            )
-            released_unallocated = max(
-                ZERO,
-                quantize_days(project.released_to_wallet_days - project.allocated_to_wallet_days),
-            )
-            if released_unallocated > ZERO:
-                balance.buckets[ResidualState.VALIDO].add(
-                    project.code,
-                    released_unallocated,
-                    None,
-                    "Quota del residuo del progetto attivo rilasciata al wallet.",
+            if project.residual_days < ZERO:
+                balance.ongoing_project_overrun_days = quantize_days(
+                    balance.ongoing_project_overrun_days + project.residual_days
                 )
+            elif project.residual_days > ZERO:
+                unreleased = max(
+                    ZERO,
+                    quantize_days(project.residual_days - project.released_to_wallet_days),
+                )
+                balance.ongoing_project_residual_days = quantize_days(
+                    balance.ongoing_project_residual_days + unreleased
+                )
+                released_unallocated = max(
+                    ZERO,
+                    quantize_days(
+                        project.released_to_wallet_days - project.allocated_to_wallet_days
+                    ),
+                )
+                if released_unallocated > ZERO:
+                    balance.buckets[ResidualState.VALIDO].add(
+                        project.code,
+                        released_unallocated,
+                        None,
+                        "Quota del residuo del progetto attivo rilasciata al wallet.",
+                    )
+            continue
+
+        if project.residual_days <= ZERO:
             continue
 
         if project.timesheet_status == TimesheetStatus.CHIUSO and project.actual_closure_date:

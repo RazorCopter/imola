@@ -4,6 +4,14 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
 
 ## [Non rilasciato]
 
+### Fase 2 — budget in corso senza doppio conteggio
+
+**Modificato**
+
+- `budget_residuo_progetti_in_corso`: ora sottrae la quota `released_to_wallet_days` per ciascun progetto ATTIVO, evitando il doppio conteggio sul seed (60.9150 gg).
+- Esposto `sforamenti_progetti_in_corso`: somma dei residui negativi dei progetti ATTIVI (-8.2400 gg).
+- Aggiornati test di accettazione sul seed reale e test di dominio del saldo wallet.
+
 ### Fase 2 — verifica seed in Docker
 
 **Verificato**

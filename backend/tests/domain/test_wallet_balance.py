@@ -122,7 +122,7 @@ class TestResiduiPerValidita:
     def test_i_bucket_separano_valido_in_scadenza_e_scaduto(self):
         ProjectFactory(
             code="IM26-ATTIVO",
-            budget_days=Decimal("10.0000"),
+            budget_days=Decimal("20.0000"),
             released_to_wallet_days=Decimal("10.0000"),
         )
         ProjectFactory(

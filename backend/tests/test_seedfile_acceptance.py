@@ -42,6 +42,8 @@ def test_wallet_api_espone_totali_e_w26_001_del_seed_reale(authenticated_client:
     assert body["disponibile"] == "10.1000"
     assert body["disponibile_da_allocazioni"] == "10.1000"
     assert body["residui_validi_non_allocati"] == "10.0000"
+    assert body["budget_residuo_progetti_in_corso"] == "60.9150"
+    assert body["sforamenti_progetti_in_corso"] == "-8.2400"
     released = body["dettaglio_residui"]["VALIDO"]["progetti"]
     assert len(released) == 1
     assert released[0]["codice"].startswith("IM26254")
