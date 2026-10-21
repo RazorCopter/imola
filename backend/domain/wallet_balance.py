@@ -77,10 +77,16 @@ class WalletYearBalance:
     unallocated_expired_days: Decimal = ZERO
     unverified_potential_days: Decimal = ZERO
     buckets: dict[str, ResidualBucket] = field(default_factory=dict)
+    allocations: list[dict] = field(default_factory=list)
 
     @property
     def available_days(self) -> Decimal:
-        """Disponibile ufficiale: allocazioni aperte + residui ancora spendibili."""
+        """Disponibile del wallet: allocato meno consumato, incluse allocazioni chiuse."""
+        return self.available_from_allocations
+
+    @property
+    def available_with_project_residuals(self) -> Decimal:
+        """Capienza estesa, separata dal saldo del wallet per evitare totali ambigui."""
         return quantize_days(
             self.available_from_open_allocations
             + self.unallocated_valid_days
@@ -92,13 +98,15 @@ class WalletYearBalance:
             "anno": self.year,
             "allocato": self.allocated_days,
             "consumato": self.consumed_days,
+            "disponibile": self.available_days,
             "disponibile_da_allocazioni": self.available_from_allocations,
             "disponibile_da_allocazioni_aperte": self.available_from_open_allocations,
+            "disponibile_con_residui_progetto": self.available_with_project_residuals,
             "residui_validi_non_allocati": self.unallocated_valid_days,
             "residui_in_scadenza": self.unallocated_expiring_days,
             "residui_scaduti": self.unallocated_expired_days,
             "residui_potenziali_da_verificare": self.unverified_potential_days,
-            "disponibile": self.available_days,
+            "allocazioni": self.allocations,
             "dettaglio_residui": {
                 state: {"giornate": bucket.days, "progetti": bucket.projects}
                 for state, bucket in self.buckets.items()
@@ -123,13 +131,26 @@ def wallet_year_balance(
 
     allocations = allocation_balance_qs(
         WalletAllocation.objects.filter(wallet_year__year=year)
-    ).select_related("source_project")
+    ).select_related("source_project", "activity")
 
     for allocation in allocations:
         balance.allocated_days = quantize_days(balance.allocated_days + allocation.allocated_days)
         balance.consumed_days = quantize_days(balance.consumed_days + allocation.consumed_days)
         balance.available_from_allocations = quantize_days(
             balance.available_from_allocations + allocation.available_days
+        )
+        balance.allocations.append(
+            {
+                "riferimento": allocation.external_ref,
+                "progetto_origine": (
+                    allocation.source_project.code if allocation.source_project else None
+                ),
+                "attivita": allocation.activity.code,
+                "allocato": allocation.allocated_days,
+                "consumato": allocation.consumed_days,
+                "disponibile": allocation.available_days,
+                "stato": allocation.status,
+            }
         )
         if allocation.status == AllocationStatus.APERTA:
             balance.available_from_open_allocations = quantize_days(

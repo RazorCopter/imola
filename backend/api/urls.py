@@ -26,6 +26,11 @@ urlpatterns = [
         name="project-review-queue",
     ),
     path(
+        "review-queue",
+        domain_views.ProjectReviewQueueView.as_view(),
+        name="review-queue",
+    ),
+    path(
         "projects/review-queue/",
         domain_views.ProjectReviewQueueView.as_view(),
     ),

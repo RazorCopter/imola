@@ -175,10 +175,9 @@ def test_api_review_queue_endpoint(api_client: APIClient):
     assert data["results"][0]["codice"] == "PRJ-API-1"
 
 
+@pytest.mark.seedfile
 def test_review_queue_sul_seed_reale():
-    """Verifica che sul seed importato la coda contenga esattamente 12 progetti:
-    3 CHIUSO senza data + 9 DA_VERIFICARE.
-    """
+    """Accettazione sul seed reale: identità, date, ordinamento e warning della coda."""
     seed_file = Path(settings.BASE_DIR).parent / "data" / "seed" / "seed_imola_2026-10-16.json"
     if not seed_file.is_file():
         pytest.skip(f"File seed non presente in {seed_file}")
@@ -192,15 +191,41 @@ def test_review_queue_sul_seed_reale():
     chiuso_senza_data = [x for x in queue if x["tipo_revisione"] == "CHIUSO_SENZA_DATA"]
     da_verificare = [x for x in queue if x["tipo_revisione"] == "DA_VERIFICARE"]
 
+    expected_2025 = [
+        "IM24517-3313-BMED-ARCH-SOLUTION-DESIGN-CONSULENZA-AMMINISTRATO",
+        "IM25026-3313-BMED-ARCH-SOLUTION-DESIGN-INTEGRAZIONE-SCHEDA-FONDO",
+        "IM25075-3313-BMED-ARCH-SOLUTION-DESIGN-APP-FB-WAVE-2",
+        "IM25151-3313-BMED-ARCH-ICT-ASSET-LIFECYCLE-OBSOLESCENZA",
+        "IM25188-3313-BMED-ARCH-INTEGR-NOTIFICHE-PUSH-APP-MED-ALERT-SEC",
+        "IM25206-3313-BMED-ARCH-DATABRICKS-SUPERAMENTO-CRMA-DATALAB",
+        "IM25236-3313-BMED-ARCH-RAFFORZAMENTO-DATA-QUALITY-TECNICA",
+        "IM25255-3313-BMED-ARCH-ADEGUA-OSI-ORIGINATION-MONIT-CRED-ORD",
+        "IM25270-3313-BMED-ARCH-SOLUTION-DESIGN-AGILE-CREDIT",
+    ]
+    expected_closed = [
+        "IM26034-3313-BMED-ARCH-SOLUTION-DESIGN-MIGRAZIONE-VIYA",
+        "IM26047-3313-BMED-ARCH-SOLUTION-DESIGN-MARKET-RISK-W2",
+        "IM26075-3313-BMED-ARCH-MIGRAZIONE-COMP-ARCH-OSB14",
+    ]
+
+    assert [x["codice"] for x in queue] == expected_2025 + expected_closed
+    assert [x["codice"] for x in da_verificare] == expected_2025
+    assert [x["codice"] for x in chiuso_senza_data] == expected_closed
     assert len(queue) == 12
-    assert len(chiuso_senza_data) == 3
-    assert len(da_verificare) == 9
 
-    # Verifica ordinamento per scadenza potenziale crescente
-    expiries = [x["scadenza_potenziale"] for x in queue if x["scadenza_potenziale"]]
-    assert expiries == sorted(expiries)
+    for item in da_verificare:
+        assert item["data_chiusura_proposta"].year == 2025
+        assert item["scadenza_potenziale"] == date(2026, 12, 31)
+        assert item["in_scadenza_entro_90gg"] is True
+        assert item["avviso_scadenza"].endswith("utilizzabili fino al 31/12/2026.")
 
-    # Verifica che la precompilazione della data_chiusura_proposta esista per tutti
-    for item in queue:
-        assert item["data_chiusura_proposta"] is not None
-        assert "residuo" in item
+    expected_closed_dates = {
+        expected_closed[0]: date(2026, 6, 30),
+        expected_closed[1]: date(2026, 7, 31),
+        expected_closed[2]: date(2026, 3, 31),
+    }
+    for item in chiuso_senza_data:
+        assert item["data_chiusura_proposta"] == expected_closed_dates[item["codice"]]
+        assert item["scadenza_potenziale"] == date(2027, 12, 31)
+        assert item["in_scadenza_entro_90gg"] is False
+        assert item["avviso_scadenza"] is None

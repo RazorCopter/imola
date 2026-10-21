@@ -110,8 +110,11 @@ class TestCaso11_4TotaliWallet2026:
             balance.unallocated_valid_days,
             balance.unallocated_expiring_days,
         )
-        # Il disponibile ufficiale non contiene i 30 gg potenziali.
-        assert balance.available_days == Decimal("10.1000") + balance.unallocated_valid_days
+        # Il saldo wallet resta allocato - consumato; i residui di progetto sono separati.
+        assert balance.available_days == Decimal("10.1000")
+        assert balance.available_with_project_residuals == (
+            Decimal("10.1000") + balance.unallocated_valid_days
+        )
         assert balance.buckets[ResidualState.DA_VERIFICARE].days == Decimal("30.0000")
 
 
