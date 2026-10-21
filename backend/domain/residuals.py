@@ -317,7 +317,11 @@ def review_queue_projects(
         # 4. Avviso di scadenza (se entro 90 giorni o già scaduto)
         avviso_scadenza: str | None = None
         in_scadenza_90gg = False
-        if potential_expiry is not None and days_to_expiry is not None:
+        if (
+            project.residual_days > ZERO
+            and potential_expiry is not None
+            and days_to_expiry is not None
+        ):
             if days_to_expiry < 0:
                 in_scadenza_90gg = True
                 avviso_scadenza = (

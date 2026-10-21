@@ -6,18 +6,24 @@ salvate. Ogni risposta porta con sé la spiegazione del calcolo, che la UI mostr
 
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
+
+from django.db import transaction
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from canone.models import Canone
 from core.models import AppSettings
-from core.permissions import IsAdmin
+from core.permissions import IsAdmin, ReadOnlyOrLedgerWriter
 from domain.canone_status import canone_burndown, canone_status
+from domain.money import ZERO, quantize_days
 from domain.reconciliation import reconcile, reconciliation_summary
-from domain.residuals import residual_explanation, residual_validity
+from domain.residuals import project_balance_qs, residual_explanation, residual_validity
 from domain.wallet_balance import wallet_flow, wallet_year_balance
 
 
@@ -146,6 +152,32 @@ class ProjectReviewQueueView(APIView):
         )
 
 
+class AnomalyListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from anomalies.models import Anomaly
+
+        rows = Anomaly.objects.select_related("project").order_by("-detected_at", "external_ref")
+        return Response(
+            {
+                "results": [
+                    {
+                        "id": row.id,
+                        "external_ref": row.external_ref,
+                        "codice_regola": row.rule_code,
+                        "severita": row.severity,
+                        "ambito": row.scope,
+                        "descrizione": row.description,
+                        "stato": row.status,
+                        "progetto": row.project.code if row.project else None,
+                    }
+                    for row in rows
+                ]
+            }
+        )
+
+
 class WalletBalanceView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -157,6 +189,72 @@ class WalletBalanceView(APIView):
             expiring_window_days=settings_obj.residual_expiring_window_days,
         )
         return Response(balance.as_dict())
+
+
+class ReleaseProjectToWalletView(APIView):
+    """Rende esplicitamente disponibile al wallet una quota del residuo di un progetto attivo."""
+
+    permission_classes = [ReadOnlyOrLedgerWriter]
+
+    @transaction.atomic
+    def post(self, request, pk):
+        from projects.models import Project, TimesheetStatus
+
+        project = get_object_or_404(Project.objects.select_for_update(), pk=pk)
+        if project.timesheet_status != TimesheetStatus.ATTIVO:
+            return Response(
+                {"detail": "Il rilascio è consentito solo per progetti ATTIVI."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        reason = str(request.data.get("motivazione", "")).strip()
+        if not reason:
+            return Response(
+                {"motivazione": ["Questo campo è obbligatorio."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            days = quantize_days(Decimal(str(request.data.get("giornate", ""))))
+        except (InvalidOperation, TypeError, ValueError):
+            return Response(
+                {"giornate": ["Inserire un numero valido."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if days <= ZERO:
+            return Response(
+                {"giornate": ["Il valore deve essere maggiore di zero."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        calculated = project_balance_qs(Project.objects.filter(pk=project.pk)).get()
+        available_to_release = quantize_days(
+            calculated.residual_days - project.released_to_wallet_days
+        )
+        if days > available_to_release:
+            return Response(
+                {
+                    "giornate": [
+                        "Il rilascio supera il residuo ancora rilasciabile "
+                        f"({available_to_release})."
+                    ]
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        project.released_to_wallet_days = quantize_days(project.released_to_wallet_days + days)
+        project._change_reason = reason
+        project.save(update_fields=["released_to_wallet_days", "updated_at"])
+        return Response(
+            {
+                "id": project.id,
+                "codice": project.code,
+                "giornate_rilasciate": days,
+                "rilasciato_al_wallet": project.released_to_wallet_days,
+                "residuo_ancora_rilasciabile": quantize_days(available_to_release - days),
+                "motivazione": reason,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class WalletFlowView(APIView):

@@ -26,7 +26,7 @@ from rest_framework.test import APIClient
 from core import roles
 from domain.residuals import review_queue_projects
 from imports.models import ImportKind, ImportStatus
-from projects.models import TimesheetStatus
+from projects.models import Project, TimesheetStatus
 from tests.factories import ImportBatchFactory, ProjectFactory
 
 pytestmark = pytest.mark.django_db
@@ -104,6 +104,24 @@ def test_review_queue_selezione_e_precompilazione():
     assert item_dv["scadenza_potenziale"] == date(2027, 12, 31)
     # Dal 2026-10-16 a fine 2027 sono > 90gg -> nessun avviso di scadenza imminente
     assert item_dv["avviso_scadenza"] is None
+
+
+def test_review_queue_non_avvisa_scadenza_quando_residuo_non_positivo():
+    project = ProjectFactory(
+        code="IM25206",
+        timesheet_status=TimesheetStatus.DA_VERIFICARE,
+        start_date=date(2025, 1, 1),
+        planned_end_date=date(2025, 6, 30),
+        budget_days=Decimal("0.0000"),
+    )
+
+    item = review_queue_projects(
+        as_of=date(2026, 10, 16), queryset=Project.objects.filter(pk=project.pk)
+    )[0]
+
+    assert item["residuo"] == Decimal("0.0000")
+    assert item["in_scadenza_entro_90gg"] is False
+    assert item["avviso_scadenza"] is None
 
 
 def test_review_queue_ordinamento_scadenza_crescente():

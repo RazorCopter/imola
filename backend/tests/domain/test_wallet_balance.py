@@ -120,7 +120,11 @@ class TestCaso11_4TotaliWallet2026:
 
 class TestResiduiPerValidita:
     def test_i_bucket_separano_valido_in_scadenza_e_scaduto(self):
-        ProjectFactory(code="IM26-ATTIVO", budget_days=Decimal("10.0000"))
+        ProjectFactory(
+            code="IM26-ATTIVO",
+            budget_days=Decimal("10.0000"),
+            released_to_wallet_days=Decimal("10.0000"),
+        )
         ProjectFactory(
             code="IM25-CHIUSO-IN-SCADENZA",
             budget_days=Decimal("7.0000"),
@@ -137,6 +141,7 @@ class TestResiduiPerValidita:
 
         balance = wallet_year_balance(2026, today=date(2026, 10, 20))
         assert balance.unallocated_valid_days == Decimal("10.0000")
+        assert balance.ongoing_project_residual_days == Decimal("10.0000")
         assert balance.unallocated_expiring_days == Decimal("7.0000")
         assert balance.unallocated_expired_days == Decimal("3.0000")
 

@@ -47,6 +47,12 @@ def build_fingerprint(rule_code: str, *refs: object) -> str:
 
 
 class Anomaly(TrackedModel, ImportedRecordMixin):
+    external_ref = models.CharField(
+        max_length=100,
+        blank=True,
+        db_index=True,
+        verbose_name="riferimento esterno",
+    )
     rule_code = models.CharField(max_length=40, db_index=True, verbose_name="codice regola")
     severity = models.CharField(max_length=6, choices=Severity.choices, verbose_name="severità")
     scope = models.CharField(max_length=20, choices=Scope.choices, verbose_name="ambito")

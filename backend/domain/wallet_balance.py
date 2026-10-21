@@ -76,6 +76,7 @@ class WalletYearBalance:
     unallocated_expiring_days: Decimal = ZERO
     unallocated_expired_days: Decimal = ZERO
     unverified_potential_days: Decimal = ZERO
+    ongoing_project_residual_days: Decimal = ZERO
     buckets: dict[str, ResidualBucket] = field(default_factory=dict)
     allocations: list[dict] = field(default_factory=list)
 
@@ -86,7 +87,12 @@ class WalletYearBalance:
 
     @property
     def available_with_project_residuals(self) -> Decimal:
-        """Capienza estesa, separata dal saldo del wallet per evitare totali ambigui."""
+        """Alias interno deprecato; l'API espone `capienza_wallet_potenziale`."""
+        return self.potential_wallet_capacity
+
+    @property
+    def potential_wallet_capacity(self) -> Decimal:
+        """Capienza wallet: saldo aperto più residui esplicitamente utilizzabili."""
         return quantize_days(
             self.available_from_open_allocations
             + self.unallocated_valid_days
@@ -101,9 +107,10 @@ class WalletYearBalance:
             "disponibile": self.available_days,
             "disponibile_da_allocazioni": self.available_from_allocations,
             "disponibile_da_allocazioni_aperte": self.available_from_open_allocations,
-            "disponibile_con_residui_progetto": self.available_with_project_residuals,
+            "capienza_wallet_potenziale": self.potential_wallet_capacity,
             "residui_validi_non_allocati": self.unallocated_valid_days,
             "residui_in_scadenza": self.unallocated_expiring_days,
+            "budget_residuo_progetti_in_corso": self.ongoing_project_residual_days,
             "residui_scaduti": self.unallocated_expired_days,
             "residui_potenziali_da_verificare": self.unverified_potential_days,
             "allocazioni": self.allocations,
@@ -165,8 +172,42 @@ def wallet_year_balance(
     ):
         balance.buckets[state] = ResidualBucket(state=state)
 
-    projects = project_balance_qs().filter(residual_days__gt=0)
+    from projects.models import ContractType, TimesheetStatus
+
+    projects = (
+        project_balance_qs().filter(residual_days__gt=0).exclude(contract_type=ContractType.CANONE)
+    )
     for project in projects:
+        if project.timesheet_status == TimesheetStatus.ATTIVO:
+            balance.ongoing_project_residual_days = quantize_days(
+                balance.ongoing_project_residual_days + project.residual_days
+            )
+            released_unallocated = max(
+                ZERO,
+                quantize_days(project.released_to_wallet_days - project.allocated_to_wallet_days),
+            )
+            if released_unallocated > ZERO:
+                balance.buckets[ResidualState.VALIDO].add(
+                    project.code,
+                    released_unallocated,
+                    None,
+                    "Quota del residuo del progetto attivo rilasciata al wallet.",
+                )
+            continue
+
+        if project.timesheet_status != TimesheetStatus.CHIUSO or not project.actual_closure_date:
+            validity = residual_validity(
+                timesheet_status=project.timesheet_status,
+                closure_date=project.actual_closure_date,
+                today=today,
+                years_valid_after_closure=years_valid_after_closure,
+                expiring_window_days=expiring_window_days,
+            )
+            balance.buckets[validity.state].add(
+                project.code, project.residual_days, validity.expires_on, validity.reason
+            )
+            continue
+
         validity = residual_validity(
             timesheet_status=project.timesheet_status,
             closure_date=project.actual_closure_date,
@@ -174,8 +215,9 @@ def wallet_year_balance(
             years_valid_after_closure=years_valid_after_closure,
             expiring_window_days=expiring_window_days,
         )
-        bucket = balance.buckets[validity.state]
-        bucket.add(project.code, project.residual_days, validity.expires_on, validity.reason)
+        balance.buckets[validity.state].add(
+            project.code, project.residual_days, validity.expires_on, validity.reason
+        )
 
     balance.unallocated_valid_days = balance.buckets[ResidualState.VALIDO].days
     balance.unallocated_expiring_days = balance.buckets[ResidualState.IN_SCADENZA].days

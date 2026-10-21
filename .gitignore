@@ -29,6 +29,8 @@ test-results/
 .env
 .env.local
 *.log
+.docker-data/
+.pgdata/
 backend/staticfiles/
 backups/
 

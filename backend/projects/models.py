@@ -86,6 +86,11 @@ class Project(TrackedModel, VerifiableMixin, ImportedRecordMixin):
     )
 
     budget_days = DaysField(verbose_name="giornate di budget")
+    released_to_wallet_days = DaysField(
+        default=0,
+        verbose_name="giornate rese disponibili al wallet",
+        help_text="Quota del residuo di un progetto attivo esplicitamente rilasciata al wallet.",
+    )
 
     start_date = models.DateField(null=True, blank=True, verbose_name="data di inizio")
     planned_end_date = models.DateField(null=True, blank=True, verbose_name="fine prevista")

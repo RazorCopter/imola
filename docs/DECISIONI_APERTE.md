@@ -1,5 +1,17 @@
 # Decisioni aperte e interpretazioni conservative
 
+## D-16 — Quota residuo di IM26254 rilasciata al wallet
+
+**Problema**: il seed reale non distingue il residuo informativo dei progetti ancora in corso
+dalla quota già resa spendibile nel wallet.
+**Scelta**: per `IM26254` l'import imposta `released_to_wallet_days = 10.0000`, come
+rettifica esplicita e storicizzata. I residui dei progetti ATTIVI restano informativi salvo
+questa quota; ulteriori rilasci richiedono motivazione tramite l'endpoint dedicato e non
+possono superare il residuo disponibile.
+**Dove**: `backend/projects/models.py`, `backend/importers/seed_json.py`,
+`backend/api/domain_views.py`, `backend/domain/wallet_balance.py`.
+
+
 Ogni voce elenca: la domanda non risolta dalle specifiche, la scelta applicata nel codice
 (sempre la più conservativa) e dove vive nel codice. Da rivedere con il responsabile BMED.
 

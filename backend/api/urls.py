@@ -19,6 +19,7 @@ urlpatterns = [
     path("auth/logout", auth_views.LogoutView.as_view(), name="logout"),
     path("auth/session", auth_views.SessionView.as_view(), name="session"),
     path("settings", domain_views.SettingsView.as_view(), name="settings"),
+    path("anomalies", domain_views.AnomalyListView.as_view(), name="anomaly-list"),
     path("projects/balances", domain_views.ProjectBalancesView.as_view(), name="project-balances"),
     path(
         "projects/review-queue",
@@ -33,6 +34,11 @@ urlpatterns = [
     path(
         "projects/review-queue/",
         domain_views.ProjectReviewQueueView.as_view(),
+    ),
+    path(
+        "projects/<uuid:pk>/release-to-wallet",
+        domain_views.ReleaseProjectToWalletView.as_view(),
+        name="project-release-to-wallet",
     ),
     path(
         "wallet/<int:year>/balance",

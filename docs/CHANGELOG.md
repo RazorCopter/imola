@@ -4,6 +4,33 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
 
 ## [Non rilasciato]
 
+### Fase 2 — rifiniture residui e coda di revisione
+
+**Aggiunto**
+
+- Modello `Project`: aggiunto il campo `released_to_wallet_days` con tracciamento storico e default 0.
+- Endpoint `POST /api/v1/projects/{id}/release-to-wallet`: rilascia quote di residuo al wallet per soli progetti ATTIVI, con motivazione obbligatoria e controllo di capienza sul residuo disponibile.
+- Dominio wallet: calcolo di `residui_validi_non_allocati` su progetti CHIUSO non scaduti con data certa più quote rilasciate da progetti ATTIVI al netto delle allocazioni uscite; esposta la metrica informativa `budget_residuo_progetti_in_corso` e rinominato il campo in `capienza_wallet_potenziale`.
+- Decisione D-16 in `docs/DECISIONI_APERTE.md`: quota del residuo di IM26254 impostata a 10 gg in fase di import seed.
+- Modello `Anomaly`: aggiunto `external_ref` per memorizzare l'`id_import` del seed (`AN-001`…`AN-011`), esposto in API e admin.
+- Coda di revisione: soppressi gli avvisi di scadenza per progetti con residuo non positivo (`<= 0`).
+- Script PowerShell `scripts/pg-local.ps1` (`start`, `stop`, `status`, `psql`) per fallback su Windows, documentato in `README.md`.
+- Test di regressione dedicati per rilascio wallet, coda di revisione, anomalie seed e accettazione seedfile su `IM26254` e `IM24517`.
+
+### Verifica ambiente Docker
+
+**Corretto**
+
+- Aggiunto `.dockerignore` per escludere segreti, dati reali, ambienti locali, dipendenze e volumi persistenti dal contesto di build.
+- Limitato il mount del seed reale al solo override di sviluppo, in sola lettura sotto `/app/data/seed`; il seed resta escluso dalle immagini.
+- Incluso il solo `seed_schema_v1.json` versionato nelle immagini backend dev e prod, necessario all'importer e alla suite eseguita nel container.
+- Reso affidabile l'healthcheck nginx usando l'indirizzo IPv4 esplicito `127.0.0.1`.
+
+**Verificato**
+
+- Build Docker pulita, stack healthy con nginx, backend e PostgreSQL 16, health endpoint HTTP 200.
+- Suite backend su Python 3.12/PostgreSQL 16, controlli Ruff/Black, check migrazioni e check deploy; lint, typecheck e test frontend nel container.
+
 ### Fase 2 — Import seed JSON
 
 **Aggiunto**

@@ -3,16 +3,19 @@
 Scritto per: tracciare il completamento dell'import seed e il checkpoint verificato della Fase 2.
 Aggiornato al 21/10/2026. La Fase 1 è chiusa (`Fase 1 — fondamenta`) e l'intera implementazione della Fase 2 (importer seed JSON, orchestrazione batch, CLI di import e rollback, gestione supersessione D-05, modelli e suite di test) è completa e verificata.
 
-## Come verificare lo stato attuale in due comandi
+## Come verificare lo stato attuale in Docker
 
-```bash
-scripts/pg-local.sh start                      # PostgreSQL 16 portatile su 127.0.0.1:5433
-cd backend && ../.venv/Scripts/python.exe -m pytest -q
+```powershell
+docker compose build --no-cache
+docker compose up -d
+docker compose exec -T backend pytest -q
 ```
 
-Atteso: test suite completamente verde (test Fase 1 + test Fase 2: `seed_json.py`, `import_seed`, `rollback_seed`, `supersession.py`, `test_d14_seed_exceptions.py`, `test_review_queue.py`).
-Il venv è `.venv/` (Python 3.13 locale, Django 5.2.18; compatibile con Python 3.12, vedi D-16); Docker su questa macchina non parte perché manca WSL2, quindi si usa l'istanza portatile.
-Controlli di qualità: Ruff, Black, `python manage.py check` e migrazioni applicate senza discrepanze.
+Atteso: stack healthy e test suite completamente verde (test Fase 1 + test Fase 2 + rifiniture residui, coda di revisione, anomalie seed e script PowerShell).
+La verifica ufficiale gira ora nei container previsti dal progetto: Python 3.12 e PostgreSQL 16. Il venv locale Python 3.13 e PostgreSQL portatile restano solo fallback.
+Verifica Docker del 21/10/2026: Python 3.12.15, PostgreSQL 16.15, healthcheck nginx/backend HTTP 200, 231 test superati e 4 test `seedfile` saltati perché il seed reale non era presente in `data/seed/`.
+Rifiniture applicate: `released_to_wallet_days` con endpoint `POST /projects/{id}/release-to-wallet`, D-16 per IM26254 (10 gg), residui validi non allocati coerenti, soppressione avviso scadenza coda di revisione per residui non positivi, `external_ref` per anomalie seed e `scripts/pg-local.ps1`.
+Controlli di qualità verificati nel container: Ruff, Black, `python manage.py check --deploy` e migrazioni senza discrepanze. Il check deploy termina con codice 0 ma conserva warning noti sullo schema OpenAPI e sulle impostazioni HTTPS locali.
 
 ## Componenti implementati della Fase 2
 

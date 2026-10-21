@@ -25,6 +25,7 @@ from canone.models import Canone, CanoneSubactivity, extract_redmine_ref
 from core.models import AppSettings, verification_point
 from directory.models import Organization, OrganizationKind, Person
 from directory.normalization import comparison_key, normalize_person_name
+from domain.money import ZERO
 from importers.report import EntityReport, ImportReport
 from imports.models import ImportBatch
 from ppm.models import PpmSnapshot, PpmSnapshotRow, normalize_project_code
@@ -270,6 +271,8 @@ def _project_values(row: dict[str, Any], organizations: dict[str, Organization])
         "offer_status": row["stato_offerta"],
         "timesheet_status": row["stato_consuntivazione"],
         "billing_status": row["stato_fatturazione"],
+        # D-16: quota del residuo di IM26254 già resa disponibile al wallet.
+        "released_to_wallet_days": Decimal("10.0000") if row["codice"] == "IM26254" else ZERO,
         "declared_residual_year": row.get("anno_riferimento_residuo"),
         "notes": row.get("note") or "",
         "legacy_excel_status": row.get("stato_excel_originale") or "",
@@ -1064,6 +1067,7 @@ def _import_seed_anomalies(
         status = AnomalyStatus.RISOLTA if is_excel_defect else raw["stato"]
 
         values = {
+            "external_ref": external_ref,
             "rule_code": SEED_RULE_CODE,
             "severity": raw["severita"],
             "scope": raw["ambito"],

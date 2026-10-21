@@ -21,6 +21,21 @@ L'applicazione è la fonte di verità per **pianificazione, allocazioni wallet e
 | **R4** | Canone: `target = min(monte, base + settimane × gg_per_settimana)`; `delta = target − consuntivato` (positivo = a favore di BMED). |
 | **R6** | Il PPM è la fonte dei consuntivi; la riconciliazione tollera 0,01 gg. |
 
+## PostgreSQL portatile di fallback su Windows
+
+L'ambiente ufficiale usa Docker. Se Docker non è disponibile, lo script PowerShell gestisce
+l'istanza PostgreSQL 16 portatile in `C:\dev\pgdata` sulla porta `5433`:
+
+```powershell
+.\scripts\pg-local.ps1 start
+.\scripts\pg-local.ps1 status
+.\scripts\pg-local.ps1 psql
+.\scripts\pg-local.ps1 stop
+```
+
+È possibile personalizzare directory, porta, database e utente con `PGDATA`, `PGPORT`,
+`POSTGRES_DB` e `POSTGRES_USER`. Lo script non inizializza e non cancella mai i dati.
+
 ## Requisiti
 
 - Docker Desktop (o Container Manager su Synology) con Docker Compose v2.

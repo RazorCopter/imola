@@ -12,7 +12,7 @@ services:
     volumes:
       - ${SL_DATA_DIR:-./.docker-data}/pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-supplier_ledger} -d ${POSTGRES_DB:-supplier_ledger}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-supplier_ledger} -d ${POSTGRES_DB:-supplier_ledger}" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -71,7 +71,7 @@ services:
       - ${SL_DATA_DIR:-./.docker-data}/static:/srv/static:ro
       - ${SL_DATA_DIR:-./.docker-data}/media:/srv/media:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/healthz || exit 1"]
+      test: [ "CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1" ]
       interval: 30s
       timeout: 5s
       retries: 3

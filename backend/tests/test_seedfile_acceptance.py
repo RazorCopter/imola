@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,8 @@ from django.conf import settings
 from django.core.management import call_command
 from rest_framework.test import APIClient
 
+from domain.wallet_balance import wallet_year_balance
+from projects.models import Project, TimesheetStatus
 from tests.factories import UserFactory
 
 pytestmark = [pytest.mark.django_db, pytest.mark.seedfile]
@@ -40,6 +43,9 @@ def test_wallet_api_espone_totali_e_w26_001_del_seed_reale(authenticated_client:
     assert body["consumato"] == "120.7900"
     assert body["disponibile"] == "10.1000"
     assert body["disponibile_da_allocazioni"] == "10.1000"
+    assert body["residui_validi_non_allocati"] == "10.0000"
+    released = body["dettaglio_residui"]["VALIDO"]["progetti"]
+    assert [(row["codice"], row["giornate"]) for row in released] == [("IM26254", "10.0000")]
 
     allocation = next(row for row in body["allocazioni"] if row["riferimento"] == "W26-001")
     assert allocation == {
@@ -51,6 +57,16 @@ def test_wallet_api_espone_totali_e_w26_001_del_seed_reale(authenticated_client:
         "disponibile": "0.0000",
         "stato": "APERTA",
     }
+
+
+def test_chiusura_im24517_porta_i_residui_validi_a_22_3100(imported_seed: Path):
+    project = Project.objects.get(code__startswith="IM24517")
+    project.timesheet_status = TimesheetStatus.CHIUSO
+    project.actual_closure_date = date(2025, 5, 30)
+    project.save(update_fields=["timesheet_status", "actual_closure_date", "updated_at"])
+
+    balance = wallet_year_balance(2026, today=date(2026, 10, 16))
+    assert balance.unallocated_valid_days + balance.unallocated_expiring_days == Decimal("22.3100")
 
 
 def test_review_queue_api_espone_i_dodici_progetti_esatti(authenticated_client: APIClient):

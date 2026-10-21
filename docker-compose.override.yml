@@ -19,7 +19,7 @@ services:
       MEDIA_ROOT: /srv/media
     volumes:
       - ./backend:/app
-      - ./data/seed:/srv/seed:ro
+      - ./data/seed:/app/data/seed:ro
       - ${SL_DATA_DIR:-./.docker-data}/media:/srv/media
       - ${SL_DATA_DIR:-./.docker-data}/static:/srv/static
       - ${SL_DATA_DIR:-./.docker-data}/backups:/srv/backups
