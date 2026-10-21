@@ -46,6 +46,7 @@ urlpatterns = [
         name="wallet-balance",
     ),
     path("wallet/<int:year>/flow", domain_views.WalletFlowView.as_view(), name="wallet-flow"),
+    path("canoni", domain_views.CanoneListView.as_view(), name="canone-list"),
     path("canoni/<uuid:pk>/status", domain_views.CanoneStatusView.as_view(), name="canone-status"),
     path(
         "reconciliation/latest",

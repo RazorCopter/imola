@@ -1,0 +1,127 @@
+import { useQuery } from "@tanstack/react-query";
+
+import { DaysValue } from "@/components/DaysValue";
+import { KpiCard } from "@/components/KpiCard";
+import { StatusBadge } from "@/components/StatusBadge";
+import { ErrorState, LoadingState } from "@/components/UiState";
+import { api } from "@/lib/api";
+
+interface Balance {
+  anno: number;
+  allocato: string;
+  consumato: string;
+  disponibile: string;
+  residui_validi_non_allocati: string;
+  residui_in_scadenza: string;
+  residui_scaduti: string;
+  residui_potenziali_da_verificare: string;
+  dettaglio_residui: Record<
+    string,
+    {
+      giornate: string;
+      progetti: { codice: string; residuo: string; scade_il: string | null; motivo: string }[];
+    }
+  >;
+}
+interface Flow {
+  origine: string;
+  origine_titolo: string;
+  destinazione: string;
+  destinazione_titolo: string;
+  allocato: string;
+  consumato: string;
+  disponibile: string;
+  stato: string;
+}
+
+export function WalletPage() {
+  const year = new Date().getFullYear();
+  const balance = useQuery({
+    queryKey: ["wallet", "balance", year],
+    queryFn: () => api.get<Balance>(`/wallet/${year}/balance`),
+  });
+  const flow = useQuery({
+    queryKey: ["wallet", "flow", year],
+    queryFn: () => api.get<{ results: Flow[] }>(`/wallet/${year}/flow`),
+  });
+  if (balance.isLoading || flow.isLoading) return <LoadingState />;
+  if (balance.isError || flow.isError || !balance.data)
+    return <ErrorState title="Impossibile caricare il wallet" />;
+  return (
+    <section className="space-y-5">
+      <header>
+        <h1 className="text-xl font-semibold">Wallet {year}</h1>
+        <p className="text-sm text-muted-foreground">
+          Origini, destinazioni e disponibilità calcolate dall’API.
+        </p>
+      </header>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          label="Disponibile"
+          value={<DaysValue value={balance.data.disponibile} />}
+          tone="ok"
+        />
+        <KpiCard label="Allocato" value={<DaysValue value={balance.data.allocato} />} />
+        <KpiCard label="Consumato" value={<DaysValue value={balance.data.consumato} />} />
+        <KpiCard
+          label="In scadenza"
+          value={<DaysValue value={balance.data.residui_in_scadenza} />}
+          tone="warn"
+        />
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[2fr,1fr]">
+        <section className="rounded-lg border border-border bg-card p-4">
+          <h2 className="font-medium">Flusso origine → attività</h2>
+          <div className="mt-3 space-y-2">
+            {flow.data?.results.map((row, index) => (
+              <div
+                key={`${row.origine}-${row.destinazione}-${index}`}
+                className="grid gap-2 rounded-md border border-border p-3 sm:grid-cols-[1fr,auto,1fr,auto]"
+              >
+                <div>
+                  <p className="font-mono text-sm">{row.origine}</p>
+                  <p className="truncate text-xs text-muted-foreground">{row.origine_titolo}</p>
+                </div>
+                <span aria-hidden>→</span>
+                <div>
+                  <p className="font-mono text-sm">{row.destinazione}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {row.destinazione_titolo}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <DaysValue value={row.allocato} />
+                  <div>
+                    <StatusBadge status={row.stato} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+        <aside className="rounded-lg border border-border bg-card p-4">
+          <h2 className="font-medium">Residui per validità</h2>
+          <div className="mt-3 space-y-4">
+            {Object.entries(balance.data.dettaglio_residui).map(([state, bucket]) => (
+              <div key={state}>
+                <div className="flex items-center justify-between">
+                  <StatusBadge status={state} />
+                  <DaysValue value={bucket.giornate} />
+                </div>
+                {bucket.progetti.map((project) => (
+                  <div
+                    key={project.codice}
+                    className="mt-2 flex justify-between border-l-2 border-border pl-2 text-xs"
+                  >
+                    <span className="font-mono">{project.codice}</span>
+                    <DaysValue value={project.residuo} />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}

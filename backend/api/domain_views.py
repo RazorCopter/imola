@@ -264,6 +264,30 @@ class WalletFlowView(APIView):
         return Response({"results": wallet_flow(year)})
 
 
+class CanoneListView(APIView):
+    """Indice minimo dei canoni per il selettore semestre della UI."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: dict})
+    def get(self, request):
+        rows = Canone.objects.select_related("project").order_by("-semester")
+        return Response(
+            {
+                "results": [
+                    {
+                        "id": row.id,
+                        "semestre": row.semester,
+                        "progetto_codice": row.project.code,
+                        "progetto_titolo": row.project.title,
+                    }
+                    for row in rows
+                ],
+                "count": rows.count(),
+            }
+        )
+
+
 class CanoneStatusView(APIView):
     permission_classes = [IsAuthenticated]
 

@@ -8,6 +8,10 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { SessionExpiredDialog } from "@/features/auth/SessionExpiredDialog";
 import { useSession } from "@/features/auth/session";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
+import { CanonePage } from "@/features/canone/CanonePage";
+import { ProjectDetailPage } from "@/features/projects/ProjectDetailPage";
+import { ProjectsPage } from "@/features/projects/ProjectsPage";
+import { WalletPage } from "@/features/wallet/WalletPage";
 import { PlaceholderPage } from "@/components/PlaceholderPage";
 
 export default function App() {
@@ -43,9 +47,10 @@ export default function App() {
       <Routes>
         <Route element={<AppShell onOpenCommandPalette={() => setPaletteOpen(true)} />}>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/progetti" element={<PlaceholderPage titleKey="nav.projects" />} />
-          <Route path="/wallet" element={<PlaceholderPage titleKey="nav.wallet" />} />
-          <Route path="/canone" element={<PlaceholderPage titleKey="nav.canone" />} />
+          <Route path="/progetti" element={<ProjectsPage />} />
+          <Route path="/progetti/:projectId" element={<ProjectDetailPage />} />
+          <Route path="/wallet" element={<WalletPage />} />
+          <Route path="/canone" element={<CanonePage />} />
           <Route
             path="/riconciliazione"
             element={<PlaceholderPage titleKey="nav.reconciliation" />}

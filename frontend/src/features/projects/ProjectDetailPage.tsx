@@ -1,0 +1,109 @@
+import { useQuery } from "@tanstack/react-query";
+import * as Tabs from "@radix-ui/react-tabs";
+import { Link, useParams } from "react-router-dom";
+
+import { DaysValue } from "@/components/DaysValue";
+import { StatusBadge } from "@/components/StatusBadge";
+import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
+import { api } from "@/lib/api";
+import type { ProjectBalance } from "./ProjectsPage";
+
+interface ProjectResponse {
+  results: ProjectBalance[];
+}
+
+export function ProjectDetailPage() {
+  const { projectId } = useParams();
+  const query = useQuery({
+    queryKey: ["projects", "balances"],
+    queryFn: () => api.get<ProjectResponse>("/projects/balances"),
+  });
+  if (query.isLoading) return <LoadingState />;
+  if (query.isError) return <ErrorState title="Impossibile caricare il progetto" />;
+  const project = query.data?.results.find((item) => item.id === projectId);
+  if (!project) return <EmptyState title="Progetto non trovato" />;
+
+  const metrics = [
+    ["Budget", project.budget],
+    ["Consuntivi diretti", project.consuntivi_diretti],
+    ["Allocato al wallet", project.allocato_a_wallet],
+    ["Consumato via wallet", project.consumato_via_wallet],
+    ["Consumato totale", project.consumato_totale],
+    ["Residuo", project.residuo],
+  ] as const;
+  const tabs = [
+    "Panoramica",
+    "Consuntivi",
+    "Wallet",
+    "Milestone",
+    "Residuo",
+    "Anomalie",
+    "Documenti",
+    "Storico modifiche",
+  ];
+
+  return (
+    <section className="space-y-5">
+      <header>
+        <Link to="/progetti" className="text-sm text-accent">
+          ← Progetti
+        </Link>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <h1 className="font-mono text-xl font-semibold">{project.codice}</h1>
+          <StatusBadge status={project.stato_consuntivazione} domain="timesheet" />
+          <StatusBadge status={project.stato_fatturazione} domain="billing" />
+          <StatusBadge status={project.stato_offerta} domain="offer" />
+        </div>
+        <p className="mt-1 text-muted-foreground">{project.titolo}</p>
+      </header>
+      <Tabs.Root defaultValue="Panoramica">
+        <Tabs.List
+          className="flex gap-1 overflow-x-auto border-b border-border"
+          aria-label="Dettaglio progetto"
+        >
+          {tabs.map((tab) => (
+            <Tabs.Trigger
+              key={tab}
+              value={tab}
+              className="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground data-[state=active]:border-accent data-[state=active]:text-foreground"
+            >
+              {tab}
+            </Tabs.Trigger>
+          ))}
+        </Tabs.List>
+        <Tabs.Content value="Panoramica" className="pt-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {metrics.map(([label, value]) => (
+              <article key={label} className="rounded-lg border border-border bg-card p-4">
+                <p className="text-xs uppercase text-muted-foreground">{label}</p>
+                <DaysValue
+                  value={value}
+                  label={label}
+                  className="mt-2 block font-mono text-xl font-semibold tabular-nums"
+                />
+              </article>
+            ))}
+          </div>
+          <div className="mt-4 rounded-lg border border-border bg-card p-4">
+            <h2 className="font-medium">Validità residuo</h2>
+            <div className="mt-2 flex items-center gap-3">
+              <StatusBadge status={project.stato_residuo} />
+              <span className="text-sm text-muted-foreground">{project.residuo_motivo}</span>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground" title={project.spiegazione_residuo}>
+              {project.spiegazione_residuo}
+            </p>
+          </div>
+        </Tabs.Content>
+        {tabs.slice(1).map((tab) => (
+          <Tabs.Content key={tab} value={tab} className="pt-4">
+            <EmptyState
+              title={`${tab}: nessun elemento da mostrare`}
+              detail="La struttura è pronta; i dati specifici saranno collegati ai rispettivi endpoint CRUD."
+            />
+          </Tabs.Content>
+        ))}
+      </Tabs.Root>
+    </section>
+  );
+}
