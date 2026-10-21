@@ -21,6 +21,15 @@ urlpatterns = [
     path("settings", domain_views.SettingsView.as_view(), name="settings"),
     path("projects/balances", domain_views.ProjectBalancesView.as_view(), name="project-balances"),
     path(
+        "projects/review-queue",
+        domain_views.ProjectReviewQueueView.as_view(),
+        name="project-review-queue",
+    ),
+    path(
+        "projects/review-queue/",
+        domain_views.ProjectReviewQueueView.as_view(),
+    ),
+    path(
         "wallet/<int:year>/balance",
         domain_views.WalletBalanceView.as_view(),
         name="wallet-balance",

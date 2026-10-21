@@ -4,9 +4,27 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
 
 ## [Non rilasciato]
 
+### Fase 2 — Import seed JSON
+
+**Aggiunto**
+
+- Cuore importer seed in `backend/importers/seed_json.py` (~1029 righe) suddiviso in 5 blocchi atomici e idempotenti: configurazione/organizzazioni/persone, progetti/milestone/consuntivi diretti, canoni/sotto-attività/consuntivi canone, wallet 2026/attività/allocazioni/movimenti e storico 2025, snapshot PPM e anomalie seed.
+- Strategia di upsert basata su chiavi naturali con ownership del batch assegnata esclusivamente in creazione; consuntivi append-only con causale `SEED_INIZIALE`, gestione degli scarti motivati su wallet storico (D-04) e popolamento della coda di revisione.
+- Orchestratore batch in `backend/importers/batch.py`: lettura protetta dei file, digest SHA-256 (`content_hash`), validazione schema tramite doppia lettura (float per validazione schema, Decimal per importazione dati), ciclo di vita `ImportBatch`, persistenza strutturata degli `ImportIssue` (avvisi ed errori) e integrazione report.
+- Management command CLI `import_seed` (`backend/imports/management/commands/import_seed.py`): modalità `--dry-run` transazionale senza persistenza (rollback con eccezione sentinella), modalità `--apply` atomica, flag `--schema` per validazione isolata, output testuale e formattato `--json`, codici di uscita distinti.
+- Modulo di rollback sicuro in `backend/importers/rollback.py` e relativo management command `rollback_seed`: eliminazione esclusiva dei record generati dal batch, ordine FK sicuro a cascata, acquisizione lock pessimista (`select_for_update`), verifica bloccante contro batch successivi o già rollbackati, autorizzazione bypass trigger append-only tramite `allow_ledger_mutation()` e tracciamento audit.
+- Meccanismo di supersessione anomalie (D-05) in `backend/anomalies/models.py`: campo `superseded_by`, metodo `mark_superseded()`, mappa dichiarativa `SEED_SUPERSESSION_MAP` (7 anomalie mappate su regole automatiche di Fase 4 e 4 incoerenze manuali non mappate), protezione da sovrascritture di stato nei reimport.
+- Estensione modello `ImportBatch` con `content_hash` e nuovo modello `ImportIssue` per la registrazione degli scarti/avvisi nel database; migrazione `0002_historicalimportbatch_content_hash_and_more.py` e inline in `imports/admin.py`.
+
+**Test e verifiche**
+
+- Suite estesa a 214 test passati (158 test di Fase 1 + 56 nuovi test dedicati: 20 per `importers/seed_json.py`, 10 per il command `import_seed`, 12 per il modulo e command di rollback, 10 per la supersessione D-05).
+- Controlli di qualità del codice superati: Ruff, Black, `python manage.py check` e verifica migrazioni senza problemi.
+
 ### Fase 1 - Fondamenta
 
 **Aggiunto**
+
 - Scaffolding del repository: backend Django 5 / DRF / PostgreSQL 16, frontend React 18 +
   TypeScript + Vite + Tailwind, Docker Compose (db, backend, frontend, nginx) con porte non
   privilegiate, volumi bind e healthcheck su ogni servizio, `.env.example` completo.
@@ -34,6 +52,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
   versionare il seed con i dati reali del fornitore.
 
 **Corretto durante la verifica**
+
 - Le richieste non autenticate rispondevano 403: DRF declassa `NotAuthenticated` quando
   l'autenticazione è a sessione. Ora tornano **401** con `code=session_expired`, che è la
   condizione su cui il frontend apre il modale di re-login senza perdere il lavoro.
@@ -44,6 +63,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
   via syncdb prima di `auth`, rompendo la chiave esterna dello storico. Migrazione aggiunta.
 
 **Test**
+
 - 142 test backend, tutti verdi su PostgreSQL 16.4, copertura di `domain/` al **97%**
   (gate 85%). Fra questi i casi obbligatori del par. 11: 11.1 (progetto
   del 2024 ancora attivo, residuo 0), 11.3 (chiuso il 15/11/2025: valido al 31/12/2026,
@@ -56,6 +76,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
   bilancio wallet, riconciliazione e PATCH con permessi.
 
 **Nota sull'ambiente di questa macchina**
+
 - Docker non parte perché WSL2 non è installato: lo sviluppo e i test usano un PostgreSQL 16
   portatile avviato da `scripts/pg-local.sh`. Lo stack Docker Compose resta quello previsto
   per il deploy su Synology, ma su questa macchina non è ancora stato eseguito.

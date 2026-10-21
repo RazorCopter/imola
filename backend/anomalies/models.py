@@ -200,14 +200,98 @@ class Anomaly(TrackedModel, ImportedRecordMixin):
         if user is not None:
             self.assigned_to = user
 
-    def mark_superseded(self, replacement: Anomaly) -> None:
-        """Chiude un'anomalia del seed coperta da una regola automatica (D-05)."""
+    def extract_covered_entities(self) -> set[str]:
+        """Estrae i codici entità coperti da questa anomalia (progetto, context, ecc.)."""
+        entities: set[str] = set()
+        project = getattr(self, "project", None)
+        if project is not None and getattr(project, "code", None):
+            entities.add(project.code)
+        if self.context and isinstance(self.context, dict):
+            keys = (
+                "project_code",
+                "codice_progetto",
+                "entity",
+                "entita",
+                "ref",
+                "reference",
+                "code",
+            )
+            for key in keys:
+                val = self.context.get(key)
+                if val and isinstance(val, str):
+                    entities.add(val)
+            for list_key in ("entities", "entita_coinvolte", "projects", "progetti"):
+                val = self.context.get(list_key)
+                if isinstance(val, (list, tuple, set)):
+                    for item in val:
+                        if isinstance(item, str):
+                            entities.add(item)
+        return entities
+
+    def mark_superseded(
+        self,
+        replacement: Anomaly | list[Anomaly] | tuple[Anomaly, ...],
+        expected_entities: list[str] | tuple[str, ...] | set[str] | None = None,
+    ) -> None:
+        """Chiude un'anomalia del seed coperta da una o più regole automatiche (D-05).
+
+        Se sono specificate `expected_entities`, l'anomalia si chiude SOLO se tutte
+        le entità attese risultano coperte dall'insieme delle anomalie sostitutive.
+        """
+        if isinstance(replacement, Anomaly):
+            replacements = [replacement]
+        elif isinstance(replacement, (list, tuple)) and replacement:
+            replacements = list(replacement)
+        else:
+            raise ValidationError({"superseded_by": "L'anomalia sostitutiva non è valida."})
+
+        for rep in replacements:
+            if not isinstance(rep, Anomaly):
+                raise ValidationError({"superseded_by": "L'anomalia sostitutiva non è valida."})
+            if rep == self or (self.pk and rep.pk and self.pk == rep.pk):
+                raise ValidationError(
+                    {"superseded_by": "Un'anomalia non può sostituire se stessa."}
+                )
+            if rep._state.adding or not rep.pk:
+                raise ValidationError(
+                    {"superseded_by": "L'anomalia sostitutiva deve essere prima salvata."}
+                )
+
+        if expected_entities:
+            covered: set[str] = set()
+            for rep in replacements:
+                covered.update(rep.extract_covered_entities())
+            missing = set(expected_entities) - covered
+            if missing:
+                raise ValidationError(
+                    {
+                        "superseded_by": (
+                            f"Copertura incompleta: mancano le entità {sorted(missing)}."
+                        )
+                    }
+                )
+
         from django.utils import timezone
 
-        self.superseded_by = replacement
+        self.superseded_by = replacements[0]
         self.status = AnomalyStatus.RISOLTA
-        self.resolution_note = (
-            f"Sostituita dal controllo automatico {replacement.rule_code} "
-            f"(anomalia {replacement.id})."
-        )
         self.resolved_at = timezone.now()
+
+        if len(replacements) == 1:
+            self.resolution_note = (
+                f"Sostituita dal controllo automatico {replacements[0].rule_code} "
+                f"(anomalia {replacements[0].id})."
+            )
+        else:
+            rule_codes = ", ".join(sorted({r.rule_code for r in replacements}))
+            ids_str = ", ".join(str(r.id) for r in replacements)
+            entities_str = (
+                ", ".join(expected_entities) if expected_entities else ", ".join(sorted(covered))
+            )
+            self.resolution_note = (
+                f"Sostituita dai controlli automatici {rule_codes} (anomalie: {ids_str}) "
+                f"coprendo tutte le entità: {entities_str}."
+            )
+            if not isinstance(self.context, dict):
+                self.context = {}
+            self.context["superseded_by_ids"] = [str(r.id) for r in replacements]

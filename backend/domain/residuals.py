@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 from django.db import models
 from django.db.models import DecimalField, F, Q, Sum, Value
@@ -229,3 +230,137 @@ def projects_with_usable_residual(today: date, years_valid_after_closure: int = 
         )
         .order_by(F("actual_closure_date").asc(nulls_last=True), "code")
     )
+
+
+def project_review_queue_qs(queryset: models.QuerySet | None = None) -> models.QuerySet:
+    """Queryset dei progetti che richiedono revisione (D-03):
+
+    - CHIUSO senza data di chiusura (3 nel seed);
+    - DA_VERIFICARE (9 nel seed, con wallet storico).
+    """
+    from projects.models import TimesheetStatus
+
+    base = project_balance_qs(queryset)
+    return base.filter(
+        Q(timesheet_status=TimesheetStatus.CHIUSO, actual_closure_date__isnull=True)
+        | Q(timesheet_status=TimesheetStatus.DA_VERIFICARE)
+    )
+
+
+def review_queue_projects(
+    *,
+    as_of: date | None = None,
+    years_valid_after_closure: int | None = None,
+    expiring_window_days: int | None = None,
+    queryset: models.QuerySet | None = None,
+) -> list[dict[str, Any]]:
+    """Restituisce i progetti della coda di revisione (D-03).
+
+    I progetti sono ordinati per scadenza potenziale crescente.
+    Include logica di precompilazione di data_fine_prevista se l'utente scegliesse CHIUSO,
+    e un avviso esplicito se il residuo scadrebbe entro la finestra di guardia (default 90 gg).
+    """
+    from core.models import AppSettings
+    from domain.money import format_days_it
+    from projects.models import TimesheetStatus
+
+    if years_valid_after_closure is None or expiring_window_days is None:
+        settings_obj = AppSettings.get_solo()
+        if years_valid_after_closure is None:
+            years_valid_after_closure = settings_obj.residual_years_after_closure
+        if expiring_window_days is None:
+            expiring_window_days = settings_obj.residual_expiring_window_days
+
+    if as_of is None:
+        from django.utils import timezone
+
+        as_of = timezone.localdate()
+
+    qs = project_review_queue_qs(queryset).select_related("client_owner", "supplier_owner")
+
+    items: list[dict[str, Any]] = []
+    for project in qs:
+        # 1. Motivo e tipo di revisione
+        if (
+            project.timesheet_status == TimesheetStatus.CHIUSO
+            and project.actual_closure_date is None
+        ):
+            tipo_revisione = "CHIUSO_SENZA_DATA"
+            motivo_revisione = "Progetto CHIUSO senza data di chiusura (D-03)."
+        else:
+            tipo_revisione = "DA_VERIFICARE"
+            motivo_revisione = (
+                "Stato consuntivazione DA_VERIFICARE con residuo da chiarire (D-03/D-04)."
+            )
+
+        # 2. Precompilazione data chiusura per D-03
+        if project.actual_closure_date:
+            proposed_closure = project.actual_closure_date
+            proposed_source = "data_chiusura_consuntivazione"
+        elif project.planned_end_date:
+            proposed_closure = project.planned_end_date
+            proposed_source = "data_fine_prevista"
+        else:
+            proposed_closure = as_of
+            proposed_source = "data_riferimento"
+
+        # 3. Scadenza potenziale del residuo
+        if proposed_closure:
+            potential_expiry = last_usable_day(
+                proposed_closure, years_valid_after_closure=years_valid_after_closure
+            )
+            days_to_expiry = (potential_expiry - as_of).days
+        else:
+            potential_expiry = None
+            days_to_expiry = None
+
+        # 4. Avviso di scadenza (se entro 90 giorni o già scaduto)
+        avviso_scadenza: str | None = None
+        in_scadenza_90gg = False
+        if potential_expiry is not None and days_to_expiry is not None:
+            if days_to_expiry < 0:
+                in_scadenza_90gg = True
+                avviso_scadenza = (
+                    f"{format_days_it(project.residual_days)} scaduti il "
+                    f"{potential_expiry.strftime('%d/%m/%Y')}."
+                )
+            elif days_to_expiry <= expiring_window_days:
+                in_scadenza_90gg = True
+                avviso_scadenza = (
+                    f"{format_days_it(project.residual_days)} utilizzabili fino al "
+                    f"{potential_expiry.strftime('%d/%m/%Y')}."
+                )
+
+        items.append(
+            {
+                "id": project.id,
+                "codice": project.code,
+                "titolo": project.title,
+                "tipo_contratto": project.contract_type,
+                "stato_consuntivazione": project.timesheet_status,
+                "stato_fatturazione": project.billing_status,
+                "stato_offerta": project.offer_status,
+                "tipo_revisione": tipo_revisione,
+                "motivo_revisione": motivo_revisione,
+                "budget": project.budget_days,
+                "consuntivi_diretti": project.direct_consumed_days,
+                "allocato_a_wallet": project.allocated_to_wallet_days,
+                "consumato_via_wallet": project.consumed_via_wallet_days,
+                "consumato_totale": project.total_consumed_days,
+                "residuo": project.residual_days,
+                "data_inizio": project.start_date,
+                "data_fine_prevista": project.planned_end_date,
+                "data_chiusura_consuntivazione": project.actual_closure_date,
+                "data_chiusura_proposta": proposed_closure,
+                "fonte_data_chiusura_proposta": proposed_source,
+                "scadenza_potenziale": potential_expiry,
+                "giorni_a_scadenza_potenziale": days_to_expiry,
+                "in_scadenza_entro_90gg": in_scadenza_90gg,
+                "avviso_scadenza": avviso_scadenza,
+                "punti_da_verificare": project.verification_points or [],
+            }
+        )
+
+    # 5. Ordinamento per scadenza potenziale crescente, poi codice
+    items.sort(key=lambda x: (x["scadenza_potenziale"] or date.max, x["codice"]))
+    return items

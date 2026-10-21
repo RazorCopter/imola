@@ -17,17 +17,24 @@ from contextlib import contextmanager
 
 from django.db import connection, transaction
 
+from imports.models import ImportKind
+
 logger = logging.getLogger(__name__)
 
 SESSION_FLAG = "supplier_ledger.allow_ledger_mutation"
 
 
 @contextmanager
-def allow_ledger_mutation(reason: str) -> Iterator[None]:
+def allow_ledger_mutation(reason: str, batch: object | None = None) -> Iterator[None]:
     """Consente UPDATE e DELETE sui consuntivi per la transazione corrente.
 
     `SET LOCAL` limita l'effetto alla transazione, quindi la finestra si chiude da sé al
     commit o al rollback, anche in caso di errore.
+
+    D-14: la mutazione diretta del ledger è consentita esclusivamente se il batch associato
+    è di tipo SEED_JSON. Per batch PPM o altri tipi futuri, la cancellazione e la mutazione
+    diretta del ledger sono rifiutate (i batch PPM di Fase 5 si annullano esclusivamente con
+    storni contabili append-only).
     """
     if not reason or not reason.strip():
         raise ValueError("Serve una motivazione per modificare i consuntivi.")
@@ -35,6 +42,15 @@ def allow_ledger_mutation(reason: str) -> Iterator[None]:
         raise RuntimeError(
             "allow_ledger_mutation richiede una transazione: usalo dentro transaction.atomic()."
         )
+
+    if batch is not None:
+        batch_kind = getattr(batch, "kind", batch)
+        if batch_kind != ImportKind.SEED_JSON:
+            raise PermissionError(
+                f"allow_ledger_mutation vietata per il batch di tipo '{batch_kind}': "
+                "solo i batch SEED_JSON ammettono mutazioni dirette del ledger. "
+                "I batch PPM e altri tipi richiedono storni contabili append-only (D-14)."
+            )
 
     logger.warning(
         "Finestra di modifica dei consuntivi aperta", extra={"motivazione": reason.strip()}

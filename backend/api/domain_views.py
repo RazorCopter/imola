@@ -110,6 +110,42 @@ class ProjectBalancesView(APIView):
         return Response({"results": rows, "count": len(rows)})
 
 
+class ProjectReviewQueueView(APIView):
+    """Coda di revisione progetti: 3 CHIUSO senza data + 9 DA_VERIFICARE (D-03)."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: dict})
+    def get(self, request):
+        from datetime import date
+
+        from domain.residuals import review_queue_projects
+
+        as_of = None
+        as_of_param = request.query_params.get("as_of") or request.query_params.get(
+            "reference_date"
+        )
+        if as_of_param:
+            try:
+                as_of = date.fromisoformat(as_of_param)
+            except ValueError:
+                pass
+
+        items = review_queue_projects(as_of=as_of)
+        return Response(
+            {
+                "results": items,
+                "count": len(items),
+                "chiuso_senza_data_count": sum(
+                    1 for x in items if x["tipo_revisione"] == "CHIUSO_SENZA_DATA"
+                ),
+                "da_verificare_count": sum(
+                    1 for x in items if x["tipo_revisione"] == "DA_VERIFICARE"
+                ),
+            }
+        )
+
+
 class WalletBalanceView(APIView):
     permission_classes = [IsAuthenticated]
 

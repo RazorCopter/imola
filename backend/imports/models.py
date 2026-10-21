@@ -22,6 +22,11 @@ class ImportStatus(models.TextChoices):
     FAILED = "FAILED", "Errore"
 
 
+class ImportIssueLevel(models.TextChoices):
+    WARNING = "WARNING", "Avviso"
+    ERROR = "ERROR", "Errore"
+
+
 class ImportBatch(TrackedModel):
     kind = models.CharField(max_length=20, choices=ImportKind.choices, verbose_name="tipo")
     status = models.CharField(
@@ -32,6 +37,12 @@ class ImportBatch(TrackedModel):
     )
     file = models.FileField(upload_to="imports/%Y/%m/", null=True, blank=True)
     source_filename = models.CharField(max_length=255, blank=True, verbose_name="nome file")
+    content_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        db_index=True,
+        verbose_name="hash SHA-256 del contenuto",
+    )
     report = models.JSONField(default=dict, blank=True, verbose_name="report")
     applied_by = models.ForeignKey(
         "auth.User",
@@ -61,6 +72,25 @@ class ImportBatch(TrackedModel):
     @property
     def can_rollback(self) -> bool:
         return self.status == ImportStatus.APPLIED
+
+
+class ImportIssue(TrackedModel):
+    """Avviso o errore strutturato emerso durante l'applicazione di un batch."""
+
+    batch = models.ForeignKey(ImportBatch, on_delete=models.CASCADE, related_name="issues")
+    level = models.CharField(max_length=10, choices=ImportIssueLevel.choices)
+    entity = models.CharField(max_length=100, blank=True)
+    key = models.CharField(max_length=255, blank=True)
+    message = models.TextField()
+
+    class Meta:
+        verbose_name = "problema di import"
+        verbose_name_plural = "problemi di import"
+        ordering = ("created_at",)
+
+    def __str__(self) -> str:
+        location = f" [{self.entity}:{self.key}]" if self.entity or self.key else ""
+        return f"{self.get_level_display()}{location}: {self.message}"
 
 
 class ImportedRecordMixin(models.Model):

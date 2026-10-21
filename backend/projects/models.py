@@ -15,7 +15,7 @@ from simple_history.models import HistoricalRecords
 
 from core.fields import DaysField
 from core.models import TrackedModel, VerifiableMixin
-from imports.models import ImportedRecordMixin
+from imports.models import ImportedRecordMixin, ImportKind
 
 
 class ContractType(models.TextChoices):
@@ -157,8 +157,9 @@ class Project(TrackedModel, VerifiableMixin, ImportedRecordMixin):
                 | models.Q(planned_end_date__gte=models.F("start_date")),
                 name="project_end_after_start",
             ),
-            # I progetti CHIUSO importati senza data sono ammessi solo se provengono da un
-            # import: restano in coda di revisione con anomalia CHK_CLOSED_NO_DATE (D-03).
+            # I progetti CHIUSO senza data sono ammessi SOLO se provengono da un import SEED_JSON
+            # (D-03, D-14): vincolo a livello DB raffinato dal trigger
+            # trg_project_closed_requires_seed_batch e validato a livello di modello in clean().
             models.CheckConstraint(
                 condition=~models.Q(timesheet_status=TimesheetStatus.CHIUSO)
                 | models.Q(actual_closure_date__isnull=False)
@@ -192,9 +193,20 @@ class Project(TrackedModel, VerifiableMixin, ImportedRecordMixin):
                 "Il progetto non può passare ad ATTIVO se l'offerta non è ACCETTATA."
             )
         if self.timesheet_status == TimesheetStatus.CHIUSO and self.actual_closure_date is None:
-            errors["actual_closure_date"] = (
-                "La data di chiusura è obbligatoria per un progetto CHIUSO."
-            )
+            is_seed = False
+            if self.import_batch_id:
+                try:
+                    is_seed = (
+                        self.import_batch is not None
+                        and self.import_batch.kind == ImportKind.SEED_JSON
+                    )
+                except Exception:
+                    is_seed = False
+            if not is_seed:
+                errors["actual_closure_date"] = (
+                    "La data di chiusura è obbligatoria per un progetto CHIUSO "
+                    "(l'eccezione è riservata al solo import seed JSON, vedi D-03/D-14)."
+                )
         if (
             self.actual_closure_date
             and self.start_date
