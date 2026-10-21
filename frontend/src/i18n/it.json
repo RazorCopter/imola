@@ -11,8 +11,16 @@
     "close": "Chiudi",
     "search": "Cerca",
     "commandPalette": "Cerca progetti, attività, anomalie",
-    "theme": { "light": "Tema chiaro", "dark": "Tema scuro", "system": "Tema di sistema" },
-    "density": { "label": "Densità", "compact": "Compatta", "comfortable": "Comoda" }
+    "theme": {
+      "light": "Tema chiaro",
+      "dark": "Tema scuro",
+      "system": "Tema di sistema"
+    },
+    "density": {
+      "label": "Densità",
+      "compact": "Compatta",
+      "comfortable": "Comoda"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -34,7 +42,10 @@
     "signInAgain": "Accedi di nuovo",
     "invalidCredentials": "Credenziali non valide."
   },
-  "units": { "days": "gg", "daysLong": "giornate" },
+  "units": {
+    "days": "gg",
+    "daysLong": "giornate"
+  },
   "project": {
     "code": "Codice",
     "title": "Titolo",
@@ -59,9 +70,12 @@
     "available": "Wallet disponibile",
     "allocated": "Allocato",
     "consumed": "Consumato",
+    "ongoingBudget": "Budget progetti in corso",
+    "ongoingOverrun": "Sforamenti in corso",
     "expiring": "Residui in scadenza",
     "expired": "Residui scaduti",
     "potential": "Residui potenziali da verificare",
+    "reviewQueueLink": "Vai alla coda di revisione",
     "newAllocation": "Nuova allocazione",
     "closeAllocation": "Chiudi allocazione",
     "reassign": "Riassegna",

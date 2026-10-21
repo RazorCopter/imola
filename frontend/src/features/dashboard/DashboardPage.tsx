@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api } from "@/lib/api";
@@ -11,7 +13,12 @@ interface WalletBalance {
   consumato: string;
   disponibile: string;
   disponibile_da_allocazioni: string;
+  disponibile_da_allocazioni_aperte: string;
+  capienza_wallet_potenziale: string;
+  residui_validi_non_allocati: string;
   residui_in_scadenza: string;
+  budget_residuo_progetti_in_corso: string;
+  sforamenti_progetti_in_corso: string;
   residui_scaduti: string;
   residui_potenziali_da_verificare: string;
 }
@@ -33,15 +40,29 @@ function KpiCard({
   value,
   hint,
   tone = "neutral",
+  tooltip,
+  action,
 }: {
   label: string;
   value: string;
-  hint?: string;
+  hint?: ReactNode;
   tone?: "neutral" | "ok" | "warn" | "danger";
+  tooltip?: string;
+  action?: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4 shadow-subtle">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className="rounded-lg border border-border bg-card p-4 shadow-subtle" title={tooltip}>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+        {tooltip !== undefined && (
+          <span
+            className="cursor-help text-xs text-muted-foreground hover:text-foreground"
+            aria-label={tooltip}
+          >
+            ⓘ
+          </span>
+        )}
+      </div>
       <p
         className={cn(
           "mt-2 font-mono text-2xl font-semibold tabular-nums",
@@ -52,7 +73,8 @@ function KpiCard({
       >
         {value}
       </p>
-      {hint !== undefined && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      {hint !== undefined && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
+      {action !== undefined && <div className="mt-2 text-xs font-medium">{action}</div>}
     </div>
   );
 }
@@ -106,18 +128,29 @@ export function DashboardPage() {
               hint={`${t("wallet.allocated")} ${formatDays(wallet.data?.allocato)} · ${t(
                 "wallet.consumed",
               )} ${formatDays(wallet.data?.consumato)}`}
+              tooltip={`Disponibile = allocato (${formatDays(wallet.data?.allocato)}) − consumato (${formatDays(wallet.data?.consumato)}) = ${formatDays(wallet.data?.disponibile)}`}
               tone="ok"
             />
             <KpiCard
-              label={t("wallet.expiring")}
-              value={formatDays(wallet.data?.residui_in_scadenza)}
-              hint={`${t("wallet.expired")}: ${formatDays(wallet.data?.residui_scaduti)}`}
-              tone="warn"
+              label={t("wallet.ongoingBudget")}
+              value={formatDays(wallet.data?.budget_residuo_progetti_in_corso)}
+              hint={`Separato dal wallet · ${t("wallet.ongoingOverrun")}: ${formatDays(wallet.data?.sforamenti_progetti_in_corso)}`}
+              tooltip={`Budget residuo progetti in corso al netto dei rilasci al wallet. Sforamenti: ${formatDays(wallet.data?.sforamenti_progetti_in_corso)}`}
+              tone="neutral"
             />
             <KpiCard
               label={t("wallet.potential")}
               value={formatDays(wallet.data?.residui_potenziali_da_verificare)}
               hint="Esclusi dal disponibile ufficiale"
+              tooltip="12 progetti da verificare o chiusi senza data; non spendibili finché non chiariti"
+              action={
+                <Link
+                  to="/revisione"
+                  className="text-primary inline-flex items-center underline underline-offset-4 hover:opacity-80"
+                >
+                  {t("wallet.reviewQueueLink")} &rarr;
+                </Link>
+              }
               tone="warn"
             />
             <KpiCard
@@ -130,6 +163,7 @@ export function DashboardPage() {
                     ).toLocaleDateString("it-IT")}`
                   : t("app.empty")
               }
+              tooltip="Differenza consuntivi interni vs ultimo estratto PPM fornitore"
               tone={reconciliation.data?.riepilogo.ko ? "danger" : "ok"}
             />
           </>
