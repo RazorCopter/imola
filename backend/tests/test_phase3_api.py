@@ -81,3 +81,30 @@ def test_fornitore_non_puo_creare_un_progetto():
     )
 
     assert response.status_code == 403
+
+
+def test_command_search_trova_progetti():
+    project = ProjectFactory(code="IM-SEARCH", title="Ricerca palette")
+    client = APIClient()
+    client.force_authenticate(user=UserFactory())
+
+    response = client.get("/api/v1/search", {"q": "SEARCH"})
+
+    assert response.status_code == 200
+    assert response.json()["results"][0] == {
+        "tipo": "progetto",
+        "id": str(project.id),
+        "codice": "IM-SEARCH",
+        "titolo": "Ricerca palette",
+        "url": f"/progetti/{project.id}",
+    }
+
+
+def test_command_search_non_esegue_query_con_un_solo_carattere():
+    client = APIClient()
+    client.force_authenticate(user=UserFactory())
+
+    response = client.get("/api/v1/search", {"q": "I"})
+
+    assert response.status_code == 200
+    assert response.json() == {"results": []}

@@ -344,6 +344,62 @@ class CanoneListView(APIView):
         )
 
 
+class CommandSearchView(APIView):
+    """Ricerca globale leggera per la command palette."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: dict})
+    def get(self, request):
+        from django.db.models import Q
+
+        from anomalies.models import Anomaly
+        from projects.models import Project
+        from wallet.models import WalletActivity
+
+        query = str(request.query_params.get("q", "")).strip()
+        if len(query) < 2:
+            return Response({"results": []})
+        projects = Project.objects.filter(Q(code__icontains=query) | Q(title__icontains=query))[:8]
+        activities = WalletActivity.objects.filter(
+            Q(code__icontains=query) | Q(title__icontains=query)
+        )[:8]
+        anomalies = Anomaly.objects.filter(
+            Q(external_ref__icontains=query) | Q(description__icontains=query)
+        )[:8]
+        results = [
+            {
+                "tipo": "progetto",
+                "id": row.id,
+                "codice": row.code,
+                "titolo": row.title,
+                "url": f"/progetti/{row.id}",
+            }
+            for row in projects
+        ]
+        results.extend(
+            {
+                "tipo": "attivita_wallet",
+                "id": row.id,
+                "codice": row.code,
+                "titolo": row.title,
+                "url": "/wallet",
+            }
+            for row in activities
+        )
+        results.extend(
+            {
+                "tipo": "anomalia",
+                "id": row.id,
+                "codice": row.external_ref or row.rule_code,
+                "titolo": row.description,
+                "url": "/anomalie",
+            }
+            for row in anomalies
+        )
+        return Response({"results": results})
+
+
 class CanoneStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
