@@ -7,12 +7,20 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from django.conf import settings
 
 REPO_DIR = Path(__file__).resolve().parent.parent
-SEED_FILE = Path(
-    os.environ.get("SEED_FILE", REPO_DIR / "data" / "seed" / "seed_imola_2026-10-16.json")
+SEED_FILE = getattr(
+    settings,
+    "SEED_FILE",
+    Path(os.environ.get("SEED_FILE", "/app/data/seed/seed_imola_2026-10-16.json")),
 )
-SEED_SCHEMA = Path(os.environ.get("SEED_SCHEMA", REPO_DIR / "seed_schema_v1.json"))
+_default_schema = (
+    "/seed_schema_v1.json"
+    if Path("/seed_schema_v1.json").exists()
+    else str(REPO_DIR / "seed_schema_v1.json")
+)
+SEED_SCHEMA = Path(os.environ.get("SEED_SCHEMA", _default_schema))
 
 
 def pytest_collection_modifyitems(config, items) -> None:

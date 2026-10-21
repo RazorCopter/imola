@@ -914,9 +914,10 @@ def _as_datetime(value: str | datetime) -> datetime:
     if isinstance(value, datetime):
         parsed = value
     else:
-        parsed = parse_datetime(value)
-        if parsed is None:
+        dt = parse_datetime(value)
+        if dt is None:
             raise ValueError(f"Data e ora non valida: {value}")
+        parsed = dt
     if timezone.is_naive(parsed):
         parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
     return parsed

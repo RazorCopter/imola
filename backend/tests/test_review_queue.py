@@ -18,7 +18,6 @@ from io import StringIO
 from pathlib import Path
 
 import pytest
-from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.core.management import call_command
 from rest_framework.test import APIClient
@@ -194,9 +193,8 @@ def test_api_review_queue_endpoint(api_client: APIClient):
 
 
 @pytest.mark.seedfile
-def test_review_queue_sul_seed_reale():
+def test_review_queue_sul_seed_reale(seed_file: Path):
     """Accettazione sul seed reale: identità, date, ordinamento e warning della coda."""
-    seed_file = Path(settings.BASE_DIR).parent / "data" / "seed" / "seed_imola_2026-10-16.json"
     if not seed_file.is_file():
         pytest.skip(f"File seed non presente in {seed_file}")
 

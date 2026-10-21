@@ -159,6 +159,17 @@ DAYS_DECIMAL_PLACES = 4
 DISPLAY_DECIMAL_PLACES = 2
 RESIDUAL_EXPIRING_WINDOW_DAYS = env_int("RESIDUAL_EXPIRING_WINDOW_DAYS", 90)
 
+# --- Seed files -----------------------------------------------------------
+_seed_in_app = Path("/app/data/seed/seed_imola_2026-10-16.json")
+_seed_in_repo = REPO_DIR / "data" / "seed" / "seed_imola_2026-10-16.json"
+_seed_in_base = BASE_DIR / "data" / "seed" / "seed_imola_2026-10-16.json"
+_default_seed_path = (
+    str(_seed_in_app)
+    if _seed_in_app.parent.exists()
+    else str(_seed_in_base if _seed_in_base.parent.exists() else _seed_in_repo)
+)
+SEED_FILE = Path(env("SEED_FILE", _default_seed_path))
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

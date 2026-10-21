@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from django.db import models, transaction
 from django.db.models import Q
@@ -99,7 +99,7 @@ def _external_dependencies(batch: ImportBatch) -> list[str]:
 
     blockers: list[str] = []
     for label, target_model in ROLLBACK_ORDER:
-        target_ids = target_model.objects.filter(import_batch=batch).values("pk")
+        target_ids = cast(Any, target_model).objects.filter(import_batch=batch).values("pk")
         if not target_ids.exists():
             continue
         for relation in target_model._meta.related_objects:
@@ -107,8 +107,10 @@ def _external_dependencies(batch: ImportBatch) -> list[str]:
             if not hasattr(related_model, "import_batch"):
                 continue
             field = relation.field
-            external = related_model.objects.filter(**{f"{field.name}__in": target_ids}).exclude(
-                import_batch=batch
+            external = (
+                cast(Any, related_model)
+                .objects.filter(**{f"{field.name}__in": target_ids})
+                .exclude(import_batch=batch)
             )
             count = external.count()
             if count:
@@ -146,12 +148,13 @@ def rollback_seed_batch(batch_id: str) -> RollbackResult:
         raise RollbackError("Rollback bloccato da dipendenze esterne: " + "; ".join(blockers))
 
     deleted = {
-        label: model.objects.filter(import_batch=batch).count() for label, model in ROLLBACK_ORDER
+        label: cast(Any, model).objects.filter(import_batch=batch).count()
+        for label, model in ROLLBACK_ORDER
     }
     reason = f"Rollback batch seed {batch.id}"
     with allow_ledger_mutation(reason, batch=batch):
         for _label, model in ROLLBACK_ORDER:
-            model.objects.filter(import_batch=batch).delete()
+            cast(Any, model).objects.filter(import_batch=batch).delete()
 
     rolled_back_at = timezone.now()
     report = dict(batch.report or {})

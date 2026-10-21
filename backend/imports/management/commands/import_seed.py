@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from importers.batch import ImportConflictError, ImportExecutionError, orchestrate_seed
@@ -15,7 +16,12 @@ class Command(BaseCommand):
     help = "Valida e importa un seed JSON (default: apply; usare --dry-run per simulare)."
 
     def add_arguments(self, parser: Any) -> None:
-        parser.add_argument("file", help="Percorso del file seed JSON.")
+        parser.add_argument(
+            "file",
+            nargs="?",
+            default=None,
+            help="Percorso del file seed JSON (default: settings.SEED_FILE).",
+        )
         mode = parser.add_mutually_exclusive_group()
         mode.add_argument(
             "--dry-run",
@@ -40,9 +46,12 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args: Any, **options: Any) -> None:
+        target_file = options["file"] or str(
+            getattr(settings, "SEED_FILE", "/app/data/seed/seed_imola_2026-10-16.json")
+        )
         try:
             result = orchestrate_seed(
-                options["file"],
+                target_file,
                 dry_run=options["dry_run"],
                 schema_path=options["schema"],
             )

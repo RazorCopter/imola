@@ -7,7 +7,6 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from django.conf import settings
 from django.core.management import call_command
 from rest_framework.test import APIClient
 
@@ -19,8 +18,7 @@ pytestmark = [pytest.mark.django_db, pytest.mark.seedfile]
 
 
 @pytest.fixture
-def imported_seed() -> Path:
-    seed_file = Path(settings.BASE_DIR).parent / "data" / "seed" / "seed_imola_2026-10-16.json"
+def imported_seed(seed_file: Path) -> Path:
     if not seed_file.is_file():
         pytest.skip(f"File seed non presente in {seed_file}")
     call_command("import_seed", str(seed_file), "--apply", verbosity=0)

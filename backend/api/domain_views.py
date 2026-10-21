@@ -242,7 +242,7 @@ class ReleaseProjectToWalletView(APIView):
             )
 
         project.released_to_wallet_days = quantize_days(project.released_to_wallet_days + days)
-        project._change_reason = reason
+        project._change_reason = reason  # type: ignore[attr-defined]
         project.save(update_fields=["released_to_wallet_days", "updated_at"])
         return Response(
             {
