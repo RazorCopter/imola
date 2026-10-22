@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { DaysValue } from "@/components/DaysValue";
 import { KpiCard } from "@/components/KpiCard";
@@ -24,6 +24,8 @@ interface Balance {
   >;
 }
 interface Flow {
+  id: string;
+  riferimento: string;
   origine: string;
   origine_titolo: string;
   destinazione: string;
@@ -36,6 +38,7 @@ interface Flow {
 
 export function WalletPage() {
   const year = new Date().getFullYear();
+  const queryClient = useQueryClient();
   const balance = useQuery({
     queryKey: ["wallet", "balance", year],
     queryFn: () => api.get<Balance>(`/wallet/${year}/balance`),
@@ -43,6 +46,20 @@ export function WalletPage() {
   const flow = useQuery({
     queryKey: ["wallet", "flow", year],
     queryFn: () => api.get<{ results: Flow[] }>(`/wallet/${year}/flow`),
+  });
+  const adjust = useMutation({
+    mutationFn: ({
+      id,
+      allocated_days,
+      status,
+    }: {
+      id: string;
+      allocated_days?: string;
+      status?: string;
+    }) => api.post(`/allocations/${id}/adjust`, { allocated_days, status }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["wallet"] });
+    },
   });
   if (balance.isLoading || flow.isLoading) return <LoadingState />;
   if (balance.isError || flow.isError || !balance.data)
@@ -93,6 +110,20 @@ export function WalletPage() {
                   <DaysValue value={row.allocato} />
                   <div>
                     <StatusBadge status={row.stato} />
+                  </div>
+                  <div className="mt-2 flex justify-end gap-1">
+                    <button
+                      className="rounded border border-border px-2 py-1 text-[10px]"
+                      onClick={() => adjust.mutate({ id: row.id, allocated_days: row.consumato })}
+                    >
+                      Riduci al consumato
+                    </button>
+                    <button
+                      className="rounded border border-danger/40 px-2 py-1 text-[10px] text-danger"
+                      onClick={() => adjust.mutate({ id: row.id, status: "CHIUSA" })}
+                    >
+                      Chiudi
+                    </button>
                   </div>
                 </div>
               </div>

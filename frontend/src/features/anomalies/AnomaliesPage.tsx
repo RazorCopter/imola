@@ -33,8 +33,21 @@ export function AnomaliesPage() {
     onSuccess: async () => client.invalidateQueries({ queryKey: ["anomalies"] }),
   });
   const act = useMutation({
-    mutationFn: ({ id, action, nota }: { id: string; action: string; nota?: string }) =>
-      api.post(`/anomalies/${id}/${action}`, { nota: nota ?? "Gestita dall'inbox" }),
+    mutationFn: ({
+      id,
+      action,
+      nota,
+      finoAl,
+    }: {
+      id: string;
+      action: string;
+      nota?: string;
+      finoAl?: string;
+    }) =>
+      api.post(`/anomalies/${id}/${action}`, {
+        nota: nota ?? "Gestita dall'inbox",
+        fino_al: finoAl,
+      }),
     onSuccess: async () => client.invalidateQueries({ queryKey: ["anomalies"] }),
   });
   if (query.isLoading) return <LoadingState />;
@@ -117,6 +130,19 @@ export function AnomaliesPage() {
                     }
                   >
                     Risolvi
+                  </button>
+                  <button
+                    className="rounded border border-accent/40 px-2 py-1 text-xs text-accent"
+                    onClick={() =>
+                      act.mutate({
+                        id: item.id,
+                        action: "accept",
+                        nota: "Deroga approvata con scadenza",
+                        finoAl: "2026-12-31",
+                      })
+                    }
+                  >
+                    Accetta con deroga
                   </button>
                 </div>
               )}

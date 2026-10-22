@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Link, useParams } from "react-router-dom";
 
@@ -14,9 +14,32 @@ interface ProjectResponse {
 
 export function ProjectDetailPage() {
   const { projectId } = useParams();
+  const client = useQueryClient();
   const query = useQuery({
     queryKey: ["projects", "balances"],
     queryFn: () => api.get<ProjectResponse>("/projects/balances"),
+  });
+  const audit = useQuery({
+    queryKey: ["audit", "project", projectId],
+    queryFn: () =>
+      api.get<{
+        results: {
+          history_id: number;
+          data: string;
+          tipo: string;
+          utente: string;
+          modifiche: string[];
+        }[];
+      }>(`/audit/project/${projectId}`),
+    enabled: Boolean(projectId),
+  });
+  const update = useMutation({
+    mutationFn: (payload: { planned_end_date?: string; notes?: string }) =>
+      api.patch(`/projects/${projectId}`, payload),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["projects"] });
+      await client.invalidateQueries({ queryKey: ["audit", "project", projectId] });
+    },
   });
   if (query.isLoading) return <LoadingState />;
   if (query.isError) return <ErrorState title="Impossibile caricare il progetto" />;
@@ -95,14 +118,66 @@ export function ProjectDetailPage() {
             </p>
           </div>
         </Tabs.Content>
-        {tabs.slice(1).map((tab) => (
+        {tabs.slice(1, -1).map((tab) => (
           <Tabs.Content key={tab} value={tab} className="pt-4">
-            <EmptyState
-              title={`${tab}: nessun elemento da mostrare`}
-              detail="La struttura è pronta; i dati specifici saranno collegati ai rispettivi endpoint CRUD."
-            />
+            {tab === "Anomalie" ? (
+              <div className="rounded-lg border border-border bg-card p-4">
+                <h2 className="font-medium">Azioni sul progetto</h2>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <input
+                    id="planned-end-date"
+                    type="date"
+                    defaultValue="2026-12-31"
+                    className="rounded border border-input bg-background px-3 py-2 text-sm"
+                  />
+                  <button
+                    className="rounded bg-accent px-3 py-2 text-sm font-medium text-accent-foreground"
+                    onClick={() => {
+                      const input = document.getElementById("planned-end-date") as HTMLInputElement;
+                      update.mutate({ planned_end_date: input.value });
+                    }}
+                  >
+                    Aggiorna data fine prevista
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <EmptyState
+                title={`${tab}: nessun elemento da mostrare`}
+                detail="La struttura è pronta; i dati specifici saranno collegati ai rispettivi endpoint CRUD."
+              />
+            )}
           </Tabs.Content>
         ))}
+        <Tabs.Content value="Storico modifiche" className="pt-4">
+          {audit.isLoading ? (
+            <LoadingState />
+          ) : audit.data?.results.length ? (
+            <div className="space-y-2">
+              {audit.data.results.map((record) => (
+                <article
+                  key={record.history_id}
+                  className="rounded-lg border border-border bg-card p-4 text-sm"
+                >
+                  <div className="flex justify-between gap-3">
+                    <span className="font-medium">{record.tipo}</span>
+                    <time className="text-xs text-muted-foreground">
+                      {new Date(record.data).toLocaleString("it-IT")}
+                    </time>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">Utente: {record.utente}</p>
+                  <ul className="mt-2 list-disc pl-5 text-xs">
+                    {record.modifiche.map((m) => (
+                      <li key={m}>{m}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <EmptyState title="Nessuna modifica registrata" />
+          )}
+        </Tabs.Content>
       </Tabs.Root>
     </section>
   );

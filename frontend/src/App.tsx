@@ -1,20 +1,41 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { AppShell } from "@/components/AppShell";
 import { CommandPalette } from "@/components/CommandPalette";
+import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { LoadingState } from "@/components/UiState";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { SessionExpiredDialog } from "@/features/auth/SessionExpiredDialog";
 import { useSession } from "@/features/auth/session";
-import { DashboardPage } from "@/features/dashboard/DashboardPage";
-import { AnomaliesPage } from "@/features/anomalies/AnomaliesPage";
-import { ReconciliationPage } from "@/features/reconciliation/ReconciliationPage";
-import { CanonePage } from "@/features/canone/CanonePage";
-import { ProjectDetailPage } from "@/features/projects/ProjectDetailPage";
-import { ProjectsPage } from "@/features/projects/ProjectsPage";
-import { WalletPage } from "@/features/wallet/WalletPage";
-import { PlaceholderPage } from "@/components/PlaceholderPage";
+
+const DashboardPage = lazy(() =>
+  import("@/features/dashboard/DashboardPage").then((m) => ({ default: m.DashboardPage })),
+);
+const AnomaliesPage = lazy(() =>
+  import("@/features/anomalies/AnomaliesPage").then((m) => ({ default: m.AnomaliesPage })),
+);
+const ReconciliationPage = lazy(() =>
+  import("@/features/reconciliation/ReconciliationPage").then((m) => ({
+    default: m.ReconciliationPage,
+  })),
+);
+const CanonePage = lazy(() =>
+  import("@/features/canone/CanonePage").then((m) => ({ default: m.CanonePage })),
+);
+const ProjectDetailPage = lazy(() =>
+  import("@/features/projects/ProjectDetailPage").then((m) => ({ default: m.ProjectDetailPage })),
+);
+const ProjectsPage = lazy(() =>
+  import("@/features/projects/ProjectsPage").then((m) => ({ default: m.ProjectsPage })),
+);
+const WalletPage = lazy(() =>
+  import("@/features/wallet/WalletPage").then((m) => ({ default: m.WalletPage })),
+);
+const ReviewQueuePage = lazy(() =>
+  import("@/features/review/ReviewQueuePage").then((m) => ({ default: m.ReviewQueuePage })),
+);
 
 export default function App() {
   const { status } = useSession();
@@ -46,20 +67,22 @@ export default function App() {
 
   return (
     <>
-      <Routes>
-        <Route element={<AppShell onOpenCommandPalette={() => setPaletteOpen(true)} />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/progetti" element={<ProjectsPage />} />
-          <Route path="/progetti/:projectId" element={<ProjectDetailPage />} />
-          <Route path="/wallet" element={<WalletPage />} />
-          <Route path="/canone" element={<CanonePage />} />
-          <Route path="/riconciliazione" element={<ReconciliationPage />} />
-          <Route path="/anomalie" element={<AnomaliesPage />} />
-          <Route path="/revisione" element={<PlaceholderPage titleKey="nav.review" />} />
-          <Route path="/amministrazione" element={<PlaceholderPage titleKey="nav.admin" />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<LoadingState />}>
+        <Routes>
+          <Route element={<AppShell onOpenCommandPalette={() => setPaletteOpen(true)} />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/progetti" element={<ProjectsPage />} />
+            <Route path="/progetti/:projectId" element={<ProjectDetailPage />} />
+            <Route path="/wallet" element={<WalletPage />} />
+            <Route path="/canone" element={<CanonePage />} />
+            <Route path="/riconciliazione" element={<ReconciliationPage />} />
+            <Route path="/anomalie" element={<AnomaliesPage />} />
+            <Route path="/revisione" element={<ReviewQueuePage />} />
+            <Route path="/amministrazione" element={<PlaceholderPage titleKey="nav.admin" />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </Suspense>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <SessionExpiredDialog />
     </>
