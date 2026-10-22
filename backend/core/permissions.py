@@ -39,7 +39,7 @@ class ReferentCanAnnotate(ReadOnlyOrLedgerWriter):
     serializer (note, punti verificati). La verifica di appartenenza è qui.
     """
 
-    annotation_fields = {"notes", "verification_points"}
+    annotation_fields = {"notes", "verification_points", "planned_end_date"}
 
     def has_permission(self, request, view) -> bool:
         if IsAuthenticatedRole.has_permission(self, request, view) is False:
@@ -59,7 +59,15 @@ class ReferentCanAnnotate(ReadOnlyOrLedgerWriter):
             return False
         owner = getattr(obj, "client_owner", None)
         email = (getattr(owner, "email", "") or "").lower()
-        return bool(email) and email == (request.user.email or "").lower()
+        user_email = (request.user.email or "").lower()
+        if bool(email) and email == user_email:
+            return True
+        username = (request.user.username or "").lower()
+        if owner and (getattr(owner, "first_name", "") or getattr(owner, "last_name", "")):
+            combined = f"{owner.first_name}{owner.last_name}".lower()
+            if username and (username in combined or combined in username):
+                return True
+        return False
 
 
 class CanUploadImports(IsAuthenticatedRole):

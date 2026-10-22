@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 
 from core import roles
 from core.auth.providers import get_auth_provider
+from core.throttles import LoginRateThrottle
 
 
 class LoginSerializer(serializers.Serializer):
@@ -46,6 +47,7 @@ def session_payload(user) -> dict:
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [LoginRateThrottle]
     throttle_scope = "login"
     serializer_class = LoginSerializer
 

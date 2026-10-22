@@ -260,6 +260,8 @@ def wallet_flow(year: int) -> list[dict]:
     )
     return [
         {
+            "id": row.id,
+            "riferimento": row.external_ref,
             "origine": row.source_project.code if row.source_project_id else "WALLET-GENERALE",
             "origine_titolo": (
                 row.source_project.title if row.source_project_id else "Wallet senza origine"

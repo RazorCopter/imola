@@ -49,6 +49,7 @@ class Command(BaseCommand):
                     "-d",
                     str(db["NAME"]),
                     "--no-owner",
+                    "--no-comments",
                 ],
                 stdout=subprocess.PIPE,
                 env=env,

@@ -30,6 +30,27 @@ urlpatterns = [
     path("projects", domain_views.ProjectListCreateView.as_view(), name="project-list-create"),
     path("projects/balances", domain_views.ProjectBalancesView.as_view(), name="project-balances"),
     path(
+        "projects/<uuid:pk>",
+        domain_views.ProjectDetailUpdateView.as_view(),
+        name="project-detail-update",
+    ),
+    path(
+        "projects/<uuid:pk>/confirm-review",
+        domain_views.ProjectConfirmReviewView.as_view(),
+        name="project-confirm-review",
+    ),
+    path(
+        "allocations/<uuid:pk>/adjust",
+        domain_views.WalletAllocationAdjustView.as_view(),
+        name="allocation-adjust",
+    ),
+    path(
+        "audit/<str:entity_type>/<uuid:pk>",
+        domain_views.AuditHistoryView.as_view(),
+        name="audit-history",
+    ),
+    path("imports/ppm", domain_views.PpmImportUploadView.as_view(), name="import-ppm-upload"),
+    path(
         "review-queue",
         domain_views.ProjectReviewQueueView.as_view(),
         name="review-queue",

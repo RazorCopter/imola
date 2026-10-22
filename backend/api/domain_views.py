@@ -20,7 +20,7 @@ from rest_framework.views import APIView
 
 from canone.models import Canone
 from core.models import AppSettings
-from core.permissions import IsAdmin, ReadOnlyOrLedgerWriter
+from core.permissions import CanUploadImports, IsAdmin, ReadOnlyOrLedgerWriter, ReferentCanAnnotate
 from domain.canone_status import canone_burndown, canone_status
 from domain.money import ZERO, quantize_days
 from domain.reconciliation import reconcile, reconciliation_summary
@@ -30,6 +30,16 @@ from domain.wallet_balance import wallet_flow, wallet_year_balance
 
 class DomainResponseSerializer(serializers.Serializer):
     """Schema di fallback esplicito per risposte di dominio documentate come oggetti."""
+
+
+class ProjectListResponseSerializer(serializers.Serializer):
+    results = serializers.ListField(child=serializers.DictField())
+    count = serializers.IntegerField()
+
+
+class AuditHistoryResponseSerializer(serializers.Serializer):
+    results = serializers.ListField(child=serializers.DictField())
+    count = serializers.IntegerField()
 
 
 class DocumentedAPIView(APIView):
@@ -81,7 +91,7 @@ class ProjectListCreateView(DocumentedAPIView):
 
     permission_classes = [ReadOnlyOrLedgerWriter]
 
-    @extend_schema(responses={200: dict})
+    @extend_schema(operation_id="project_list", responses={200: ProjectListResponseSerializer})
     def get(self, request):
         from projects.models import Project
 
@@ -538,3 +548,203 @@ class ReconciliationView(DocumentedAPIView):
                 ],
             }
         )
+
+
+class ProjectDetailUpdateView(DocumentedAPIView):
+    permission_classes = [ReferentCanAnnotate]
+
+    def get_object(self, pk):
+        from projects.models import Project
+
+        obj = get_object_or_404(Project, pk=pk)
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    @extend_schema(operation_id="project_detail", responses={200: dict})
+    def get(self, request, pk):
+        project = self.get_object(pk)
+        return Response(
+            {
+                "id": project.id,
+                "codice": project.code,
+                "titolo": project.title,
+                "tipo_contratto": project.contract_type,
+                "stato_consuntivazione": project.timesheet_status,
+                "stato_fatturazione": project.billing_status,
+                "stato_offerta": project.offer_status,
+                "budget_days": str(project.budget_days),
+                "start_date": str(project.start_date) if project.start_date else None,
+                "planned_end_date": (
+                    str(project.planned_end_date) if project.planned_end_date else None
+                ),
+                "actual_closure_date": (
+                    str(project.actual_closure_date) if project.actual_closure_date else None
+                ),
+                "notes": project.notes,
+            }
+        )
+
+    @extend_schema(request=dict, responses={200: dict})
+    def patch(self, request, pk):
+        from datetime import date
+
+        from core import roles
+
+        project = self.get_object(pk)
+        if "notes" in request.data:
+            project.notes = str(request.data["notes"])
+        if "planned_end_date" in request.data:
+            val = request.data["planned_end_date"]
+            project.planned_end_date = date.fromisoformat(val) if val else None
+        if roles.can_write_ledger(request.user):
+            if "actual_closure_date" in request.data:
+                val = request.data["actual_closure_date"]
+                project.actual_closure_date = date.fromisoformat(val) if val else None
+            if "timesheet_status" in request.data:
+                project.timesheet_status = request.data["timesheet_status"]
+            if "billing_status" in request.data:
+                project.billing_status = request.data["billing_status"]
+        project.full_clean()
+        project.save()
+        return self.get(request, pk)
+
+
+class ProjectConfirmReviewView(DocumentedAPIView):
+    permission_classes = [ReadOnlyOrLedgerWriter]
+
+    @extend_schema(request=dict, responses={200: dict})
+    def post(self, request, pk):
+        from datetime import date
+
+        from projects.models import Project
+
+        project = get_object_or_404(Project, pk=pk)
+        if "timesheet_status" in request.data:
+            project.timesheet_status = request.data["timesheet_status"]
+        if "actual_closure_date" in request.data:
+            val = request.data["actual_closure_date"]
+            project.actual_closure_date = date.fromisoformat(val) if val else None
+        project.full_clean()
+        project.save()
+        if project.actual_closure_date:
+            from anomalies.models import Anomaly, AnomalyStatus
+
+            for a in Anomaly.objects.filter(
+                project=project, rule_code="CHK_CLOSED_NO_DATE", status=AnomalyStatus.APERTA
+            ):
+                a.resolve("Data di chiusura confermata dalla coda di revisione.", request.user)
+                a.save()
+        return Response(
+            {
+                "id": project.id,
+                "timesheet_status": project.timesheet_status,
+                "actual_closure_date": str(project.actual_closure_date),
+            }
+        )
+
+
+class WalletAllocationAdjustView(DocumentedAPIView):
+    permission_classes = [ReadOnlyOrLedgerWriter]
+
+    @extend_schema(request=dict, responses={200: dict})
+    def post(self, request, pk):
+        from domain.money import to_days
+        from wallet.models import WalletAllocation
+
+        alloc = get_object_or_404(WalletAllocation, pk=pk)
+        if "allocated_days" in request.data:
+            alloc.allocated_days = to_days(request.data["allocated_days"])
+        if "status" in request.data:
+            alloc.status = request.data["status"]
+        alloc.full_clean()
+        alloc.save()
+        return Response(
+            {
+                "id": alloc.id,
+                "external_ref": alloc.external_ref,
+                "allocated_days": str(alloc.allocated_days),
+                "status": alloc.status,
+            }
+        )
+
+
+class AuditHistoryView(DocumentedAPIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: AuditHistoryResponseSerializer})
+    def get(self, request, entity_type: str, pk):
+        from anomalies.models import Anomaly
+        from projects.models import Project
+        from wallet.models import WalletAllocation
+
+        model_map = {
+            "project": Project,
+            "progetto": Project,
+            "projects": Project,
+            "allocation": WalletAllocation,
+            "allocazione": WalletAllocation,
+            "allocations": WalletAllocation,
+            "anomaly": Anomaly,
+            "anomalia": Anomaly,
+            "anomalies": Anomaly,
+        }
+        model_cls = model_map.get(entity_type.lower())
+        if model_cls is None:
+            return Response(
+                {"detail": "Tipo entità per audit non valido."}, status=status.HTTP_404_NOT_FOUND
+            )
+        instance = get_object_or_404(model_cls, pk=pk)
+        history_manager = instance.history  # type: ignore[attr-defined]
+        history_records = list(history_manager.all().order_by("-history_date")[:30])
+        rows = []
+        for i, h in enumerate(history_records):
+            changes = []
+            if i < len(history_records) - 1:
+                prev = history_records[i + 1]
+                delta = h.diff_against(prev)
+                for change in delta.changes:
+                    changes.append(f"{change.field}: {change.old} -> {change.new}")
+            rows.append(
+                {
+                    "history_id": h.history_id,
+                    "data": h.history_date.isoformat(),
+                    "tipo": h.get_history_type_display(),
+                    "utente": str(h.history_user or "Sistema"),
+                    "modifiche": changes,
+                }
+            )
+        return Response({"results": rows, "count": len(rows)})
+
+
+class PpmImportUploadView(DocumentedAPIView):
+    permission_classes = [CanUploadImports]
+
+    @extend_schema(request=dict, responses={200: dict})
+    def post(self, request):
+        import tempfile
+        from pathlib import Path
+
+        from core import roles
+        from importers.ppm import apply_ppm, dry_run_ppm
+
+        upload = request.FILES.get("file")
+        if upload is None:
+            return Response({"detail": "File non fornito."}, status=status.HTTP_400_BAD_REQUEST)
+        suffix = Path(upload.name).suffix
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            for chunk in upload.chunks():
+                tmp.write(chunk)
+            tmp_path = Path(tmp.name)
+        try:
+            is_supplier = roles.has_role(
+                request.user, roles.SUPPLIER
+            ) and not roles.can_write_ledger(request.user)
+            wants_apply = request.data.get("apply") in (True, "true", "1") and not is_supplier
+            if wants_apply:
+                report = apply_ppm(tmp_path, user=request.user)
+            else:
+                report = dry_run_ppm(tmp_path)
+            return Response(report.as_dict())
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink()
