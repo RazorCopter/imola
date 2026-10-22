@@ -67,12 +67,12 @@ def _supersede_seed(report: RunReport) -> None:
         seed = Anomaly.objects.filter(rule_code=SEED_RULE_CODE, external_ref=external_ref).first()
         if seed is None or seed.superseded_by_id is not None:
             continue
-        replacement = next(
+        chosen: Anomaly | None = next(
             (row for row in replacements if row.extract_covered_entities() & expected_refs),
             replacements[0] if replacements else None,
         )
-        if replacement is not None:
-            seed.mark_superseded(replacement)
+        if chosen is not None:
+            seed.mark_superseded(chosen)
             seed.resolution_note = f"sostituita da {rule_code}"
             seed.save(
                 update_fields=[

@@ -42,8 +42,25 @@ def test_runner_crea_aggiorna_e_risolve_senza_duplicare(monkeypatch):
 
     assert first.created == 1
     assert second.created == 0
-    assert second.updated == 1
+    assert second.updated == 0
     assert Anomaly.objects.filter(rule_code="CHK_TEST").count() == 1
+
+    # Quando i valori cambiano, l'anomalia esistente viene aggiornata sul posto
+    def updated_detector():
+        if active:
+            yield Finding(
+                "CHK_TEST",
+                "ENTITY-1",
+                Severity.MEDIA,
+                Scope.PROGETTO,
+                "Descrizione aggiornata",
+                context={"value": str(Decimal("2.0000"))},
+            )
+
+    monkeypatch.setitem(RULES, "CHK_TEST", updated_detector)
+    updated_run = run_checks(["CHK_TEST"])
+    assert updated_run.updated == 1
+    assert Anomaly.objects.get(rule_code="CHK_TEST").description == "Descrizione aggiornata"
 
     active = False
     third = run_checks(["CHK_TEST"])

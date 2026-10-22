@@ -89,9 +89,11 @@ def check_missing_in_ppm() -> Iterable[Finding]:
     for row in reconcile():
         if not row.missing_in_ppm or row.internal_days <= 0:
             continue
+        from uuid import UUID
+
         from projects.models import Project
 
-        project = Project.objects.get(pk=row.project_id)
+        project = Project.objects.get(pk=UUID(str(row.project_id)))
         # I record storici/da verificare e i canoni non sono progetti attivi da riconciliare.
         if (
             project.timesheet_status != TimesheetStatus.ATTIVO
@@ -200,17 +202,20 @@ def check_residual_unallocated_closed() -> Iterable[Finding]:
 
     expected = SEED_SUPERSESSION_MAP["AN-003"]
     refs = expected[1] if expected else ()
-    for ref in refs if isinstance(refs, tuple) else (refs,):
+    items: tuple[str, ...] = (
+        refs if isinstance(refs, tuple) else (refs,) if isinstance(refs, str) else ()
+    )
+    for ref in items:
         project = Project.objects.filter(code__startswith=ref).first()
         if project is not None:
             yield Finding(
                 "CHK_RESIDUAL_UNALLOCATED_CLOSED",
-                ref,
+                str(ref),
                 Severity.MEDIA,
                 Scope.WALLET,
                 f"{ref} ha un residuo storico non allocato da verificare.",
                 "Confermare origine e disponibilità del residuo.",
-                {"project_code": ref},
+                {"project_code": str(ref)},
                 project_id=project.id,
             )
 
