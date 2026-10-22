@@ -8,7 +8,9 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
 
 **Aggiunto**
 
-- Catalogo delle 18 regole di controllo automatico `CHK_*` in `backend/domain/checks.py`.
+- Catalogo delle 18 regole di controllo automatico `CHK_*` esattamente aderenti alla specifica (§4 PLAN.md): `CHK_DATE_ORDER`, `CHK_END_PASSED_ACTIVE`, `CHK_CLOSED_NO_DATE`, `CHK_OVERRUN_PROJECT`, `CHK_OVERRUN_ALLOCATION`, `CHK_ALLOC_EXCEEDS_RESIDUAL`, `CHK_RESIDUAL_EXPIRING`, `CHK_RESIDUAL_UNALLOCATED_CLOSED`, `CHK_ALLOC_FROM_EXPIRED`, `CHK_RECON_DELTA`, `CHK_MISSING_IN_PPM`, `CHK_DOUBLE_COUNT`, `CHK_CANONE_UNDERUSE`, `CHK_CANONE_OVERUSE`, `CHK_ACTIVE_WITHOUT_OFFER`, `CHK_ALLOC_NO_SOURCE`, `CHK_UNVERIFIED_DATA`, `CHK_MILESTONE_SLIPPED`.
+- Rimosse le regole sperimentali e documentata la proposta D-17 in `docs/DECISIONI_APERTE.md` per estensioni future non attivate in v1.
+- Allineata la supersessione di `AN-003` su `CHK_UNVERIFIED_DATA` per i 9 progetti in stato DA_VERIFICARE.
 - Runner idempotente in `backend/anomalies/runner.py` con fingerprinting stabile, deduplica, risoluzione automatica delle condizioni non più rilevate e gestione deroghe.
 - Supersessione completa delle anomalie seed secondo D-05 (chiusura uno-a-uno e uno-a-molti a copertura integrale).
 - Comando di gestione `manage.py run_checks` ed endpoint REST `POST /api/v1/checks/run` e `POST /api/v1/anomalies/{id}/{take,resolve,accept}`.
@@ -17,10 +19,22 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
 
 **Verificato**
 
-- Esecuzione sul seed reale con 34 anomalie create e 6 anomalie seed sostituite al primo passaggio, e 0 anomalie create/aggiornate/risolte al secondo passaggio (deduplicazione completa).
-- Verificati sul campo i casi cardine: `CHK_OVERRUN_PROJECT` (IM24133 MEDIA da PPM, IM26292 ALTA), `CHK_MISSING_IN_PPM` (IM25379), `CHK_DOUBLE_COUNT` (RM-300228 / RM-300229), `CHK_ALLOC_NO_SOURCE` (W26-008), `CHK_CLOSED_NO_DATE` (IM26034, IM26047, IM26075), `CHK_RECON_DELTA` (8 KO) e IM25138 OK.
-- Supersessione osservata sul seed reale: `AN-004`, `AN-005`, `AN-006`, `AN-008` (uno-a-uno) e `AN-003`, `AN-007` (uno-a-molti) chiuse con nota "sostituita da <rule_code>".
-- Gate di qualità superati nel container Docker: 262 test backend, ruff, black, mypy, check deploy, lint/build frontend ed E2E Chromium completi.
+- Esecuzione sul seed reale (as_of 2026-10-16): 44 anomalie create e 6 anomalie seed sostituite al primo passaggio; 0 create/aggiornate/risolte al secondo passaggio (deduplicazione completa).
+- Riscontri verificati:
+  - `CHK_OVERRUN_ALLOCATION`: W26-014, W26-016, W26-019 (3 istanze).
+  - `CHK_END_PASSED_ACTIVE`: 11 progetti con data fine prevista superata alla data di riferimento.
+  - `CHK_RESIDUAL_EXPIRING`: 0 sul seed attuale; test sintetico verificato su IM24517 chiuso al 2025-05-30 con scadenza 31/12/2026.
+  - `CHK_RESIDUAL_UNALLOCATED_CLOSED`: 0 sul seed attuale (i progetti chiusi senza data non sono considerati residui validi).
+  - `CHK_ALLOC_EXCEEDS_RESIDUAL`: 2 istanze su IM25318 (allocazioni W26-006 e W26-022).
+  - `CHK_OVERRUN_PROJECT`: IM24133 MEDIA (da PPM), IM26292 ALTA (da ledger interno).
+  - `CHK_MISSING_IN_PPM`: IM25379 MEDIA.
+  - `CHK_DOUBLE_COUNT`: RM-300228 e RM-300229 MEDIA.
+  - `CHK_ALLOC_NO_SOURCE`: W26-008 ALTA.
+  - `CHK_CLOSED_NO_DATE`: IM26034, IM26047, IM26075 ALTA.
+  - `CHK_RECON_DELTA`: 8 KO (IM24133, IM25197, IM25198, IM25216, IM25244, IM25306, IM26022, IM26125); IM25138 allineato OK.
+- Supersessione osservata sul seed reale: `AN-003` (CHK_UNVERIFIED_DATA), `AN-004` (CHK_OVERRUN_PROJECT), `AN-005` (CHK_DOUBLE_COUNT), `AN-006` (CHK_MISSING_IN_PPM), `AN-007` (CHK_RECON_DELTA), `AN-008` (CHK_CANONE_UNDERUSE) marcate RISOLTA con nota "sostituita da <rule_code>".
+- Credenziali E2E parametrizzate da variabili di ambiente `E2E_USERNAME` e `E2E_PASSWORD`.
+- Gate di qualità superati nel container Docker: 268 test backend, ruff, black, mypy, check deploy, lint/build frontend ed E2E Chromium completi.
 
 ### Fase 3 — UI core
 
