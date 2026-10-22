@@ -32,24 +32,25 @@ from tests.factories import (
 class TestScadenzaResidui:
     """R2 in forma pura, senza database."""
 
-    def test_progetto_attivo_non_scade_mai(self):
-        # Caso 11.1: IM24133 aperto nel 2024 e ancora attivo.
+    def test_progetto_attivo_ha_saldo_operativo_ma_non_residuo_spendibile(self):
+        # Un progetto aperto dal 2024 può proseguire, ma non finanzia il wallet.
         validity = residual_validity(
             timesheet_status=TimesheetStatus.ATTIVO,
             closure_date=None,
             today=date(2026, 10, 20),
         )
-        assert validity.state == ResidualState.VALIDO
+        assert validity.state == ResidualState.NON_DISPONIBILE
         assert validity.expires_on is None
-        assert validity.usable
+        assert not validity.usable
 
-    def test_progetto_non_avviato_non_scade(self):
+    def test_progetto_non_avviato_non_e_disponibile_nel_wallet(self):
         validity = residual_validity(
             timesheet_status=TimesheetStatus.NON_AVVIATO,
             closure_date=None,
             today=date(2026, 10, 20),
         )
-        assert validity.state == ResidualState.VALIDO
+        assert validity.state == ResidualState.NON_DISPONIBILE
+        assert not validity.usable
 
     def test_ultimo_giorno_utile_e_fine_anno_successivo(self):
         assert last_usable_day(date(2025, 11, 15), 1) == date(2026, 12, 31)
@@ -205,7 +206,8 @@ class TestProjectBalanceDaDatabase:
             closure_date=row.actual_closure_date,
             today=date(2026, 10, 20),
         )
-        assert validity.state == ResidualState.VALIDO
+        assert validity.state == ResidualState.NON_DISPONIBILE
+        assert not validity.usable
 
     def test_gli_storni_riducono_il_consumato(self):
         project = ProjectFactory(budget_days=Decimal("10.0000"))

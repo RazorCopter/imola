@@ -52,22 +52,28 @@ class ReferentCanAnnotate(ReadOnlyOrLedgerWriter):
             return set(request.data or {}) <= self.annotation_fields
         return False
 
-    def has_object_permission(self, request, view, obj) -> bool:
-        if request.method in SAFE_METHODS or roles.can_write_ledger(request.user):
+    @staticmethod
+    def can_annotate(user, obj) -> bool:
+        if roles.can_write_ledger(user):
             return True
-        if not roles.has_role(request.user, roles.REFERENT):
+        if not roles.has_role(user, roles.REFERENT):
             return False
         owner = getattr(obj, "client_owner", None)
         email = (getattr(owner, "email", "") or "").lower()
-        user_email = (request.user.email or "").lower()
+        user_email = (user.email or "").lower()
         if bool(email) and email == user_email:
             return True
-        username = (request.user.username or "").lower()
+        username = (user.username or "").lower()
         if owner and (getattr(owner, "first_name", "") or getattr(owner, "last_name", "")):
             combined = f"{owner.first_name}{owner.last_name}".lower()
             if username and (username in combined or combined in username):
                 return True
         return False
+
+    def has_object_permission(self, request, view, obj) -> bool:
+        if request.method in SAFE_METHODS:
+            return True
+        return self.can_annotate(request.user, obj)
 
 
 class CanUploadImports(IsAuthenticatedRole):

@@ -6,9 +6,6 @@ salvate. Ogni risposta porta con sé la spiegazione del calcolo, che la UI mostr
 
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation
-
-from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -22,9 +19,8 @@ from canone.models import Canone
 from core.models import AppSettings
 from core.permissions import CanUploadImports, IsAdmin, ReadOnlyOrLedgerWriter, ReferentCanAnnotate
 from domain.canone_status import canone_burndown, canone_status
-from domain.money import ZERO, quantize_days
 from domain.reconciliation import reconcile, reconciliation_summary
-from domain.residuals import project_balance_qs, residual_explanation, residual_validity
+from domain.residuals import residual_explanation, residual_validity
 from domain.wallet_balance import wallet_flow, wallet_year_balance
 
 
@@ -162,6 +158,7 @@ class ProjectBalancesView(DocumentedAPIView):
                 years_valid_after_closure=settings_obj.residual_years_after_closure,
                 expiring_window_days=settings_obj.residual_expiring_window_days,
             )
+            can_annotate = ReferentCanAnnotate.can_annotate(request.user, project)
             rows.append(
                 {
                     "id": project.id,
@@ -186,6 +183,7 @@ class ProjectBalancesView(DocumentedAPIView):
                         project.direct_consumed_days,
                         project.allocated_to_wallet_days,
                     ),
+                    "permissions": {"annotate": can_annotate},
                 }
             )
         return Response({"results": rows, "count": len(rows)})
@@ -324,68 +322,20 @@ class WalletBalanceView(DocumentedAPIView):
 
 
 class ReleaseProjectToWalletView(DocumentedAPIView):
-    """Rende esplicitamente disponibile al wallet una quota del residuo di un progetto attivo."""
+    """Endpoint legacy disabilitato: un progetto attivo non genera credito wallet."""
 
     permission_classes = [ReadOnlyOrLedgerWriter]
 
-    @transaction.atomic
     def post(self, request, pk):
-        from projects.models import Project, TimesheetStatus
-
-        project = get_object_or_404(Project.objects.select_for_update(), pk=pk)
-        if project.timesheet_status != TimesheetStatus.ATTIVO:
-            return Response(
-                {"detail": "Il rilascio è consentito solo per progetti ATTIVI."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        reason = str(request.data.get("motivazione", "")).strip()
-        if not reason:
-            return Response(
-                {"motivazione": ["Questo campo è obbligatorio."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        try:
-            days = quantize_days(Decimal(str(request.data.get("giornate", ""))))
-        except (InvalidOperation, TypeError, ValueError):
-            return Response(
-                {"giornate": ["Inserire un numero valido."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if days <= ZERO:
-            return Response(
-                {"giornate": ["Il valore deve essere maggiore di zero."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        calculated = project_balance_qs(Project.objects.filter(pk=project.pk)).get()
-        available_to_release = quantize_days(
-            calculated.residual_days - project.released_to_wallet_days
-        )
-        if days > available_to_release:
-            return Response(
-                {
-                    "giornate": [
-                        "Il rilascio supera il residuo ancora rilasciabile "
-                        f"({available_to_release})."
-                    ]
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        project.released_to_wallet_days = quantize_days(project.released_to_wallet_days + days)
-        project._change_reason = reason  # type: ignore[attr-defined]
-        project.save(update_fields=["released_to_wallet_days", "updated_at"])
         return Response(
             {
-                "id": project.id,
-                "codice": project.code,
-                "giornate_rilasciate": days,
-                "rilasciato_al_wallet": project.released_to_wallet_days,
-                "residuo_ancora_rilasciabile": quantize_days(available_to_release - days),
-                "motivazione": reason,
+                "detail": (
+                    "Operazione non più consentita: il residuo entra nel wallet soltanto "
+                    "alla chiusura del progetto con data effettiva."
+                ),
+                "code": "PROJECT_WALLET_RELEASE_DEPRECATED",
             },
-            status=status.HTTP_200_OK,
+            status=status.HTTP_409_CONFLICT,
         )
 
 
@@ -539,7 +489,7 @@ class ReconciliationView(DocumentedAPIView):
         rows = reconcile(tolerance=tolerance)
         return Response(
             {
-                "riepilogo": reconciliation_summary(tolerance),
+                "riepilogo": reconciliation_summary(tolerance, rows=rows),
                 "tolleranza": tolerance,
                 "results": [
                     {**row.as_dict(), "spiegazione": row.explanation}

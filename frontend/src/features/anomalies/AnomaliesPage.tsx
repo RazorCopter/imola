@@ -4,7 +4,9 @@ import { useState } from "react";
 
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState } from "@/components/UiState";
+import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
+import { canWriteLedger } from "@/lib/permissions";
 
 interface Anomaly {
   id: string;
@@ -23,6 +25,7 @@ interface Anomaly {
 
 export function AnomaliesPage() {
   const client = useQueryClient();
+  const { session } = useSession();
   const [status, setStatus] = useState("APERTA");
   const query = useQuery({
     queryKey: ["anomalies", status],
@@ -61,14 +64,16 @@ export function AnomaliesPage() {
             Rilievi automatici deduplicati e anomalie seed storicizzate.
           </p>
         </div>
-        <button
-          className="flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground"
-          onClick={() => run.mutate()}
-          disabled={run.isPending}
-        >
-          <Play className="size-4" />
-          Esegui controlli
-        </button>
+        {canWriteLedger(session) && (
+          <button
+            className="flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground"
+            onClick={() => run.mutate()}
+            disabled={run.isPending}
+          >
+            <Play className="size-4" />
+            Esegui controlli
+          </button>
+        )}
       </header>
       <div className="flex gap-2">
         <select
@@ -115,7 +120,7 @@ export function AnomaliesPage() {
                   </p>
                 </div>
               </div>
-              {item.stato === "APERTA" && (
+              {canWriteLedger(session) && item.stato === "APERTA" && (
                 <div className="flex gap-2">
                   <button
                     className="rounded border border-border px-2 py-1 text-xs"

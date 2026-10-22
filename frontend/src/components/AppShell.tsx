@@ -12,7 +12,6 @@ import {
   PanelLeftOpen,
   Scale,
   Search,
-  Settings,
   Sun,
   Wallet,
 } from "lucide-react";
@@ -28,7 +27,6 @@ const NAV = [
   { to: "/riconciliazione", label: "nav.reconciliation", icon: ListChecks },
   { to: "/anomalie", label: "nav.anomalies", icon: AlertTriangle },
   { to: "/revisione", label: "nav.review", icon: ClipboardCheck },
-  { to: "/amministrazione", label: "nav.admin", icon: Settings },
 ] as const;
 
 export function AppShell({ onOpenCommandPalette }: { onOpenCommandPalette: () => void }) {

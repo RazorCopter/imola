@@ -23,18 +23,21 @@ interface WalletBalance {
   residui_potenziali_da_verificare: string;
   dettaglio_residui?: Record<
     string,
-    { giornate: string; progetti: { codice: string; residuo: string }[] }
+    { giornate: string; progetti: { codice: string; giornate: string }[] }
   >;
 }
 
 interface ReconciliationSummary {
   riepilogo: {
+    stato: "ALLINEATO" | "NON_ALLINEATO" | "PARZIALE" | "NON_VERIFICABILE";
+    stato_dati: "DISPONIBILI" | "SNAPSHOT_ASSENTE" | "NESSUNA_RIGA_CONFRONTABILE";
     righe: number;
+    righe_confrontabili: number;
     ok: number;
     ko: number;
     assenti_in_ppm: number;
-    delta_totale: string;
-    percentuale_allineati: string;
+    delta_totale: string | null;
+    percentuale_allineati: string | null;
     snapshot_estratto_il: string | null;
   };
 }
@@ -159,16 +162,30 @@ export function DashboardPage() {
             />
             <KpiCard
               label={t("dashboard.reconciliationDelta")}
-              value={formatDelta(reconciliation.data?.riepilogo.delta_totale)}
+              value={
+                reconciliation.data?.riepilogo.delta_totale === null
+                  ? "Non disponibile"
+                  : formatDelta(reconciliation.data?.riepilogo.delta_totale)
+              }
               hint={
-                reconciliation.data?.riepilogo.snapshot_estratto_il
-                  ? `${t("dashboard.lastSnapshot")}: ${new Date(
-                      reconciliation.data.riepilogo.snapshot_estratto_il,
-                    ).toLocaleDateString("it-IT")}`
-                  : t("app.empty")
+                reconciliation.data?.riepilogo.stato === "NON_VERIFICABILE"
+                  ? "Riconciliazione non verificabile / dati assenti"
+                  : reconciliation.data?.riepilogo.snapshot_estratto_il
+                    ? `${t("dashboard.lastSnapshot")}: ${new Date(
+                        reconciliation.data.riepilogo.snapshot_estratto_il,
+                      ).toLocaleDateString("it-IT")}`
+                    : t("app.empty")
               }
               tooltip="Differenza consuntivi interni vs ultimo estratto PPM fornitore"
-              tone={reconciliation.data?.riepilogo.ko ? "danger" : "ok"}
+              tone={
+                reconciliation.data?.riepilogo.stato === "ALLINEATO"
+                  ? "ok"
+                  : reconciliation.data?.riepilogo.stato === "NON_ALLINEATO"
+                    ? "danger"
+                    : reconciliation.data?.riepilogo.stato === "PARZIALE"
+                      ? "warn"
+                      : "neutral"
+              }
             />
           </>
         )}
@@ -191,17 +208,14 @@ export function DashboardPage() {
                   ],
                 ] as [string, string, string][]
               ).map(([label, value, color]) => (
-                <div key={label}>
-                  <div className="flex justify-between text-xs">
-                    <span>{label}</span>
-                    <span className="font-mono">{formatDays(value)}</span>
-                  </div>
-                  <div className="mt-1 h-2 overflow-hidden rounded bg-muted">
-                    <div
-                      className={`h-full ${color}`}
-                      style={{ width: `${Math.min(100, Math.max(3, Number.parseFloat(value)))}%` }}
-                    />
-                  </div>
+                <div
+                  key={label}
+                  className="flex justify-between border-b border-border py-1 text-xs"
+                >
+                  <span className={cn("border-l-4 pl-2", color.replace("bg-", "border-"))}>
+                    {label}
+                  </span>
+                  <span className="font-mono tabular-nums">{formatDays(value)}</span>
                 </div>
               ))}
             </div>

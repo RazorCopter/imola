@@ -4,6 +4,9 @@ type StatusDomain = "timesheet" | "billing" | "offer" | "generic";
 type Tone = "neutral" | "ok" | "warn" | "danger";
 
 const LABELS: Record<string, string> = {
+  ALLINEATO: "Allineato",
+  NON_ALLINEATO: "Non allineato",
+  NON_VERIFICABILE: "Non verificabile / dati assenti",
   NON_AVVIATO: "Non avviato",
   ATTIVO: "Attivo",
   CHIUSO: "Chiuso",
@@ -29,9 +32,9 @@ const DOMAIN_LABELS: Record<StatusDomain, string> = {
 };
 
 function statusTone(status: string): Tone {
-  if (["CHIUSO", "TOTALE", "ACCETTATA", "RISOLTA"].includes(status)) return "ok";
+  if (["ALLINEATO", "CHIUSO", "TOTALE", "ACCETTATA", "RISOLTA"].includes(status)) return "ok";
   if (["DA_VERIFICARE", "PARZIALE", "INVIATA", "APERTA"].includes(status)) return "warn";
-  if (["SCADUTA", "NON_ACCETTATA"].includes(status)) return "danger";
+  if (["NON_ALLINEATO", "SCADUTA", "NON_ACCETTATA"].includes(status)) return "danger";
   return "neutral";
 }
 

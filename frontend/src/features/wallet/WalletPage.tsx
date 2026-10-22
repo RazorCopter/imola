@@ -4,7 +4,9 @@ import { DaysValue } from "@/components/DaysValue";
 import { KpiCard } from "@/components/KpiCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState } from "@/components/UiState";
+import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
+import { canWriteLedger } from "@/lib/permissions";
 
 interface Balance {
   anno: number;
@@ -19,7 +21,7 @@ interface Balance {
     string,
     {
       giornate: string;
-      progetti: { codice: string; residuo: string; scade_il: string | null; motivo: string }[];
+      progetti: { codice: string; giornate: string; scade_il: string | null; motivo: string }[];
     }
   >;
 }
@@ -38,6 +40,7 @@ interface Flow {
 
 export function WalletPage() {
   const year = new Date().getFullYear();
+  const { session } = useSession();
   const queryClient = useQueryClient();
   const balance = useQuery({
     queryKey: ["wallet", "balance", year],
@@ -111,20 +114,22 @@ export function WalletPage() {
                   <div>
                     <StatusBadge status={row.stato} />
                   </div>
-                  <div className="mt-2 flex justify-end gap-1">
-                    <button
-                      className="rounded border border-border px-2 py-1 text-[10px]"
-                      onClick={() => adjust.mutate({ id: row.id, allocated_days: row.consumato })}
-                    >
-                      Riduci al consumato
-                    </button>
-                    <button
-                      className="rounded border border-danger/40 px-2 py-1 text-[10px] text-danger"
-                      onClick={() => adjust.mutate({ id: row.id, status: "CHIUSA" })}
-                    >
-                      Chiudi
-                    </button>
-                  </div>
+                  {canWriteLedger(session) && (
+                    <div className="mt-2 flex justify-end gap-1">
+                      <button
+                        className="rounded border border-border px-2 py-1 text-[10px]"
+                        onClick={() => adjust.mutate({ id: row.id, allocated_days: row.consumato })}
+                      >
+                        Riduci al consumato
+                      </button>
+                      <button
+                        className="rounded border border-danger/40 px-2 py-1 text-[10px] text-danger"
+                        onClick={() => adjust.mutate({ id: row.id, status: "CHIUSA" })}
+                      >
+                        Chiudi
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -140,12 +145,17 @@ export function WalletPage() {
                   <DaysValue value={bucket.giornate} />
                 </div>
                 {bucket.progetti.map((project) => (
-                  <div
-                    key={project.codice}
-                    className="mt-2 flex justify-between border-l-2 border-border pl-2 text-xs"
-                  >
-                    <span className="font-mono">{project.codice}</span>
-                    <DaysValue value={project.residuo} />
+                  <div key={project.codice} className="mt-2 border-l-2 border-border pl-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="font-mono">{project.codice}</span>
+                      <DaysValue value={project.giornate} />
+                    </div>
+                    <p className="mt-1 text-muted-foreground">
+                      {project.scade_il
+                        ? `scade ${new Date(`${project.scade_il}T00:00:00`).toLocaleDateString("it-IT")}`
+                        : "nessuna scadenza"}
+                      {` · ${project.motivo}`}
+                    </p>
                   </div>
                 ))}
               </div>

@@ -333,6 +333,7 @@ def check_residual_unallocated_closed(as_of: date | None = None) -> Iterable[Fin
 
 # 9. CHK_ALLOC_FROM_EXPIRED
 def check_alloc_from_expired(as_of: date | None = None) -> Iterable[Finding]:
+    """Segnala quote create dopo la scadenza, non quote scadute dopo l'assegnazione."""
     settings_obj = AppSettings.get_solo()
     reference_date = as_of or timezone.localdate()
     for allocation in WalletAllocation.objects.exclude(source_project=None).select_related(
@@ -344,10 +345,13 @@ def check_alloc_from_expired(as_of: date | None = None) -> Iterable[Finding]:
             and source.timesheet_status == TimesheetStatus.CHIUSO
             and source.actual_closure_date is not None
         ):
+            allocated_on = allocation.created_at.date()
+            if allocated_on > reference_date:
+                continue
             validity = residual_validity(
                 timesheet_status=source.timesheet_status,
                 closure_date=source.actual_closure_date,
-                today=reference_date,
+                today=allocated_on,
                 years_valid_after_closure=settings_obj.residual_years_after_closure,
                 expiring_window_days=settings_obj.residual_expiring_window_days,
             )
@@ -358,9 +362,16 @@ def check_alloc_from_expired(as_of: date | None = None) -> Iterable[Finding]:
                     ref,
                     Severity.ALTA,
                     Scope.WALLET,
-                    f"L'allocazione {ref} proviene da {_short(source.code)} con residuo scaduto.",
-                    "Revocare o motivare l'allocazione da residuo scaduto.",
-                    {"allocation_ref": ref, "source_project": _short(source.code)},
+                    f"L'allocazione {ref} è successiva alla scadenza di {_short(source.code)}.",
+                    "Verificare la data di assegnazione e correggere la provenienza.",
+                    {
+                        "allocation_ref": ref,
+                        "source_project": _short(source.code),
+                        "allocated_on": allocated_on.isoformat(),
+                        "expires_on": (
+                            validity.expires_on.isoformat() if validity.expires_on else None
+                        ),
+                    },
                     allocation_id=allocation.id,
                     project_id=source.id,
                 )

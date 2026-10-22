@@ -3,7 +3,9 @@ import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 
 import { ErrorState, LoadingState } from "@/components/UiState";
+import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
+import { canWriteLedger } from "@/lib/permissions";
 
 interface ReviewProject {
   id: string;
@@ -17,6 +19,7 @@ interface ReviewProject {
 
 export function ReviewQueuePage() {
   const client = useQueryClient();
+  const { session } = useSession();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("CHIUSO");
   const [closureDate, setClosureDate] = useState<string>("2026-06-30");
@@ -84,7 +87,9 @@ export function ReviewQueuePage() {
                   {p.data_chiusura ?? p.data_fine_prevista ?? "-"}
                 </td>
                 <td className="p-3">
-                  {selectedId === p.id ? (
+                  {!canWriteLedger(session) ? (
+                    <span className="text-xs text-muted-foreground">Sola lettura</span>
+                  ) : selectedId === p.id ? (
                     <div className="flex flex-wrap items-center gap-2">
                       <select
                         value={status}

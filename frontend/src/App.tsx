@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 
 import { AppShell } from "@/components/AppShell";
 import { CommandPalette } from "@/components/CommandPalette";
-import { PlaceholderPage } from "@/components/PlaceholderPage";
 import { LoadingState } from "@/components/UiState";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { SessionExpiredDialog } from "@/features/auth/SessionExpiredDialog";
@@ -78,7 +77,6 @@ export default function App() {
             <Route path="/riconciliazione" element={<ReconciliationPage />} />
             <Route path="/anomalie" element={<AnomaliesPage />} />
             <Route path="/revisione" element={<ReviewQueuePage />} />
-            <Route path="/amministrazione" element={<PlaceholderPage titleKey="nav.admin" />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

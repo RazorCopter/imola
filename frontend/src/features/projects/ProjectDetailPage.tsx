@@ -45,6 +45,7 @@ export function ProjectDetailPage() {
   if (query.isError) return <ErrorState title="Impossibile caricare il progetto" />;
   const project = query.data?.results.find((item) => item.id === projectId);
   if (!project) return <EmptyState title="Progetto non trovato" />;
+  const canAnnotate = project.permissions.annotate;
 
   const metrics = [
     ["Budget", project.budget],
@@ -121,26 +122,34 @@ export function ProjectDetailPage() {
         {tabs.slice(1, -1).map((tab) => (
           <Tabs.Content key={tab} value={tab} className="pt-4">
             {tab === "Anomalie" ? (
-              <div className="rounded-lg border border-border bg-card p-4">
-                <h2 className="font-medium">Azioni sul progetto</h2>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <input
-                    id="planned-end-date"
-                    type="date"
-                    defaultValue="2026-12-31"
-                    className="rounded border border-input bg-background px-3 py-2 text-sm"
-                  />
-                  <button
-                    className="rounded bg-accent px-3 py-2 text-sm font-medium text-accent-foreground"
-                    onClick={() => {
-                      const input = document.getElementById("planned-end-date") as HTMLInputElement;
-                      update.mutate({ planned_end_date: input.value });
-                    }}
-                  >
-                    Aggiorna data fine prevista
-                  </button>
+              canAnnotate ? (
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <h2 className="font-medium">Azioni sul progetto</h2>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <input
+                      id="planned-end-date"
+                      type="date"
+                      defaultValue="2026-12-31"
+                      className="rounded border border-input bg-background px-3 py-2 text-sm"
+                    />
+                    <button
+                      className="rounded bg-accent px-3 py-2 text-sm font-medium text-accent-foreground"
+                      onClick={() => {
+                        const input = document.getElementById(
+                          "planned-end-date",
+                        ) as HTMLInputElement;
+                        update.mutate({ planned_end_date: input.value });
+                      }}
+                    >
+                      Aggiorna data fine prevista
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+                  Consultazione disponibile; le modifiche non sono consentite per questo progetto.
+                </p>
+              )
             ) : (
               <EmptyState
                 title={`${tab}: nessun elemento da mostrare`}

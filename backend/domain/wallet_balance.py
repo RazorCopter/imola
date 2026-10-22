@@ -186,32 +186,18 @@ def wallet_year_balance(
 
     projects = project_balance_qs().exclude(contract_type=ContractType.CANONE)
     for project in projects:
-        if project.timesheet_status == TimesheetStatus.ATTIVO:
+        if project.timesheet_status in {
+            TimesheetStatus.ATTIVO,
+            TimesheetStatus.NON_AVVIATO,
+        }:
             if project.residual_days < ZERO:
                 balance.ongoing_project_overrun_days = quantize_days(
                     balance.ongoing_project_overrun_days + project.residual_days
                 )
             elif project.residual_days > ZERO:
-                unreleased = max(
-                    ZERO,
-                    quantize_days(project.residual_days - project.released_to_wallet_days),
-                )
                 balance.ongoing_project_residual_days = quantize_days(
-                    balance.ongoing_project_residual_days + unreleased
+                    balance.ongoing_project_residual_days + project.residual_days
                 )
-                released_unallocated = max(
-                    ZERO,
-                    quantize_days(
-                        project.released_to_wallet_days - project.allocated_to_wallet_days
-                    ),
-                )
-                if released_unallocated > ZERO:
-                    balance.buckets[ResidualState.VALIDO].add(
-                        project.code,
-                        released_unallocated,
-                        None,
-                        "Quota del residuo del progetto attivo rilasciata al wallet.",
-                    )
             continue
 
         if project.residual_days <= ZERO:
@@ -278,12 +264,29 @@ def wallet_flow(year: int) -> list[dict]:
 
 
 def available_residual_for_allocation(project_id, *, exclude_allocation_id=None) -> Decimal:
-    """Residuo spendibile di un progetto, usato per bloccare le allocazioni eccessive."""
-    from projects.models import Project
+    """Residuo spendibile solo per un progetto chiuso, datato e non scaduto."""
+    from django.utils import timezone
+
+    from core.models import AppSettings
+    from projects.models import Project, TimesheetStatus
     from timesheets.models import TimesheetEntry
     from wallet.models import WalletAllocation
 
     project = Project.objects.get(pk=project_id)
+    if project.timesheet_status != TimesheetStatus.CHIUSO or project.actual_closure_date is None:
+        return ZERO
+
+    settings_obj = AppSettings.get_solo()
+    validity = residual_validity(
+        timesheet_status=project.timesheet_status,
+        closure_date=project.actual_closure_date,
+        today=timezone.localdate(),
+        years_valid_after_closure=settings_obj.residual_years_after_closure,
+        expiring_window_days=settings_obj.residual_expiring_window_days,
+    )
+    if not validity.usable:
+        return ZERO
+
     direct = TimesheetEntry.objects.filter(project=project).aggregate(
         total=Coalesce(Sum("days", output_field=DAYS_OUTPUT), Value(ZERO, output_field=DAYS_OUTPUT))
     )["total"]
@@ -364,7 +367,11 @@ def unallocated_closed_projects(
 def allocations_from_expired_residual(
     *, today: date | None = None, years_valid_after_closure: int = 1
 ) -> list:
-    """Allocazioni che poggiano su un residuo già scaduto (R2 violata)."""
+    """Allocazioni create dopo la scadenza del residuo sorgente.
+
+    La scadenza successiva non invalida una quota assegnata in tempo. Finché il modello
+    non espone una data efficace dedicata, `created_at` è l'unica evidenza disponibile.
+    """
     from django.utils import timezone
 
     from wallet.models import WalletAllocation
@@ -375,15 +382,16 @@ def allocations_from_expired_residual(
         "source_project"
     ):
         project = allocation.source_project
-        if project is None:
+        allocated_on = allocation.created_at.date()
+        if project is None or project.actual_closure_date is None or allocated_on > today:
             continue
-        validity = residual_validity(
+        validity_at_allocation = residual_validity(
             timesheet_status=project.timesheet_status,
             closure_date=project.actual_closure_date,
-            today=today,
+            today=allocated_on,
             years_valid_after_closure=years_valid_after_closure,
         )
-        if validity.state == ResidualState.SCADUTO:
+        if validity_at_allocation.state == ResidualState.SCADUTO:
             offenders.append(allocation)
     return offenders
 

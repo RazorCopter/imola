@@ -155,11 +155,58 @@ class TestVisteCalcolate:
         assert response.status_code == 200
         row = next(r for r in response.json()["results"] if r["codice"] == "IM26-API")
         assert row["residuo"] == "7.5000"
-        assert row["stato_residuo"] == "VALIDO"
+        assert row["stato_residuo"] == "NON_DISPONIBILE"
         assert "7,50 gg" in row["spiegazione_residuo"]
 
-    def test_la_riconciliazione_risponde_anche_senza_snapshot(self, client, manager):
+    def test_residui_e_scadenze_attraversano_dominio_serializer_e_api(self, client, manager):
+        from datetime import date
+        from decimal import Decimal
+
+        from projects.models import TimesheetStatus
+        from tests.factories import ProjectFactory
+
+        ProjectFactory(
+            code="IM25-CHIUSO-API",
+            budget_days=Decimal("7.2500"),
+            timesheet_status=TimesheetStatus.CHIUSO,
+            actual_closure_date=date(2025, 11, 15),
+        )
+        ProjectFactory(
+            code="IM26-IN-CORSO-API",
+            budget_days=Decimal("9.5000"),
+            timesheet_status=TimesheetStatus.ATTIVO,
+        )
+
+        client.force_login(manager)
+        response = client.get("/api/v1/wallet/2026/balance")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["residui_in_scadenza"] == "7.2500"
+        assert body["budget_residuo_progetti_in_corso"] == "9.5000"
+        expiring = body["dettaglio_residui"]["IN_SCADENZA"]
+        assert expiring["giornate"] == "7.2500"
+        assert len(expiring["progetti"]) == 1
+        expiring_project = expiring["progetti"][0]
+        assert expiring_project["codice"] == "IM25-CHIUSO-API"
+        assert expiring_project["giornate"] == "7.2500"
+        assert expiring_project["scade_il"] == "2026-12-31"
+        assert expiring_project["motivo"]
+        assert all(
+            project["codice"] != "IM26-IN-CORSO-API"
+            for bucket in body["dettaglio_residui"].values()
+            for project in bucket["progetti"]
+        )
+
+    def test_la_riconciliazione_espone_stato_non_verificabile_senza_snapshot(self, client, manager):
         client.force_login(manager)
         response = client.get("/api/v1/reconciliation/latest")
+
         assert response.status_code == 200
-        assert response.json()["riepilogo"]["righe"] == 0
+        summary = response.json()["riepilogo"]
+        assert summary["stato"] == "NON_VERIFICABILE"
+        assert summary["stato_dati"] == "SNAPSHOT_ASSENTE"
+        assert summary["righe"] == 0
+        assert summary["righe_confrontabili"] == 0
+        assert summary["delta_totale"] is None
+        assert summary["percentuale_allineati"] is None

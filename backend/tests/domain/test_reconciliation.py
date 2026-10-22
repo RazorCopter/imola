@@ -190,13 +190,71 @@ class TestRiepilogo:
         )
 
         summary = reconciliation_summary()
+        assert summary["stato"] == "PARZIALE"
+        assert summary["stato_dati"] == "DISPONIBILI"
+        assert summary["righe_confrontabili"] == 2
         assert summary["ok"] == 1
         assert summary["ko"] == 1
         assert summary["assenti_in_ppm"] == 1
         assert summary["delta_massimo"] == Decimal("2.0000")
-        # La percentuale di allineamento la calcola il backend, non il client (D-15).
-        assert summary["percentuale_allineati"] == Decimal("33.3333")  # 1 OK su 3 righe
+        # Il denominatore comprende solo le righe realmente confrontate.
+        assert summary["percentuale_allineati"] == Decimal("50.0000")
         assert summary["snapshot_estratto_il"] == snapshot.extracted_at
+
+    def test_snapshot_assente_non_e_un_successo_anche_con_delta_apparentemente_zero(self):
+        ProjectFactory(code="IM26-SENZA-SNAPSHOT", budget_days=Decimal("10.0000"))
+
+        summary = reconciliation_summary()
+
+        assert summary["stato"] == "NON_VERIFICABILE"
+        assert summary["stato_dati"] == "SNAPSHOT_ASSENTE"
+        assert summary["righe_confrontabili"] == 0
+        assert summary["delta_totale"] is None
+        assert summary["delta_massimo"] is None
+        assert summary["percentuale_allineati"] is None
+
+    def test_snapshot_presente_senza_righe_applicabili_non_e_un_successo(self):
+        snapshot = PpmSnapshotFactory(extracted_at=aware(2026, 10, 16))
+        ProjectFactory(code="IM26-SENZA-CONSUNTIVI", budget_days=Decimal("10.0000"))
+
+        summary = reconciliation_summary()
+
+        assert summary["stato"] == "NON_VERIFICABILE"
+        assert summary["stato_dati"] == "NESSUNA_RIGA_CONFRONTABILE"
+        assert summary["snapshot_id"] == snapshot.id
+        assert summary["righe"] == 0
+        assert summary["percentuale_allineati"] is None
+
+    def test_tutte_le_righe_presenti_e_delta_zero_sono_allineate(self):
+        project = ProjectFactory(code="IM26-ZERO", budget_days=Decimal("10.0000"))
+        PpmSnapshotRowFactory(
+            snapshot=PpmSnapshotFactory(extracted_at=aware(2026, 10, 16)),
+            project=project,
+            project_code=project.code,
+            total_days=Decimal("0.0000"),
+        )
+
+        summary = reconciliation_summary()
+
+        assert summary["stato"] == "ALLINEATO"
+        assert summary["righe_confrontabili"] == 1
+        assert summary["delta_totale"] == Decimal("0.0000")
+        assert summary["percentuale_allineati"] == Decimal("100.0000")
+
+    def test_righe_presenti_fuori_tolleranza_sono_non_allineate(self):
+        project = ProjectFactory(code="IM26-KO-SOLO", budget_days=Decimal("10.0000"))
+        PpmSnapshotRowFactory(
+            snapshot=PpmSnapshotFactory(extracted_at=aware(2026, 10, 16)),
+            project=project,
+            project_code=project.code,
+            total_days=Decimal("1.0000"),
+        )
+
+        summary = reconciliation_summary()
+
+        assert summary["stato"] == "NON_ALLINEATO"
+        assert summary["ko"] == 1
+        assert summary["percentuale_allineati"] == Decimal("0.0000")
 
 
 class TestRighePpmNonRiconosciute:

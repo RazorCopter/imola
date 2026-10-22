@@ -1,13 +1,8 @@
-"""R2 (scadenza dei residui) e R3 (residuo di progetto).
+"""Saldo operativo dei progetti e validità dei residui wallet.
 
-R2 — Un progetto ATTIVO non ha scadenza dei residui, qualunque sia l'anno di apertura.
-     Quando passa a CHIUSO conta l'anno della data di chiusura: il residuo si usa
-     nell'anno di chiusura e nei successivi `anni_validita_dopo_chiusura` (default 1),
-     poi scade dal 1 gennaio dell'anno seguente.
-     Esempio: chiuso il 15/11/2025 -> utilizzabile fino al 31/12/2026, scaduto dal 01/01/2027.
-
-R3 — residuo = budget - consuntivi diretti - allocazioni wallet in uscita.
-     Mai un numero scritto a mano: sempre calcolato dal database.
+Un progetto non chiuso può avere un saldo operativo positivo, ma non genera credito wallet.
+Solo un progetto CHIUSO con data effettiva produce un residuo spendibile, valido fino al
+31 dicembre dell'anno successivo alla chiusura. I totali sono sempre calcolati dal database.
 """
 
 from __future__ import annotations
@@ -33,6 +28,7 @@ class ResidualState(str):
     IN_SCADENZA = "IN_SCADENZA"
     SCADUTO = "SCADUTO"
     DA_VERIFICARE = "DA_VERIFICARE"
+    NON_DISPONIBILE = "NON_DISPONIBILE"
 
 
 @dataclass(frozen=True)
@@ -103,14 +99,14 @@ def residual_validity(
             ResidualState.DA_VERIFICARE,
             None,
             None,
-            "Stato della consuntivazione da confermare: residuo potenziale.",
+            "Stato della consuntivazione da confermare: residuo non spendibile.",
         )
 
     return ResidualValidity(
-        ResidualState.VALIDO,
+        ResidualState.NON_DISPONIBILE,
         None,
         None,
-        "Progetto non chiuso: il residuo non ha scadenza.",
+        "Progetto non chiuso: saldo operativo non disponibile nel wallet.",
     )
 
 
@@ -213,22 +209,19 @@ def residual_explanation(
 
 
 def projects_with_usable_residual(today: date, years_valid_after_closure: int = 1):
-    """Progetti il cui residuo è spendibile (R2), ordinati per scadenza crescente.
-
-    L'ordinamento serve alla UI: si consuma prima ciò che scade prima.
-    """
+    """Progetti chiusi con data e residuo spendibile, ordinati per scadenza crescente."""
     from projects.models import TimesheetStatus
 
-    expiry_limit = date(today.year - years_valid_after_closure - 1, 12, 31)
+    first_valid_closure_year = today.year - years_valid_after_closure
     return (
         project_balance_qs()
-        .filter(residual_days__gt=0)
-        .exclude(timesheet_status=TimesheetStatus.DA_VERIFICARE)
-        .exclude(
-            Q(timesheet_status=TimesheetStatus.CHIUSO)
-            & (Q(actual_closure_date__isnull=True) | Q(actual_closure_date__lte=expiry_limit))
+        .filter(
+            timesheet_status=TimesheetStatus.CHIUSO,
+            actual_closure_date__isnull=False,
+            actual_closure_date__year__gte=first_valid_closure_year,
+            residual_days__gt=0,
         )
-        .order_by(F("actual_closure_date").asc(nulls_last=True), "code")
+        .order_by("actual_closure_date", "code")
     )
 
 

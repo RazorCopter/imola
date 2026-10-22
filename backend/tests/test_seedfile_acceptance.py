@@ -41,13 +41,10 @@ def test_wallet_api_espone_totali_e_w26_001_del_seed_reale(authenticated_client:
     assert body["consumato"] == "120.7900"
     assert body["disponibile"] == "10.1000"
     assert body["disponibile_da_allocazioni"] == "10.1000"
-    assert body["residui_validi_non_allocati"] == "10.0000"
-    assert body["budget_residuo_progetti_in_corso"] == "60.9150"
+    assert body["residui_validi_non_allocati"] == "0.0000"
+    assert body["budget_residuo_progetti_in_corso"] == "129.9150"
     assert body["sforamenti_progetti_in_corso"] == "-8.2400"
-    released = body["dettaglio_residui"]["VALIDO"]["progetti"]
-    assert len(released) == 1
-    assert released[0]["codice"].startswith("IM26254")
-    assert released[0]["giornate"] == "10.0000"
+    assert body["dettaglio_residui"]["VALIDO"]["progetti"] == []
 
     allocation = next(row for row in body["allocazioni"] if row["riferimento"] == "W26-001")
     assert allocation == {
@@ -61,15 +58,15 @@ def test_wallet_api_espone_totali_e_w26_001_del_seed_reale(authenticated_client:
     }
 
 
-def test_chiusura_im24517_porta_i_residui_validi_a_22_3100(imported_seed: Path):
+def test_chiusura_im24517_rende_spendibile_solo_il_suo_residuo(imported_seed: Path):
     project = Project.objects.get(code__startswith="IM24517")
     project.timesheet_status = TimesheetStatus.CHIUSO
     project.actual_closure_date = date(2025, 5, 30)
     project.save(update_fields=["timesheet_status", "actual_closure_date", "updated_at"])
 
     balance = wallet_year_balance(2026, today=date(2026, 10, 16))
-    assert balance.unallocated_valid_days + balance.unallocated_expiring_days == Decimal("22.3100")
-    assert balance.unallocated_valid_days == Decimal("10.0000")
+    assert balance.unallocated_valid_days + balance.unallocated_expiring_days == Decimal("12.3100")
+    assert balance.unallocated_valid_days == Decimal("0.0000")
     assert balance.unallocated_expiring_days == Decimal("12.3100")
 
 

@@ -19,12 +19,15 @@ interface Row {
 }
 interface Response {
   riepilogo: {
+    stato: "ALLINEATO" | "NON_ALLINEATO" | "PARZIALE" | "NON_VERIFICABILE";
+    stato_dati: "DISPONIBILI" | "SNAPSHOT_ASSENTE" | "NESSUNA_RIGA_CONFRONTABILE";
     righe: number;
+    righe_confrontabili: number;
     ok: number;
     ko: number;
     assenti_in_ppm: number;
-    delta_totale: string;
-    percentuale_allineati: string;
+    delta_totale: string | null;
+    percentuale_allineati: string | null;
     snapshot_estratto_il: string | null;
   };
   tolleranza: string;
@@ -42,6 +45,12 @@ export function ReconciliationPage() {
     return <ErrorState title="Impossibile caricare la riconciliazione" />;
   const { riepilogo } = query.data;
   const rows = query.data.results ?? query.data.risultati ?? [];
+  const dataMessage =
+    riepilogo.stato_dati === "SNAPSHOT_ASSENTE"
+      ? "Snapshot PPM assente: la riconciliazione non può essere eseguita."
+      : riepilogo.stato_dati === "NESSUNA_RIGA_CONFRONTABILE"
+        ? "Lo snapshot è presente, ma non contiene righe confrontabili."
+        : null;
   return (
     <section className="space-y-5">
       <header>
@@ -50,16 +59,36 @@ export function ReconciliationPage() {
           Confronto fra ledger interno e ultimo snapshot del fornitore · tolleranza{" "}
           <DaysValue value={query.data.tolleranza} />
         </p>
+        <div className="mt-3 flex items-center gap-3">
+          <StatusBadge status={riepilogo.stato} />
+          {dataMessage && <span className="text-sm text-muted-foreground">{dataMessage}</span>}
+        </div>
       </header>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Righe" value={riepilogo.righe} />
+        <KpiCard
+          label="Confronti eseguiti"
+          value={riepilogo.righe_confrontabili}
+          hint={`${riepilogo.righe} righe rilevanti`}
+        />
         <KpiCard
           label="Allineate"
-          value={`${riepilogo.ok} · ${formatPercent(riepilogo.percentuale_allineati)}`}
-          tone="ok"
+          value={
+            riepilogo.percentuale_allineati === null
+              ? "Non disponibile"
+              : `${riepilogo.ok} · ${formatPercent(riepilogo.percentuale_allineati)}`
+          }
+          tone={riepilogo.stato === "ALLINEATO" ? "ok" : "neutral"}
         />
-        <KpiCard label="KO" value={riepilogo.ko} tone="danger" />
-        <KpiCard label="Assenti in PPM" value={riepilogo.assenti_in_ppm} tone="warn" />
+        <KpiCard
+          label="Non allineate"
+          value={riepilogo.righe_confrontabili === 0 ? "Non disponibile" : riepilogo.ko}
+          tone={riepilogo.ko > 0 ? "danger" : "neutral"}
+        />
+        <KpiCard
+          label="Assenti in PPM"
+          value={riepilogo.assenti_in_ppm}
+          tone={riepilogo.assenti_in_ppm > 0 ? "warn" : "neutral"}
+        />
       </div>
       <div className="overflow-auto rounded-lg border border-border bg-card">
         <table className="w-full text-sm">
@@ -94,6 +123,13 @@ export function ReconciliationPage() {
                 </td>
               </tr>
             ))}
+            {rows.length === 0 && (
+              <tr>
+                <td className="p-6 text-center text-muted-foreground" colSpan={6}>
+                  {dataMessage ?? "Nessun dato disponibile."}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

@@ -174,6 +174,10 @@ def parse_ppm_xlsx(path: str | Path) -> ParsedPpm:
             sum_planned += to_days(planned_raw)
         if residual_raw not in (None, ""):
             sum_residual += to_days(residual_raw)
+    # In modalita read-only openpyxl mantiene aperto il file finche il workbook
+    # non viene chiuso esplicitamente; su Windows cio impedisce la rimozione
+    # del file temporaneo usato dall'endpoint di upload.
+    workbook.close()
     if not parsed:
         raise PpmParseError("Nessuna riga dati trovata nell'estratto PPM.")
     sum_rows = quantize_days(sum((row.total_days for row in parsed), ZERO))

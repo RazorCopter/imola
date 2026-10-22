@@ -3,7 +3,7 @@ COMPOSE ?= docker compose
 SEED ?= /srv/seed/seed_imola_2026-10-16.json
 
 .DEFAULT_GOAL := help
-.PHONY: help up down logs build migrate makemigrations superuser seed seed-dry shell \
+.PHONY: help up down logs build migrate makemigrations superuser seed seed-dry demo shell \
         test test-backend test-frontend lint format e2e backup checks reset
 
 help: ## Elenca i comandi disponibili
@@ -37,6 +37,9 @@ seed: ## Importa il seed reale (richiede data/seed/seed_imola_2026-10-16.json)
 seed-dry: ## Simula l'import del seed senza scrivere nulla
 	$(COMPOSE) run --rm backend python manage.py import_seed $(SEED) --dry-run
 
+demo: ## Carica dati sintetici deterministici e utenti demo
+	$(COMPOSE) run --rm backend python manage.py load_demo_data --run-checks
+
 checks: ## Esegue il motore controlli
 	$(COMPOSE) run --rm backend python manage.py run_checks
 
@@ -45,9 +48,8 @@ shell: ## Shell Django
 
 test: test-backend test-frontend ## Esegue tutti i test
 
-test-backend: ## pytest con gate di copertura su domain/ e importers/
-	$(COMPOSE) run --rm -e DJANGO_SETTINGS_MODULE=config.settings.test backend \
-		pytest --cov --cov-report=term-missing
+test-backend: ## pytest nel backend Docker con gate di copertura (non eseguire da host)
+	$(COMPOSE) exec -T backend python -m pytest --cov --cov-report=term-missing
 
 test-frontend: ## Vitest
 	$(COMPOSE) run --rm frontend npm run test -- --run
@@ -60,8 +62,8 @@ format: ## Applica black e ruff --fix, prettier
 	$(COMPOSE) run --rm backend sh -c "ruff check --fix . && black ."
 	$(COMPOSE) run --rm frontend npm run format
 
-e2e: ## Playwright, 5 flussi chiave
-	$(COMPOSE) run --rm frontend npm run e2e
+e2e: ## Playwright, workflow E2E reali contro lo stack attivo
+	$(COMPOSE) exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser -e E2E_BASE_URL=http://nginx:8080 frontend npx playwright test e2e/phase6.spec.ts
 
 backup: ## Dump del database e dei media
 	$(COMPOSE) run --rm backend python manage.py backup

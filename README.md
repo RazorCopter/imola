@@ -21,6 +21,18 @@ L'applicazione è la fonte di verità per **pianificazione, allocazioni wallet e
 | **R4** | Canone: `target = min(monte, base + settimane × gg_per_settimana)`; `delta = target − consuntivato` (positivo = a favore di BMED). |
 | **R6** | Il PPM è la fonte dei consuntivi; la riconciliazione tollera 0,01 gg. |
 
+## Test backend
+
+La suite backend usa PostgreSQL nello stack Docker e deve essere eseguita dal repository con:
+
+```bash
+make test-backend
+```
+
+Il target esegue `pytest` nel container `backend`. L'esecuzione diretta dalla virtualenv host
+non è supportata: la configurazione di test usa il nome DNS Docker `db`, non risolvibile
+all'esterno dello stack.
+
 ## PostgreSQL portatile di fallback su Windows
 
 L'ambiente ufficiale usa Docker. Se Docker non è disponibile, lo script PowerShell gestisce

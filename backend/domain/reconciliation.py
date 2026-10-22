@@ -18,6 +18,23 @@ from domain.residuals import project_balance_qs
 DEFAULT_TOLERANCE = Decimal("0.0100")
 
 
+class ReconciliationStatus:
+    """Stato autorevole del confronto esposto da API e GUI."""
+
+    ALLINEATO = "ALLINEATO"
+    NON_ALLINEATO = "NON_ALLINEATO"
+    PARZIALE = "PARZIALE"
+    NON_VERIFICABILE = "NON_VERIFICABILE"
+
+
+class ReconciliationDataStatus:
+    """Disponibilità dei dati necessaria a interpretare KPI e delta."""
+
+    DISPONIBILI = "DISPONIBILI"
+    SNAPSHOT_ASSENTE = "SNAPSHOT_ASSENTE"
+    NESSUNA_RIGA_CONFRONTABILE = "NESSUNA_RIGA_CONFRONTABILE"
+
+
 @dataclass
 class ReconciliationRow:
     """Vista calcolata `reconciliation` (par. 3.2)."""
@@ -27,7 +44,7 @@ class ReconciliationRow:
     internal_days: Decimal
     ppm_days: Decimal | None
     delta: Decimal | None
-    within_tolerance: bool
+    within_tolerance: bool | None
     snapshot_id: object | None
     snapshot_extracted_at: object | None
     missing_in_ppm: bool
@@ -94,7 +111,7 @@ def reconcile(
                     internal_days=internal,
                     ppm_days=None,
                     delta=None,
-                    within_tolerance=True,
+                    within_tolerance=None,
                     snapshot_id=None,
                     snapshot_extracted_at=None,
                     missing_in_ppm=True,
@@ -144,23 +161,53 @@ def latest_snapshot(kind: str | None = None):
     return qs.order_by("-extracted_at").first()
 
 
-def reconciliation_summary(tolerance: Decimal | None = None) -> dict:
-    """Riepilogo per la dashboard: conteggi ed estremi del delta."""
-    rows = reconcile(tolerance=tolerance)
-    deltas = [row.delta for row in rows if row.delta is not None]
+def reconciliation_summary(
+    tolerance: Decimal | None = None, *, rows: list[ReconciliationRow] | None = None
+) -> dict:
+    """Riepilogo con stato esplicito; KPI non valorizzati se il confronto è impossibile."""
     snapshot = latest_snapshot()
-    ok_count = sum(1 for row in rows if row.outcome == "OK")
-    # La percentuale si calcola qui: il client non fa aritmetica sui dati contabili (D-15).
-    aligned_pct = quantize_days(Decimal(ok_count) / Decimal(len(rows)) * 100) if rows else ZERO
+    all_rows = rows if rows is not None else reconcile(tolerance=tolerance)
+    # Le righe senza dato PPM e senza consuntivo interno non costituiscono un confronto utile.
+    rows = [row for row in all_rows if row.internal_days or row.ppm_days is not None]
+    comparable = [row for row in rows if row.delta is not None]
+    deltas = [row.delta for row in comparable if row.delta is not None]
+    ok_count = sum(1 for row in comparable if row.outcome == "OK")
+    ko_count = sum(1 for row in comparable if row.outcome == "KO")
+    missing_count = sum(1 for row in rows if row.missing_in_ppm)
+
+    if snapshot is None:
+        status = ReconciliationStatus.NON_VERIFICABILE
+        data_status = ReconciliationDataStatus.SNAPSHOT_ASSENTE
+    elif not comparable:
+        status = ReconciliationStatus.NON_VERIFICABILE
+        data_status = ReconciliationDataStatus.NESSUNA_RIGA_CONFRONTABILE
+    elif missing_count:
+        status = ReconciliationStatus.PARZIALE
+        data_status = ReconciliationDataStatus.DISPONIBILI
+    elif ko_count:
+        status = ReconciliationStatus.NON_ALLINEATO
+        data_status = ReconciliationDataStatus.DISPONIBILI
+    else:
+        status = ReconciliationStatus.ALLINEATO
+        data_status = ReconciliationDataStatus.DISPONIBILI
+
+    # Il denominatore comprende solo confronti realmente eseguiti. In assenza di questi il KPI
+    # resta nullo: zero per cento suggerirebbe erroneamente un confronto avvenuto.
+    aligned_pct = (
+        quantize_days(Decimal(ok_count) / Decimal(len(comparable)) * 100) if comparable else None
+    )
     return {
+        "stato": status,
+        "stato_dati": data_status,
         "snapshot_id": snapshot.id if snapshot else None,
         "snapshot_estratto_il": snapshot.extracted_at if snapshot else None,
         "righe": len(rows),
+        "righe_confrontabili": len(comparable),
         "ok": ok_count,
-        "ko": sum(1 for row in rows if row.outcome == "KO"),
-        "assenti_in_ppm": sum(1 for row in rows if row.missing_in_ppm),
-        "delta_totale": quantize_days(sum(deltas, ZERO)) if deltas else ZERO,
-        "delta_massimo": max((abs(delta) for delta in deltas), default=ZERO),
+        "ko": ko_count,
+        "assenti_in_ppm": missing_count,
+        "delta_totale": quantize_days(sum(deltas, ZERO)) if deltas else None,
+        "delta_massimo": max((abs(delta) for delta in deltas), default=None),
         "percentuale_allineati": aligned_pct,
     }
 

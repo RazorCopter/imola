@@ -6,7 +6,7 @@ del seed reale, riprodotti qui su progetti sintetici.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
@@ -140,8 +140,8 @@ class TestResiduiPerValidita:
         WalletYearFactory(year=2026)
 
         balance = wallet_year_balance(2026, today=date(2026, 10, 20))
-        assert balance.unallocated_valid_days == Decimal("10.0000")
-        assert balance.ongoing_project_residual_days == Decimal("10.0000")
+        assert balance.unallocated_valid_days == Decimal("0.0000")
+        assert balance.ongoing_project_residual_days == Decimal("20.0000")
         assert balance.unallocated_expiring_days == Decimal("7.0000")
         assert balance.unallocated_expired_days == Decimal("3.0000")
 
@@ -168,22 +168,45 @@ class TestResiduiPerValidita:
         assert rows[0]["giornate"] == Decimal("5.0000")
         assert rows[0]["scade_il"] == date(2027, 12, 31)
 
-    def test_allocazioni_da_residuo_scaduto(self):
+    def test_allocazione_creata_prima_della_scadenza_resta_valida(self):
         expired = ProjectFactory(
-            code="IM22-SCADUTO",
+            code="IM24-EXP",
             budget_days=Decimal("10.0000"),
             timesheet_status=TimesheetStatus.CHIUSO,
-            actual_closure_date=date(2022, 12, 1),
+            actual_closure_date=date(2024, 12, 1),
         )
-        allocate("EXP", "2.0000", "1.0000", project=expired)
+        allocation = allocate("EXP", "2.0000", "1.0000", project=expired)
+        allocation.created_at = datetime(2025, 6, 1, tzinfo=UTC)
+        allocation.save(update_fields=["created_at"])
+
         offenders = allocations_from_expired_residual(today=date(2026, 10, 20))
-        assert len(offenders) == 1
-        assert offenders[0].source_project.code == "IM22-SCADUTO"
+
+        assert offenders == []
+
+    def test_allocazione_creata_dopo_la_scadenza_e_irregolare(self):
+        expired = ProjectFactory(
+            code="IM24-LATE",
+            budget_days=Decimal("10.0000"),
+            timesheet_status=TimesheetStatus.CHIUSO,
+            actual_closure_date=date(2024, 12, 1),
+        )
+        allocation = allocate("LATE", "2.0000", "0.0000", project=expired)
+        allocation.created_at = datetime(2026, 1, 2, tzinfo=UTC)
+        allocation.save(update_fields=["created_at"])
+
+        offenders = allocations_from_expired_residual(today=date(2026, 10, 20))
+
+        assert [row.id for row in offenders] == [allocation.id]
 
 
 class TestResiduoDisponibilePerAllocazione:
     def test_tiene_conto_di_consumi_e_altre_allocazioni(self):
-        project = ProjectFactory(code="IM26-RESIDUO", budget_days=Decimal("25.0000"))
+        project = ProjectFactory(
+            code="IM26-RESIDUO",
+            budget_days=Decimal("25.0000"),
+            timesheet_status=TimesheetStatus.CHIUSO,
+            actual_closure_date=date(2026, 1, 15),
+        )
         TimesheetEntryFactory(project=project, days=Decimal("10.5000"))
         allocation = WalletAllocationFactory(
             source_project=project,

@@ -24,41 +24,22 @@ def manager_client() -> APIClient:
     return client
 
 
-def test_release_to_wallet_richiede_motivazione_e_non_supera_residuo(manager_client):
+def test_release_to_wallet_legacy_e_disabilitato_senza_modificare_il_progetto(manager_client):
     project = ProjectFactory(
         budget_days=Decimal("12.0000"),
         timesheet_status=TimesheetStatus.ATTIVO,
     )
-    url = f"/api/v1/projects/{project.pk}/release-to-wallet"
 
-    missing_reason = manager_client.post(url, {"giornate": "2.0000"}, format="json")
-    assert missing_reason.status_code == 400
-    assert "motivazione" in missing_reason.json()
-
-    too_many = manager_client.post(
-        url, {"giornate": "12.0001", "motivazione": "Richiesta BMED"}, format="json"
-    )
-    assert too_many.status_code == 400
-
-    response = manager_client.post(
-        url, {"giornate": "10.0000", "motivazione": "Richiesta BMED"}, format="json"
-    )
-    assert response.status_code == 200
-    project.refresh_from_db()
-    assert project.released_to_wallet_days == Decimal("10.0000")
-    history = project.history.latest()
-    assert history.released_to_wallet_days == Decimal("10.0000")
-    assert history.history_change_reason == "Richiesta BMED"
-
-
-def test_release_to_wallet_rifiuta_progetto_non_attivo(manager_client):
-    project = ProjectFactory(timesheet_status=TimesheetStatus.NON_AVVIATO)
     response = manager_client.post(
         f"/api/v1/projects/{project.pk}/release-to-wallet",
-        {"giornate": "1.0000", "motivazione": "Non ammesso"},
+        {"giornate": "10.0000", "motivazione": "Richiesta BMED"},
         format="json",
     )
-    assert response.status_code == 400
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "PROJECT_WALLET_RELEASE_DEPRECATED"
+    project.refresh_from_db()
+    assert project.released_to_wallet_days == Decimal("0.0000")
 
 
 def test_anomaly_external_ref_visibile_in_api(manager_client):
