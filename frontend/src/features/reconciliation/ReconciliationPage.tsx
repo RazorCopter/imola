@@ -28,7 +28,8 @@ interface Response {
     snapshot_estratto_il: string | null;
   };
   tolleranza: string;
-  risultati: Row[];
+  results?: Row[];
+  risultati?: Row[];
 }
 
 export function ReconciliationPage() {
@@ -39,7 +40,8 @@ export function ReconciliationPage() {
   if (query.isLoading) return <LoadingState />;
   if (query.isError || !query.data)
     return <ErrorState title="Impossibile caricare la riconciliazione" />;
-  const { riepilogo, risultati } = query.data;
+  const { riepilogo } = query.data;
+  const rows = query.data.results ?? query.data.risultati ?? [];
   return (
     <section className="space-y-5">
       <header>
@@ -72,7 +74,7 @@ export function ReconciliationPage() {
             </tr>
           </thead>
           <tbody>
-            {risultati.map((row) => (
+            {rows.map((row) => (
               <tr key={row.progetto_id} className="border-t border-border">
                 <td className="p-3 font-mono">{row.codice_progetto.split("-", 1)[0]}</td>
                 <td className="p-3">
