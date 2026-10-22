@@ -8,6 +8,8 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { SessionExpiredDialog } from "@/features/auth/SessionExpiredDialog";
 import { useSession } from "@/features/auth/session";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
+import { AnomaliesPage } from "@/features/anomalies/AnomaliesPage";
+import { ReconciliationPage } from "@/features/reconciliation/ReconciliationPage";
 import { CanonePage } from "@/features/canone/CanonePage";
 import { ProjectDetailPage } from "@/features/projects/ProjectDetailPage";
 import { ProjectsPage } from "@/features/projects/ProjectsPage";
@@ -51,11 +53,8 @@ export default function App() {
           <Route path="/progetti/:projectId" element={<ProjectDetailPage />} />
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/canone" element={<CanonePage />} />
-          <Route
-            path="/riconciliazione"
-            element={<PlaceholderPage titleKey="nav.reconciliation" />}
-          />
-          <Route path="/anomalie" element={<PlaceholderPage titleKey="nav.anomalies" />} />
+          <Route path="/riconciliazione" element={<ReconciliationPage />} />
+          <Route path="/anomalie" element={<AnomaliesPage />} />
           <Route path="/revisione" element={<PlaceholderPage titleKey="nav.review" />} />
           <Route path="/amministrazione" element={<PlaceholderPage titleKey="nav.admin" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
