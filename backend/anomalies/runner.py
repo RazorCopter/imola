@@ -36,6 +36,7 @@ class RunReport:
 def _values(finding: Finding, now) -> dict:
     return {
         "rule_code": finding.rule_code,
+        "entity_ref": finding.entity_ref,
         "severity": finding.severity,
         "scope": finding.scope,
         "description": finding.description,

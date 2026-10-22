@@ -63,13 +63,13 @@ def check_date_order() -> Iterable[Finding]:
         if project.planned_end_date and project.planned_end_date < project.start_date:
             yield Finding(
                 "CHK_DATE_ORDER",
-                _short(project.code),
+                project.code,
                 Severity.ALTA,
                 Scope.PROGETTO,
                 f"La data di fine prevista di {_short(project.code)} precede la data di inizio.",
                 "Correggere le date del progetto.",
                 {
-                    "project_code": _short(project.code),
+                    "project_code": project.code,
                     "start_date": str(project.start_date),
                     "planned_end_date": str(project.planned_end_date),
                 },
@@ -78,13 +78,13 @@ def check_date_order() -> Iterable[Finding]:
         elif project.actual_closure_date and project.actual_closure_date < project.start_date:
             yield Finding(
                 "CHK_DATE_ORDER",
-                _short(project.code),
+                project.code,
                 Severity.ALTA,
                 Scope.PROGETTO,
                 f"La chiusura di {_short(project.code)} precede la data di inizio.",
                 "Correggere la data di chiusura del progetto.",
                 {
-                    "project_code": _short(project.code),
+                    "project_code": project.code,
                     "start_date": str(project.start_date),
                     "actual_closure_date": str(project.actual_closure_date),
                 },
@@ -105,14 +105,14 @@ def check_end_passed_active(as_of: date | None = None) -> Iterable[Finding]:
     ).order_by("code"):
         yield Finding(
             "CHK_END_PASSED_ACTIVE",
-            _short(project.code),
+            project.code,
             Severity.MEDIA,
             Scope.PROGETTO,
             f"{_short(project.code)} è attivo ma la data di fine prevista "
             f"({project.planned_end_date}) è superata da oltre 30 giorni.",
             "Prorogare la data di fine prevista o chiudere la consuntivazione.",
             {
-                "project_code": _short(project.code),
+                "project_code": project.code,
                 "planned_end_date": str(project.planned_end_date),
                 "reference_date": str(reference_date),
             },
@@ -128,12 +128,12 @@ def check_closed_no_date() -> Iterable[Finding]:
     ).order_by("code"):
         yield Finding(
             "CHK_CLOSED_NO_DATE",
-            _short(project.code),
+            project.code,
             Severity.ALTA,
             Scope.PROGETTO,
             f"{_short(project.code)} è chiuso senza data di chiusura.",
             "Inserire la data di chiusura effettiva dalla coda di revisione.",
-            {"project_code": _short(project.code)},
+            {"project_code": project.code},
             project_id=project.id,
         )
 
@@ -164,7 +164,7 @@ def check_overrun_project() -> Iterable[Finding]:
         )
         yield Finding(
             "CHK_OVERRUN_PROJECT",
-            _short(project.code),
+            project.code,
             Severity.ALTA if ratio > Decimal("0.10") else Severity.MEDIA,
             Scope.PROGETTO,
             f"{_short(project.code)} supera il budget: {observed} gg su "
@@ -237,18 +237,17 @@ def check_alloc_exceeds_residual() -> Iterable[Finding]:
             excess = quantize_days(total_allocated - base_residual)
             alloc_refs = [a.external_ref or str(a.id) for a in allocations]
             # atteso da specifica: una sola anomalia aggregata per progetto origine
-            ref = _short(project.code)
             yield Finding(
                 "CHK_ALLOC_EXCEEDS_RESIDUAL",
-                ref,
+                project.code,
                 Severity.ALTA,
                 Scope.WALLET,
-                f"Le allocazioni da {ref} superano il residuo disponibile del progetto: "
-                f"totale allocato {total_allocated} gg su {base_residual} gg "
-                f"(eccedenza {excess} gg).",
+                f"Le allocazioni da {_short(project.code)} superano il residuo "
+                f"disponibile del progetto: totale allocato {total_allocated} gg "
+                f"su {base_residual} gg (eccedenza {excess} gg).",
                 "Ridurre le allocazioni o approvare l'override con motivazione formale.",
                 {
-                    "source_project": ref,
+                    "source_project": project.code,
                     "budget": str(project.budget_days),
                     "direct_consumed": str(direct),
                     "base_residual": str(base_residual),
@@ -283,14 +282,14 @@ def check_residual_expiring(as_of: date | None = None) -> Iterable[Finding]:
                 )
                 yield Finding(
                     "CHK_RESIDUAL_EXPIRING",
-                    _short(project.code),
+                    project.code,
                     Severity.MEDIA,
                     Scope.WALLET,
                     f"Il residuo di {_short(project.code)} ({unallocated} gg) "
                     f"scade il {expiry_str}.",
                     "Allocare il residuo al wallet prima della scadenza.",
                     {
-                        "project_code": _short(project.code),
+                        "project_code": project.code,
                         "expires_on": str(validity.expires_on),
                         "unallocated_days": str(unallocated),
                     },
@@ -318,14 +317,14 @@ def check_residual_unallocated_closed(as_of: date | None = None) -> Iterable[Fin
             if unallocated > Decimal("0") and validity.state == ResidualState.VALIDO:
                 yield Finding(
                     "CHK_RESIDUAL_UNALLOCATED_CLOSED",
-                    _short(project.code),
+                    project.code,
                     Severity.BASSA,
                     Scope.WALLET,
                     f"{_short(project.code)} è chiuso con residuo non allocato "
                     f"di {unallocated} gg.",
                     "Valutare l'allocazione delle giornate al wallet.",
                     {
-                        "project_code": _short(project.code),
+                        "project_code": project.code,
                         "unallocated_days": str(unallocated),
                     },
                     project_id=project.id,
@@ -404,12 +403,12 @@ def check_missing_in_ppm() -> Iterable[Finding]:
             continue
         yield Finding(
             "CHK_MISSING_IN_PPM",
-            _short(project.code),
+            project.code,
             Severity.MEDIA,
             Scope.RICONCILIAZIONE,
             f"{_short(project.code)} ha {row.internal_days} gg interni ma non compare nel PPM.",
             "Chiedere a Imola l'associazione nel PPM.",
-            {"project_code": _short(project.code), "internal_days": str(row.internal_days)},
+            {"project_code": project.code, "internal_days": str(row.internal_days)},
             project_id=project.id,
         )
 
@@ -441,13 +440,13 @@ def check_canone_underuse() -> Iterable[Finding]:
             ref = _short(canone.project.code)
             yield Finding(
                 "CHK_CANONE_UNDERUSE",
-                ref,
+                canone.project.code,
                 Severity.MEDIA,
                 Scope.CANONE,
                 f"Il forecast del canone {ref} è sotto il 95% del monte.",
                 "Rivedere forecast e carico delle sotto-attività.",
                 {
-                    "entity": ref,
+                    "entity": canone.project.code,
                     "forecast": str(state.forecast),
                     "total": str(state.total_days),
                 },
@@ -461,17 +460,16 @@ def check_canone_overuse() -> Iterable[Finding]:
     for canone in Canone.objects.select_related("project").order_by("-semester"):
         state = canone_status(canone)
         if state.is_overused:
-            ref = _short(canone.project.code)
             yield Finding(
                 "CHK_CANONE_OVERUSE",
-                ref,
+                canone.project.code,
                 Severity.ALTA,
                 Scope.CANONE,
                 f"Il canone {canone.semester} supera il monte: {state.consumed_days} su "
                 f"{state.total_days} gg.",
                 "Verificare i consuntivi del canone o concordare una variazione del monte.",
                 {
-                    "entity": ref,
+                    "entity": canone.project.code,
                     "consumed": str(state.consumed_days),
                     "total": str(state.total_days),
                 },
@@ -489,12 +487,12 @@ def check_active_without_offer() -> Iterable[Finding]:
     ):
         yield Finding(
             "CHK_ACTIVE_WITHOUT_OFFER",
-            _short(project.code),
+            project.code,
             Severity.MEDIA,
             Scope.PROGETTO,
             f"{_short(project.code)} è attivo con offerta non accettata ({project.offer_status}).",
             "Sollecitare l'accettazione dell'offerta o sospendere la consuntivazione.",
-            {"project_code": _short(project.code), "offer_status": project.offer_status},
+            {"project_code": project.code, "offer_status": project.offer_status},
             project_id=project.id,
         )
 
@@ -524,12 +522,12 @@ def check_unverified_data() -> Iterable[Finding]:
     ):
         yield Finding(
             "CHK_UNVERIFIED_DATA",
-            _short(project.code),
+            project.code,
             Severity.BASSA,
             Scope.PROGETTO,
             f"{_short(project.code)} è in stato DA_VERIFICARE: verificare la consuntivazione.",
             "Revisionare il progetto nella coda di revisione.",
-            {"project_code": _short(project.code)},
+            {"project_code": project.code},
             project_id=project.id,
         )
 

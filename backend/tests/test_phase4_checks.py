@@ -92,7 +92,7 @@ def test_chk_residual_expiring_dopo_chiusura_im24517():
     assert len(findings) == 1
     finding = findings[0]
     assert finding.rule_code == "CHK_RESIDUAL_EXPIRING"
-    assert finding.entity_ref == "IM24517"
+    assert finding.entity_ref == "IM24517-TEST"
     assert finding.context["unallocated_days"] == "12.3100"
     assert finding.context["expires_on"] == "2026-12-31"
 
@@ -157,7 +157,7 @@ def test_chk_active_without_offer_rileva_progetti_non_accettati():
     )
     findings = list(check_active_without_offer())
     assert len(findings) == 1
-    assert findings[0].entity_ref == "IM"
+    assert findings[0].entity_ref == "IM-NO-OFFER"
 
 
 def test_chk_milestone_slipped_rileva_slittamenti():
