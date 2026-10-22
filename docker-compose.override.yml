@@ -20,6 +20,7 @@ services:
     volumes:
       - ./backend:/app
       - ./data/seed:/app/data/seed:ro
+      - ./data/ppm:/app/data/ppm:ro
       - ${SL_DATA_DIR:-./.docker-data}/media:/srv/media
       - ${SL_DATA_DIR:-./.docker-data}/static:/srv/static
       - ${SL_DATA_DIR:-./.docker-data}/backups:/srv/backups

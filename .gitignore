@@ -1,5 +1,7 @@
 # --- dati reali del fornitore: NON versionare ---
 data/seed/*.json
+data/ppm/*
+!data/ppm/.gitkeep
 data/uploads/
 backend/media/
 !data/seed/.gitkeep

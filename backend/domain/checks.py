@@ -225,9 +225,7 @@ def check_alloc_exceeds_residual() -> Iterable[Finding]:
         if project is None:
             continue
         direct = (
-            TimesheetEntry.objects.filter(project=project).aggregate(
-                total=Sum("days")
-            )["total"]
+            TimesheetEntry.objects.filter(project=project).aggregate(total=Sum("days"))["total"]
             or ZERO
         )
         base_residual = project.budget_days - direct
