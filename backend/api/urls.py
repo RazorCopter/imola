@@ -20,7 +20,13 @@ urlpatterns = [
     path("auth/session", auth_views.SessionView.as_view(), name="session"),
     path("settings", domain_views.SettingsView.as_view(), name="settings"),
     path("search", domain_views.CommandSearchView.as_view(), name="command-search"),
+    path("checks/run", domain_views.ChecksRunView.as_view(), name="checks-run"),
     path("anomalies", domain_views.AnomalyListView.as_view(), name="anomaly-list"),
+    path(
+        "anomalies/<uuid:pk>/<str:action>",
+        domain_views.AnomalyActionView.as_view(),
+        name="anomaly-action",
+    ),
     path("projects", domain_views.ProjectListCreateView.as_view(), name="project-list-create"),
     path("projects/balances", domain_views.ProjectBalancesView.as_view(), name="project-balances"),
     path(

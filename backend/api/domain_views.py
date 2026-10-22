@@ -222,7 +222,13 @@ class AnomalyListView(DocumentedAPIView):
     def get(self, request):
         from anomalies.models import Anomaly
 
-        rows = Anomaly.objects.select_related("project").order_by("-detected_at", "external_ref")
+        rows = Anomaly.objects.select_related("project", "superseded_by").order_by(
+            "-detected_at", "external_ref"
+        )
+        if request.query_params.get("stato"):
+            rows = rows.filter(status=request.query_params["stato"])
+        if request.query_params.get("regola"):
+            rows = rows.filter(rule_code=request.query_params["regola"])
         return Response(
             {
                 "results": [
@@ -235,11 +241,53 @@ class AnomalyListView(DocumentedAPIView):
                         "descrizione": row.description,
                         "stato": row.status,
                         "progetto": row.project.code if row.project else None,
+                        "contesto": row.context,
+                        "azione_suggerita": row.suggested_action,
+                        "nota_risoluzione": row.resolution_note,
+                        "sostituita_da": (
+                            row.superseded_by.rule_code if row.superseded_by else None
+                        ),
                     }
                     for row in rows
                 ]
             }
         )
+
+
+class ChecksRunView(DocumentedAPIView):
+    permission_classes = [ReadOnlyOrLedgerWriter]
+
+    @extend_schema(request=DomainResponseSerializer, responses={200: DomainResponseSerializer})
+    def post(self, request):
+        from anomalies.runner import run_checks
+
+        rules = request.data.get("regole")
+        report = run_checks(rules if isinstance(rules, list) else None)
+        return Response(report.as_dict())
+
+
+class AnomalyActionView(DocumentedAPIView):
+    permission_classes = [ReadOnlyOrLedgerWriter]
+
+    @extend_schema(request=DomainResponseSerializer, responses={200: DomainResponseSerializer})
+    def post(self, request, pk, action: str):
+        from django.utils.dateparse import parse_date
+
+        from anomalies.models import Anomaly, AnomalyStatus
+
+        anomaly = get_object_or_404(Anomaly, pk=pk)
+        note = str(request.data.get("nota", "")).strip()
+        if action == "take":
+            anomaly.status = AnomalyStatus.IN_VERIFICA
+            anomaly.assigned_to = request.user
+        elif action == "resolve":
+            anomaly.resolve(note, request.user)
+        elif action == "accept":
+            anomaly.accept(note, parse_date(str(request.data.get("fino_al", ""))), request.user)
+        else:
+            return Response({"detail": "Azione non valida."}, status=status.HTTP_400_BAD_REQUEST)
+        anomaly.save()
+        return Response({"id": anomaly.id, "stato": anomaly.status})
 
 
 class WalletBalanceView(DocumentedAPIView):
