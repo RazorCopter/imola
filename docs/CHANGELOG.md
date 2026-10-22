@@ -4,6 +4,24 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
 
 ## [Non rilasciato]
 
+### Fase 4 — Controlli e riconciliazione
+
+**Aggiunto**
+
+- Catalogo delle 18 regole di controllo automatico `CHK_*` in `backend/domain/checks.py`.
+- Runner idempotente in `backend/anomalies/runner.py` con fingerprinting stabile, deduplica, risoluzione automatica delle condizioni non più rilevate e gestione deroghe.
+- Supersessione completa delle anomalie seed secondo D-05 (chiusura uno-a-uno e uno-a-molti a copertura integrale).
+- Comando di gestione `manage.py run_checks` ed endpoint REST `POST /api/v1/checks/run` e `POST /api/v1/anomalies/{id}/{take,resolve,accept}`.
+- Schermate UI per Inbox anomalie e Riconciliazione PPM con flussi browser verificati.
+- Test negativi e positivi delle regole, test del runner e test E2E Playwright dedicati.
+
+**Verificato**
+
+- Esecuzione sul seed reale con 34 anomalie create e 6 anomalie seed sostituite al primo passaggio, e 0 anomalie create/aggiornate/risolte al secondo passaggio (deduplicazione completa).
+- Verificati sul campo i casi cardine: `CHK_OVERRUN_PROJECT` (IM24133 MEDIA da PPM, IM26292 ALTA), `CHK_MISSING_IN_PPM` (IM25379), `CHK_DOUBLE_COUNT` (RM-300228 / RM-300229), `CHK_ALLOC_NO_SOURCE` (W26-008), `CHK_CLOSED_NO_DATE` (IM26034, IM26047, IM26075), `CHK_RECON_DELTA` (8 KO) e IM25138 OK.
+- Supersessione osservata sul seed reale: `AN-004`, `AN-005`, `AN-006`, `AN-008` (uno-a-uno) e `AN-003`, `AN-007` (uno-a-molti) chiuse con nota "sostituita da <rule_code>".
+- Gate di qualità superati nel container Docker: 262 test backend, ruff, black, mypy, check deploy, lint/build frontend ed E2E Chromium completi.
+
 ### Fase 3 — UI core
 
 **Aggiunto**
