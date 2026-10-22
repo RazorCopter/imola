@@ -58,7 +58,7 @@ SEED_SUPERSESSION_MAP: dict[str, tuple[str, str | tuple[str, ...] | None] | None
     "AN-001": None,
     "AN-002": None,
     "AN-003": (
-        "CHK_RESIDUAL_UNALLOCATED_CLOSED",
+        "CHK_UNVERIFIED_DATA",
         (
             "IM25188",
             "IM25151",

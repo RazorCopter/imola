@@ -1,25 +1,165 @@
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 
 import pytest
 
 from anomalies.models import Anomaly, AnomalyStatus, Scope, Severity
 from anomalies.runner import run_checks
-from domain.checks import RULES, Finding
+from domain.checks import (
+    RULES,
+    Finding,
+    check_active_without_offer,
+    check_canone_overuse,
+    check_milestone_slipped,
+    check_overrun_allocation,
+    check_residual_expiring,
+    check_residual_unallocated_closed,
+)
+from projects.models import BillingMilestone, OfferStatus, TimesheetStatus
+from tests.factories import (
+    CanoneFactory,
+    CanoneSubactivityFactory,
+    ProjectFactory,
+    WalletActivityFactory,
+    WalletAllocationFactory,
+    WalletYearFactory,
+)
+from timesheets.models import TimesheetEntry, TimesheetSource
 
 pytestmark = pytest.mark.django_db
 
+EXPECTED_RULES = {
+    "CHK_DATE_ORDER",
+    "CHK_END_PASSED_ACTIVE",
+    "CHK_CLOSED_NO_DATE",
+    "CHK_OVERRUN_PROJECT",
+    "CHK_OVERRUN_ALLOCATION",
+    "CHK_ALLOC_EXCEEDS_RESIDUAL",
+    "CHK_RESIDUAL_EXPIRING",
+    "CHK_RESIDUAL_UNALLOCATED_CLOSED",
+    "CHK_ALLOC_FROM_EXPIRED",
+    "CHK_RECON_DELTA",
+    "CHK_MISSING_IN_PPM",
+    "CHK_DOUBLE_COUNT",
+    "CHK_CANONE_UNDERUSE",
+    "CHK_CANONE_OVERUSE",
+    "CHK_ACTIVE_WITHOUT_OFFER",
+    "CHK_ALLOC_NO_SOURCE",
+    "CHK_UNVERIFIED_DATA",
+    "CHK_MILESTONE_SLIPPED",
+}
 
-def test_catalogo_contiene_esattamente_diciotto_regole():
+
+def test_catalogo_contiene_esattamente_diciotto_regole_della_spec():
+    assert set(RULES) == EXPECTED_RULES
     assert len(RULES) == 18
-    assert len(set(RULES)) == 18
-    assert all(code.startswith("CHK_") for code in RULES)
 
 
-@pytest.mark.parametrize("rule_code", sorted(RULES))
+@pytest.mark.parametrize("rule_code", sorted(EXPECTED_RULES))
 def test_ogni_regola_ha_un_negativo_su_database_vuoto(rule_code):
     assert list(RULES[rule_code]()) == []
+
+
+def test_chk_residual_expiring_dopo_chiusura_im24517():
+    project = ProjectFactory(
+        code="IM24517-TEST",
+        title="Solution design consulenza",
+        budget_days=Decimal("25.0000"),
+        timesheet_status=TimesheetStatus.CHIUSO,
+        actual_closure_date=date(2025, 5, 30),
+    )
+    TimesheetEntry.objects.create(
+        project=project,
+        days=Decimal("11.6900"),
+        source=TimesheetSource.SEED_INIZIALE,
+        period=date(2025, 5, 1),
+    )
+    as_of = date(2026, 10, 16)
+
+    findings = list(check_residual_expiring(as_of=as_of))
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.rule_code == "CHK_RESIDUAL_EXPIRING"
+    assert finding.entity_ref == "IM24517"
+    assert finding.context["expires_on"] == "2026-12-31"
+
+
+def test_chk_residual_unallocated_closed_zero_se_progetto_chiuso_senza_data():
+    from tests.factories import ImportBatchFactory
+
+    batch = ImportBatchFactory()
+    ProjectFactory(
+        code="IM26034-TEST",
+        timesheet_status=TimesheetStatus.CHIUSO,
+        actual_closure_date=None,
+        import_batch=batch,
+    )
+    assert list(check_residual_unallocated_closed(as_of=date(2026, 10, 16))) == []
+
+
+def test_chk_overrun_allocation_rileva_superamento_budget_allocato():
+    year = WalletYearFactory(year=2026)
+    activity = WalletActivityFactory(code="ACT-1")
+    alloc = WalletAllocationFactory(
+        wallet_year=year,
+        activity=activity,
+        allocated_days=Decimal("5.0000"),
+        external_ref="W26-TEST",
+    )
+    TimesheetEntry.objects.create(
+        wallet_allocation=alloc,
+        days=Decimal("6.0000"),
+        source=TimesheetSource.SEED_INIZIALE,
+        period=date(2026, 5, 1),
+    )
+
+    findings = list(check_overrun_allocation())
+    assert len(findings) == 1
+    assert findings[0].entity_ref == "W26-TEST"
+    assert findings[0].severity == Severity.ALTA
+
+
+def test_chk_canone_overuse_rileva_sforamento_monte():
+    project = ProjectFactory(code="CAN-1")
+    canone = CanoneFactory(project=project, semester="2026-S1", total_days=Decimal("10.0000"))
+    sub = CanoneSubactivityFactory(canone=canone, title="Sub 1")
+    TimesheetEntry.objects.create(
+        canone_subactivity=sub,
+        days=Decimal("12.0000"),
+        source=TimesheetSource.SEED_INIZIALE,
+        period=date(2026, 3, 1),
+    )
+
+    findings = list(check_canone_overuse())
+    assert len(findings) == 1
+    assert findings[0].rule_code == "CHK_CANONE_OVERUSE"
+    assert findings[0].severity == Severity.ALTA
+
+
+def test_chk_active_without_offer_rileva_progetti_non_accettati():
+    ProjectFactory(
+        code="IM-NO-OFFER",
+        timesheet_status=TimesheetStatus.ATTIVO,
+        offer_status=OfferStatus.INVIATA,
+    )
+    findings = list(check_active_without_offer())
+    assert len(findings) == 1
+    assert findings[0].entity_ref == "IM"
+
+
+def test_chk_milestone_slipped_rileva_slittamenti():
+    project = ProjectFactory(code="IM-MILE")
+    milestone = BillingMilestone.objects.create(
+        project=project,
+        planned_date=date(2026, 1, 1),
+        move_count=2,
+    )
+    findings = list(check_milestone_slipped())
+    assert len(findings) == 1
+    assert findings[0].entity_ref == str(milestone.id)
 
 
 def test_runner_crea_aggiorna_e_risolve_senza_duplicare(monkeypatch):
@@ -45,7 +185,6 @@ def test_runner_crea_aggiorna_e_risolve_senza_duplicare(monkeypatch):
     assert second.updated == 0
     assert Anomaly.objects.filter(rule_code="CHK_TEST").count() == 1
 
-    # Quando i valori cambiano, l'anomalia esistente viene aggiornata sul posto
     def updated_detector():
         if active:
             yield Finding(

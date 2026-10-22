@@ -51,7 +51,7 @@ class TestD05SupersessionMap:
 
         # Anomalie 1-a-1 e 1-a-molti coperte da controlli automatici di Fase 4
         assert SEED_SUPERSESSION_MAP["AN-003"] == (
-            "CHK_RESIDUAL_UNALLOCATED_CLOSED",
+            "CHK_UNVERIFIED_DATA",
             (
                 "IM25188",
                 "IM25151",
@@ -120,7 +120,7 @@ class TestAnomalySupersessionModel:
             fingerprint=build_fingerprint(SEED_RULE_CODE, "AN-003"),
         )
         replacement = AnomalyFactory(
-            rule_code="CHK_RESIDUAL_UNALLOCATED_CLOSED",
+            rule_code="CHK_UNVERIFIED_DATA",
             status=AnomalyStatus.APERTA,
         )
 
@@ -280,7 +280,7 @@ class TestSupersessionReimport:
         seed_anomaly = Anomaly.objects.get(fingerprint=build_fingerprint(SEED_RULE_CODE, "AN-003"))
         assert seed_anomaly.status == AnomalyStatus.APERTA
 
-        replacement = AnomalyFactory(rule_code="CHK_RESIDUAL_UNALLOCATED_CLOSED")
+        replacement = AnomalyFactory(rule_code="CHK_UNVERIFIED_DATA")
         seed_anomaly.mark_superseded(replacement)
         seed_anomaly.save()
 

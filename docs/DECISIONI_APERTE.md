@@ -81,7 +81,7 @@ situazioni che il motore controlli rileva da sé: lasciarle aperte produrrebbe d
 **Soluzione adottata**:
 
 1. Modello `Anomaly` esteso con campo `superseded_by` (`ForeignKey("self", null=True, blank=True, on_delete=SET_NULL)`) e metodo transazionale `mark_superseded(replacement)` che valida l'istanza sostitutiva (salvata, valida e non coincidente con se stessa), imposta `status = RISOLTA` e annota la motivazione con il codice regola automatico.
-2. Mappa dichiarativa `SEED_SUPERSESSION_MAP` definita in `backend/importers/seed_json.py` che associa esplicitamente 7 anomalie seed alle corrispondenti regole automatiche di Fase 4 (`AN-003` → `CHK_RESIDUAL_UNALLOCATED_CLOSED`, `AN-004` → `CHK_OVERRUN_PROJECT` su `IM26292`, `AN-005` → `CHK_DOUBLE_COUNT`, `AN-006` → `CHK_MISSING_IN_PPM` su `IM25379`, `AN-007` → `CHK_RECON_DELTA`, `AN-008` → `CHK_CANONE_UNDERUSE` su `IM26179`, `AN-009` → `CHK_DATE_ORDER`). Le restanti 4 anomalie (`AN-001`, `AN-002`, `AN-010`, `AN-011`) descrivono incoerenze contabili o duplicazioni del vecchio foglio Excel e restano aperte per gestione o chiusura manuale nella coda di revisione.
+2. Mappa dichiarativa `SEED_SUPERSESSION_MAP` definita in `backend/importers/seed_json.py` che associa esplicitamente le anomalie seed alle corrispondenti regole automatiche di Fase 4 (`AN-003` → `CHK_UNVERIFIED_DATA` sui 9 progetti in stato DA_VERIFICARE, `AN-004` → `CHK_OVERRUN_PROJECT` su `IM26292`, `AN-005` → `CHK_DOUBLE_COUNT`, `AN-006` → `CHK_MISSING_IN_PPM` su `IM25379`, `AN-007` → `CHK_RECON_DELTA`, `AN-008` → `CHK_CANONE_UNDERUSE` su `IM26179`). Le anomalie seed risolte all'import per difetto Excel (`AN-001`, `AN-002`, `AN-009`, `AN-010`, `AN-011`) non creano rumore.
 3. Idempotenza garantita: in caso di reimport del seed, le anomalie già marcate come `RISOLTA` per supersessione preservano puntatore e stato senza sovrascritture o riaperture indebite.
 **Dove**: `backend/anomalies/models.py` (`Anomaly.superseded_by`, `Anomaly.mark_superseded()`), `backend/importers/seed_json.py` (`SEED_SUPERSESSION_MAP`), suite test in `backend/tests/importers/test_supersession.py`. Il runner automatico di Fase 4 (`backend/domain/checks/runner.py`) collegherà le istanze al primo calcolo.
 
@@ -181,6 +181,11 @@ i delta e le percentuali arrivano già calcolati dalle viste di dominio; il clie
 numero solo dentro i formattatori, per la sola resa a schermo.
 **Dove**: `backend/api/renderers.py`, `frontend/src/lib/format.ts`, test in
 `frontend/src/lib/__tests__/format.test.ts`.
+
+## D-17 — Regole di controllo addizionali candidate non attivate in v1
+
+**Osservazione**: durante l'analisi sono emerse verifiche di coerenza potenzialmente utili (`CHK_MISSING_OWNER`, `CHK_ZERO_BUDGET`, `CHK_ZERO_ALLOCATION`, `CHK_MILESTONE_NO_DATE`, `CHK_BILLING_INCONSISTENT`, `CHK_PPM_UNMATCHED`, `CHK_PPM_UNBALANCED`).
+**Scelta**: non attivate in v1 per aderenza rigorosa al catalogo canonico delle 18 regole di specifica (`CHK_DATE_ORDER`, `CHK_END_PASSED_ACTIVE`, `CHK_CLOSED_NO_DATE`, `CHK_OVERRUN_PROJECT`, `CHK_OVERRUN_ALLOCATION`, `CHK_ALLOC_EXCEEDS_RESIDUAL`, `CHK_RESIDUAL_EXPIRING`, `CHK_RESIDUAL_UNALLOCATED_CLOSED`, `CHK_ALLOC_FROM_EXPIRED`, `CHK_RECON_DELTA`, `CHK_MISSING_IN_PPM`, `CHK_DOUBLE_COUNT`, `CHK_CANONE_UNDERUSE`, `CHK_CANONE_OVERUSE`, `CHK_ACTIVE_WITHOUT_OFFER`, `CHK_ALLOC_NO_SOURCE`, `CHK_UNVERIFIED_DATA`, `CHK_MILESTONE_SLIPPED`). Da valutare con il responsabile BMED per estensioni future.
 
 ## D-16 — Disallineamento versione Python (venv locale 3.13 vs Dockerfile 3.12)
 

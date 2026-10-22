@@ -1,9 +1,12 @@
 import { expect, test } from "@playwright/test";
 
+const E2E_USER = process.env.E2E_USERNAME ?? "admin";
+const E2E_PASS = process.env.E2E_PASSWORD ?? "admin1234";
+
 test("login reale e navigazione verso anomalie e riconciliazione", async ({ page }) => {
   await page.goto("/");
-  await page.locator("#username").fill("admin");
-  await page.locator("#password").fill("admin1234");
+  await page.locator("#username").fill(E2E_USER);
+  await page.locator("#password").fill(E2E_PASS);
   await page.getByRole("button", { name: "Accedi" }).click();
 
   await expect(page.getByRole("button", { name: "Esci" })).toBeVisible({ timeout: 10000 });
