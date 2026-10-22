@@ -259,10 +259,19 @@ class ChecksRunView(DocumentedAPIView):
 
     @extend_schema(request=DomainResponseSerializer, responses={200: DomainResponseSerializer})
     def post(self, request):
+        from datetime import date
+
         from anomalies.runner import run_checks
 
         rules = request.data.get("regole")
-        report = run_checks(rules if isinstance(rules, list) else None)
+        as_of_val = None
+        as_of_str = request.data.get("as_of") or request.query_params.get("as_of")
+        if as_of_str:
+            try:
+                as_of_val = date.fromisoformat(str(as_of_str))
+            except ValueError:
+                pass
+        report = run_checks(rules if isinstance(rules, list) else None, as_of=as_of_val)
         return Response(report.as_dict())
 
 

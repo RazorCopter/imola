@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 
 from django.db import transaction
 from django.utils import timezone
@@ -87,7 +88,10 @@ def _supersede_seed(report: RunReport) -> None:
 
 
 @transaction.atomic
-def run_checks(rule_codes: list[str] | None = None) -> RunReport:
+def run_checks(
+    rule_codes: list[str] | None = None,
+    as_of: date | None = None,
+) -> RunReport:
     selected = rule_codes or list(RULES)
     unknown = sorted(set(selected) - set(RULES))
     if unknown:
@@ -96,7 +100,11 @@ def run_checks(rule_codes: list[str] | None = None) -> RunReport:
     now = timezone.now()
     seen: set[str] = set()
     for rule_code in selected:
-        findings = list(RULES[rule_code]())
+        detector = RULES[rule_code]
+        try:
+            findings = list(detector(as_of=as_of))  # type: ignore[call-arg]
+        except TypeError:
+            findings = list(detector())
         report.by_rule[rule_code] = len(findings)
         report.detected += len(findings)
         for finding in findings:
