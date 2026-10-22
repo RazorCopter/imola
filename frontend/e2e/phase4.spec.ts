@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-const E2E_USER = process.env.E2E_USERNAME ?? "admin";
-const E2E_PASS = process.env.E2E_PASSWORD ?? "admin1234";
+const E2E_USER = process.env.E2E_USERNAME;
+const E2E_PASS = process.env.E2E_PASSWORD;
+
+if (!E2E_USER || !E2E_PASS) {
+  throw new Error("Impostare E2E_USERNAME ed E2E_PASSWORD per eseguire i test browser.");
+}
 
 test("login reale e navigazione verso anomalie e riconciliazione", async ({ page }) => {
   await page.goto("/");

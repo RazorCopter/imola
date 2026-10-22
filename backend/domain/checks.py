@@ -527,7 +527,7 @@ def check_unverified_data() -> Iterable[Finding]:
         yield Finding(
             "CHK_UNVERIFIED_DATA",
             _short(project.code),
-            Severity.MEDIA,
+            Severity.BASSA,
             Scope.PROGETTO,
             f"{_short(project.code)} è in stato DA_VERIFICARE: verificare la consuntivazione.",
             "Revisionare il progetto nella coda di revisione.",
