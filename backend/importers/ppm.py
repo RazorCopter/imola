@@ -10,7 +10,6 @@ from decimal import Decimal
 from pathlib import Path
 
 from django.db import transaction
-from django.db.models import Sum
 from django.utils import timezone
 from openpyxl import load_workbook  # type: ignore[import-untyped]
 
@@ -192,12 +191,10 @@ def dry_run_ppm(path: str | Path) -> PpmReport:
         internal = ZERO
         if row.project is not None:
             recognized += 1
-            internal = (
-                TimesheetEntry.objects.filter(project=row.project).aggregate(total=Sum("days"))[
-                    "total"
-                ]
-                or ZERO
-            )
+            from domain.residuals import project_balance_qs
+
+            project_bal = project_balance_qs().filter(pk=row.project.pk).first()
+            internal = quantize_days(project_bal.total_consumed_days) if project_bal else ZERO
         delta = quantize_days(row.total_days - internal)
         rows.append(
             {
@@ -284,12 +281,12 @@ def apply_ppm(path: str | Path, *, user=None) -> PpmReport:
                 message="Riga non riconosciuta: associare a un progetto esistente o crearne uno.",
             )
             continue
-        internal = (
-            TimesheetEntry.objects.filter(project=row.project).aggregate(total=Sum("days"))["total"]
-            or ZERO
-        )
+        from domain.residuals import project_balance_qs
+
+        project_bal = project_balance_qs().filter(pk=row.project.pk).first()
+        internal = quantize_days(project_bal.total_consumed_days) if project_bal else ZERO
         delta = quantize_days(row.total_days - internal)
-        if delta == ZERO:
+        if abs(delta) <= Decimal("0.0100"):
             continue
         entry = TimesheetEntry.objects.create(
             project=row.project,

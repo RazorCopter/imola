@@ -4,6 +4,31 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
 
 ## [Non rilasciato]
 
+### Fase 5 — Import PPM ed export
+
+**Aggiunto**
+
+- Parser Excel tollerante in `backend/importers/ppm.py` per estratti PPM (ricerca header prime 15 righe, estrazione data via regex, quadratura totali declared ±0.01 gg).
+- Supporto estratti PPM PDF via `pdfplumber` con messaggio d'errore esplicito e indicazione di utilizzare l'Excel originale.
+- Aggiornamento consuntivi append-only **a differenza** rispetto al totale interno del progetto: delta positivo genera `TimesheetEntry` con `source=PPM_IMPORT`; delta negativo genera storno con `source=STORNO`. Nessuna sovrascrittura o cancellazione fisica.
+- Rollback transazionale dei batch PPM tramite righe di storno che puntano alle entry generate (`reverses`), preservando l'integrità del ledger e il divieto di DELETE (D-14).
+- Comando di gestione `manage.py import_ppm` (dry-run e apply) e `manage.py rollback_ppm`.
+- Modulo di export `backend/exporters.py` ed endpoint REST:
+  - `GET /api/v1/export/excel`: fogli `Progetti`, `Wallet`, `Canone`, `Riconciliazione`, `Anomalie`.
+  - `GET /api/v1/export/csv/<entity>`: export CSV per entità singola.
+  - `GET /api/v1/export/json`: payload JSON conforme a schema 1.0.0.
+- Configurazione volume `data/ppm/` in sola lettura in `docker-compose.override.yml` e pattern `.gitignore` per file PPM reali.
+
+**Verificato**
+
+- Accettazione sul seed reale con l'estratto `data/ppm/Progetti_Gruppo_Progetto_Banca_Mediolanum_Wallet_2026.xlsx`:
+  - Dry-run: 11 righe riconosciute, 0 non riconosciute, quadratura totali OK (199.1250 gg), data estrazione `2026-10-16 11:05:18`.
+  - Apply: 8 movimenti creati (5 `PPM_IMPORT`, 3 `STORNO`) per i soli progetti KO con i delta esatti (IM24133 +1,5; IM25244 +1,115; IM25306 +1,4175; IM26022 +0,865; IM25198 +0,4975; IM25197 −0,38; IM25216 −0,3725; IM26125 −0,0625).
+  - Re-import: 0 nuove entry create (idempotenza verificata).
+  - Post-apply: riconciliazione con 11 progetti OK su 11.
+  - Export: JSON schema 1.0.0 (40 progetti, 30 allocazioni wallet, 2 canoni, 40 righe riconciliazione), CSV ed Excel a 5 fogli generati e validati.
+- Tutti i gate superati: 273 test pytest backend, Ruff, Black, Mypy, `check --deploy`, ESLint, Vitest (13 passed), build Vite ed E2E Playwright Chromium (3 passed).
+
 ### Fase 4 — Controlli e riconciliazione
 
 **Aggiunto**
