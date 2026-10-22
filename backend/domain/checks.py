@@ -19,9 +19,10 @@ from anomalies.models import Scope, Severity
 from canone.models import Canone, CanoneSubactivity
 from core.models import AppSettings
 from domain.canone_status import canone_status
+from domain.money import ZERO, quantize_days
 from domain.reconciliation import latest_rows_by_project, reconcile
 from domain.residuals import ResidualState, project_balance_qs, residual_validity
-from domain.wallet_balance import allocation_balance_qs, available_residual_for_allocation
+from domain.wallet_balance import allocation_balance_qs
 from projects.models import BillingMilestone, OfferStatus, Project, TimesheetStatus
 from wallet.models import WalletActivity, WalletAllocation
 
@@ -47,7 +48,11 @@ Detector = Callable[[], Iterable[Finding]]
 
 
 def _short(code: str) -> str:
-    return code.split("-", 1)[0]
+    if not code:
+        return ""
+    if code.startswith("IM"):
+        return code.split("-", 1)[0]
+    return code
 
 
 # 1. CHK_DATE_ORDER
@@ -89,11 +94,14 @@ def check_date_order() -> Iterable[Finding]:
 
 # 2. CHK_END_PASSED_ACTIVE
 def check_end_passed_active(as_of: date | None = None) -> Iterable[Finding]:
+    from datetime import timedelta
+
     reference_date = as_of or timezone.localdate()
+    cutoff_date = reference_date - timedelta(days=30)
     for project in Project.objects.filter(
         timesheet_status=TimesheetStatus.ATTIVO,
         planned_end_date__isnull=False,
-        planned_end_date__lt=reference_date,
+        planned_end_date__lt=cutoff_date,
     ).order_by("code"):
         yield Finding(
             "CHK_END_PASSED_ACTIVE",
@@ -101,7 +109,7 @@ def check_end_passed_active(as_of: date | None = None) -> Iterable[Finding]:
             Severity.MEDIA,
             Scope.PROGETTO,
             f"{_short(project.code)} è attivo ma la data di fine prevista "
-            f"({project.planned_end_date}) è superata.",
+            f"({project.planned_end_date}) è superata da oltre 30 giorni.",
             "Prorogare la data di fine prevista o chiudere la consuntivazione.",
             {
                 "project_code": _short(project.code),
@@ -149,10 +157,10 @@ def check_overrun_project() -> Iterable[Finding]:
             source = "PPM"
         else:
             continue
-        ratio = (
+        ratio = quantize_days(
             (observed - project.budget_days) / project.budget_days
             if project.budget_days
-            else Decimal("1")
+            else Decimal("1.0000")
         )
         yield Finding(
             "CHK_OVERRUN_PROJECT",
@@ -178,10 +186,10 @@ def check_overrun_allocation() -> Iterable[Finding]:
     for allocation in allocation_balance_qs().select_related("activity").order_by("external_ref"):
         if allocation.consumed_days > allocation.allocated_days:
             ref = allocation.external_ref or str(allocation.id)
-            ratio = (
+            ratio = quantize_days(
                 (allocation.consumed_days - allocation.allocated_days) / allocation.allocated_days
                 if allocation.allocated_days
-                else Decimal("1")
+                else Decimal("1.0000")
             )
             yield Finding(
                 "CHK_OVERRUN_ALLOCATION",
@@ -203,34 +211,54 @@ def check_overrun_allocation() -> Iterable[Finding]:
 
 # 6. CHK_ALLOC_EXCEEDS_RESIDUAL
 def check_alloc_exceeds_residual() -> Iterable[Finding]:
-    for allocation in (
+    from django.db.models import Sum
+
+    from timesheets.models import TimesheetEntry
+
+    sources = (
         WalletAllocation.objects.exclude(source_project=None)
-        .select_related("source_project")
-        .order_by("external_ref")
-    ):
-        if allocation.source_project is None or allocation.source_project_id is None:
+        .values_list("source_project_id", flat=True)
+        .distinct()
+    )
+    for project_id in sorted(sources, key=str):
+        project = Project.objects.filter(pk=project_id).first()
+        if project is None:
             continue
-        available = available_residual_for_allocation(
-            allocation.source_project_id, exclude_allocation_id=allocation.id
+        direct = (
+            TimesheetEntry.objects.filter(project=project).aggregate(
+                total=Sum("days")
+            )["total"]
+            or ZERO
         )
-        if allocation.allocated_days > available:
-            ref = allocation.external_ref or str(allocation.id)
+        base_residual = project.budget_days - direct
+        allocations = list(
+            WalletAllocation.objects.filter(source_project=project).order_by("external_ref")
+        )
+        total_allocated = sum((alloc.allocated_days for alloc in allocations), ZERO)
+        if total_allocated > base_residual:
+            excess = quantize_days(total_allocated - base_residual)
+            alloc_refs = [a.external_ref or str(a.id) for a in allocations]
+            # atteso da specifica: una sola anomalia aggregata per progetto origine
+            ref = _short(project.code)
             yield Finding(
                 "CHK_ALLOC_EXCEEDS_RESIDUAL",
                 ref,
                 Severity.ALTA,
                 Scope.WALLET,
-                f"L'allocazione {ref} ({allocation.allocated_days} gg) supera il residuo "
-                f"del progetto {_short(allocation.source_project.code)} ({available} gg).",
-                "Ridurre l'allocazione o approvare l'override con motivazione formale.",
+                f"Le allocazioni da {ref} superano il residuo disponibile del progetto: "
+                f"totale allocato {total_allocated} gg su {base_residual} gg "
+                f"(eccedenza {excess} gg).",
+                "Ridurre le allocazioni o approvare l'override con motivazione formale.",
                 {
-                    "allocation_ref": ref,
-                    "source_project": _short(allocation.source_project.code),
-                    "allocated": str(allocation.allocated_days),
-                    "available_residual": str(available),
+                    "source_project": ref,
+                    "budget": str(project.budget_days),
+                    "direct_consumed": str(direct),
+                    "base_residual": str(base_residual),
+                    "total_allocated": str(total_allocated),
+                    "excess": str(excess),
+                    "allocations": alloc_refs,
                 },
-                allocation_id=allocation.id,
-                project_id=allocation.source_project_id,
+                project_id=project.id,
             )
 
 

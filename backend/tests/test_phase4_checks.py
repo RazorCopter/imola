@@ -76,6 +76,15 @@ def test_chk_residual_expiring_dopo_chiusura_im24517():
         source=TimesheetSource.SEED_INIZIALE,
         period=date(2025, 5, 1),
     )
+    year = WalletYearFactory(year=2025)
+    activity = WalletActivityFactory(code="STORICO-IM24517")
+    WalletAllocationFactory(
+        wallet_year=year,
+        source_project=project,
+        activity=activity,
+        allocated_days=Decimal("1.0000"),
+        external_ref="STORICO-IM24517",
+    )
     as_of = date(2026, 10, 16)
 
     findings = list(check_residual_expiring(as_of=as_of))
@@ -84,6 +93,7 @@ def test_chk_residual_expiring_dopo_chiusura_im24517():
     finding = findings[0]
     assert finding.rule_code == "CHK_RESIDUAL_EXPIRING"
     assert finding.entity_ref == "IM24517"
+    assert finding.context["unallocated_days"] == "12.3100"
     assert finding.context["expires_on"] == "2026-12-31"
 
 
