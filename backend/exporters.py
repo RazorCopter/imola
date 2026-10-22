@@ -16,7 +16,7 @@ from canone.models import Canone
 from domain.canone_status import canone_status
 from domain.reconciliation import reconcile
 from domain.residuals import project_balance_qs
-from domain.wallet_balance import allocation_balance_qs
+from domain.wallet_balance import allocation_balance_qs, wallet_year_balance
 from wallet.models import WalletAllocation
 
 SCHEMA_VERSION = "1.0.0"
@@ -156,7 +156,19 @@ def export_excel_bytes() -> bytes:
     ]
     for title, rows in sheets:
         sheet = workbook.create_sheet(title)
-        sheet.append(["schema_version", SCHEMA_VERSION])
+        if title == "Wallet":
+            current_year = timezone.localdate().year
+            balance_val = wallet_year_balance(current_year).available_days
+            sheet.append(
+                [
+                    "schema_version",
+                    SCHEMA_VERSION,
+                    "wallet_disponibile",
+                    str(balance_val),
+                ]
+            )
+        else:
+            sheet.append(["schema_version", SCHEMA_VERSION])
         if not rows:
             continue
         fields = list(rows[0])

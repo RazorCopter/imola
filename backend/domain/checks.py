@@ -149,8 +149,8 @@ def check_overrun_project() -> Iterable[Finding]:
             continue
         ppm_row = latest.get(project.id)
         ppm = ppm_row.total_days if ppm_row and ppm_row.total_days is not None else Decimal("0")
-        if project.direct_consumed_days > project.budget_days:
-            observed = project.direct_consumed_days
+        if project.total_consumed_days > project.budget_days:
+            observed = project.total_consumed_days
             source = "ledger interno"
         elif ppm > project.budget_days and project.total_consumed_days == project.budget_days:
             observed = ppm

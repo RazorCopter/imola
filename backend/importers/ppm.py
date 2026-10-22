@@ -93,7 +93,9 @@ def _extract_datetime(values: list[object]) -> datetime:
     )
 
 
-def _header_indexes(row: tuple[object, ...]) -> tuple[int, int] | None:
+def _header_indexes(
+    row: tuple[object, ...],
+) -> tuple[int, int, int | None, int | None] | None:
     normalized = [str(value or "").strip().lower() for value in row]
     project_idx = next((i for i, value in enumerate(normalized) if "progetto" in value), None)
     total_idx = next(
@@ -107,7 +109,15 @@ def _header_indexes(row: tuple[object, ...]) -> tuple[int, int] | None:
     )
     if project_idx is None or total_idx is None:
         return None
-    return project_idx, total_idx
+    planned_idx = next(
+        (i for i, value in enumerate(normalized) if "previst" in value),
+        None,
+    )
+    residual_idx = next(
+        (i for i, value in enumerate(normalized) if "residu" in value),
+        None,
+    )
+    return project_idx, total_idx, planned_idx, residual_idx
 
 
 def parse_ppm_xlsx(path: str | Path) -> ParsedPpm:
@@ -117,7 +127,7 @@ def parse_ppm_xlsx(path: str | Path) -> ParsedPpm:
     preview = list(sheet.iter_rows(min_row=1, max_row=15, values_only=True))
     extracted_at = _extract_datetime([cell for row in preview for cell in row])
     header_row = 0
-    indexes: tuple[int, int] | None = None
+    indexes: tuple[int, int, int | None, int | None] | None = None
     for number, row in enumerate(preview, start=1):
         indexes = _header_indexes(row)
         if indexes:
@@ -127,31 +137,68 @@ def parse_ppm_xlsx(path: str | Path) -> ParsedPpm:
         raise PpmParseError(
             "Header non trovato nelle prime 15 righe: servono 'Progetto' e 'gg tot'."
         )
-    project_idx, total_idx = indexes
+    project_idx, total_idx, planned_idx, residual_idx = indexes
     parsed: list[ParsedRow] = []
     declared_total: Decimal | None = None
+    declared_planned: Decimal | None = None
+    declared_residual: Decimal | None = None
+    sum_planned = ZERO
+    sum_residual = ZERO
     for values in sheet.iter_rows(min_row=header_row + 1, values_only=True):
         code_raw = values[project_idx] if project_idx < len(values) else None
         total_raw = values[total_idx] if total_idx < len(values) else None
+        planned_raw = (
+            values[planned_idx] if planned_idx is not None and planned_idx < len(values) else None
+        )
+        residual_raw = (
+            values[residual_idx]
+            if residual_idx is not None and residual_idx < len(values)
+            else None
+        )
         if code_raw in (None, "") and total_raw in (None, ""):
             continue
         code = str(code_raw or "").strip()
         if "totale" in code.lower() or code.lower() in {"totali", "total"}:
             if total_raw not in (None, ""):
                 declared_total = to_days(total_raw)
+            if planned_raw not in (None, ""):
+                declared_planned = to_days(planned_raw)
+            if residual_raw not in (None, ""):
+                declared_residual = to_days(residual_raw)
             continue
         if total_raw in (None, ""):
             continue
-        parsed.append(ParsedRow(code=code, total_days=to_days(total_raw)))
+        total_days = to_days(total_raw)
+        parsed.append(ParsedRow(code=code, total_days=total_days))
+        if planned_raw not in (None, ""):
+            sum_planned += to_days(planned_raw)
+        if residual_raw not in (None, ""):
+            sum_residual += to_days(residual_raw)
     if not parsed:
         raise PpmParseError("Nessuna riga dati trovata nell'estratto PPM.")
     sum_rows = quantize_days(sum((row.total_days for row in parsed), ZERO))
-    balanced = declared_total is None or abs(sum_rows - declared_total) <= Decimal("0.0100")
+    sum_planned = quantize_days(sum_planned)
+    sum_residual = quantize_days(sum_residual)
+    balanced_total = declared_total is None or abs(sum_rows - declared_total) <= Decimal("0.0100")
+    balanced_planned = declared_planned is None or abs(sum_planned - declared_planned) <= Decimal(
+        "0.0100"
+    )
+    balanced_residual = declared_residual is None or abs(
+        sum_residual - declared_residual
+    ) <= Decimal("0.0100")
+    balanced = balanced_total and balanced_planned and balanced_residual
+    totals: dict[str, Decimal] = {"gg_totali": declared_total or sum_rows, "somma_righe": sum_rows}
+    if declared_planned is not None or sum_planned > ZERO:
+        totals["gg_previsti"] = declared_planned or sum_planned
+        totals["somma_previsti"] = sum_planned
+    if declared_residual is not None or sum_residual != ZERO:
+        totals["gg_residui"] = declared_residual or sum_residual
+        totals["somma_residui"] = sum_residual
     return ParsedPpm(
         source_filename=source.name,
         extracted_at=extracted_at,
         rows=parsed,
-        totals={"gg_totali": declared_total or sum_rows, "somma_righe": sum_rows},
+        totals=totals,
         balanced=balanced,
         header_row=header_row,
     )
