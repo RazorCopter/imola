@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { DaysValue } from "@/components/DaysValue";
@@ -32,16 +33,41 @@ interface Flow {
   origine_titolo: string;
   destinazione: string;
   destinazione_titolo: string;
+  architetto: string | null;
   allocato: string;
   consumato: string;
   disponibile: string;
   stato: string;
+}
+interface AssigneeTotal {
+  architetto_id: string;
+  architetto: string;
+  allocato: string;
+  consumato: string;
+  residuo: string;
+}
+interface Option {
+  id: string;
+  code?: string;
+  title?: string;
+  name?: string;
+}
+interface AllocationOptions {
+  projects: Option[];
+  activities: Option[];
+  assignees: Option[];
 }
 
 export function WalletPage() {
   const year = new Date().getFullYear();
   const { session } = useSession();
   const queryClient = useQueryClient();
+  const [showCreate, setShowCreate] = useState(false);
+  const [sourceProject, setSourceProject] = useState("");
+  const [activity, setActivity] = useState("");
+  const [assignee, setAssignee] = useState("");
+  const [days, setDays] = useState("");
+  const [notes, setNotes] = useState("");
   const balance = useQuery({
     queryKey: ["wallet", "balance", year],
     queryFn: () => api.get<Balance>(`/wallet/${year}/balance`),
@@ -49,6 +75,32 @@ export function WalletPage() {
   const flow = useQuery({
     queryKey: ["wallet", "flow", year],
     queryFn: () => api.get<{ results: Flow[] }>(`/wallet/${year}/flow`),
+  });
+  const assigneeTotals = useQuery({
+    queryKey: ["wallet", "assignees", year],
+    queryFn: () => api.get<{ results: AssigneeTotal[] }>(`/wallet/${year}/assignees`),
+  });
+  const options = useQuery({
+    queryKey: ["wallet", "allocation-options"],
+    queryFn: () => api.get<AllocationOptions>("/allocations/options"),
+    enabled: canWriteLedger(session),
+  });
+  const create = useMutation({
+    mutationFn: () =>
+      api.post("/allocations", {
+        year,
+        source_project: sourceProject,
+        activity,
+        assignee,
+        allocated_days: days,
+        notes,
+      }),
+    onSuccess: async () => {
+      setShowCreate(false);
+      setDays("");
+      setNotes("");
+      await queryClient.invalidateQueries({ queryKey: ["wallet"] });
+    },
   });
   const adjust = useMutation({
     mutationFn: ({
@@ -64,17 +116,119 @@ export function WalletPage() {
       await queryClient.invalidateQueries({ queryKey: ["wallet"] });
     },
   });
-  if (balance.isLoading || flow.isLoading) return <LoadingState />;
-  if (balance.isError || flow.isError || !balance.data)
+  if (balance.isLoading || flow.isLoading || assigneeTotals.isLoading) return <LoadingState />;
+  if (balance.isError || flow.isError || assigneeTotals.isError || !balance.data)
     return <ErrorState title="Impossibile caricare il wallet" />;
   return (
     <section className="space-y-5">
-      <header>
-        <h1 className="text-xl font-semibold">Wallet {year}</h1>
-        <p className="text-sm text-muted-foreground">
-          Origini, destinazioni e disponibilità calcolate dall’API.
-        </p>
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Wallet {year}</h1>
+          <p className="text-sm text-muted-foreground">
+            Origini, destinazioni e disponibilità calcolate dall’API.
+          </p>
+        </div>
+        {canWriteLedger(session) && (
+          <button
+            className="bg-primary text-primary-foreground rounded-md px-3 py-2 text-sm font-medium"
+            onClick={() => setShowCreate((value) => !value)}
+          >
+            Nuova allocazione
+          </button>
+        )}
       </header>
+      {showCreate && options.data && (
+        <form
+          className="grid gap-3 rounded-lg border border-border bg-card p-4 md:grid-cols-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            create.mutate();
+          }}
+        >
+          <label className="text-sm">
+            Origine
+            <select
+              className="mt-1 w-full rounded border p-2"
+              required
+              value={sourceProject}
+              onChange={(event) => setSourceProject(event.target.value)}
+            >
+              <option value="">Seleziona progetto</option>
+              {options.data.projects.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.code} — {item.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
+            Progetto / attività
+            <select
+              className="mt-1 w-full rounded border p-2"
+              required
+              value={activity}
+              onChange={(event) => setActivity(event.target.value)}
+            >
+              <option value="">Seleziona attività</option>
+              {options.data.activities.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.code} — {item.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
+            Architetto
+            <select
+              className="mt-1 w-full rounded border p-2"
+              required
+              value={assignee}
+              onChange={(event) => setAssignee(event.target.value)}
+            >
+              <option value="">Seleziona architetto</option>
+              {options.data.assignees.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
+            Giornate
+            <input
+              className="mt-1 w-full rounded border p-2"
+              type="number"
+              min="0.0001"
+              step="0.0001"
+              required
+              value={days}
+              onChange={(event) => setDays(event.target.value)}
+            />
+          </label>
+          <label className="text-sm md:col-span-2">
+            Note
+            <textarea
+              className="mt-1 w-full rounded border p-2"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+            />
+          </label>
+          {create.isError && (
+            <p className="text-destructive text-sm md:col-span-2">
+              Allocazione non valida o superiore al disponibile.
+            </p>
+          )}
+          <div className="flex justify-end md:col-span-2">
+            <button
+              className="bg-primary text-primary-foreground rounded-md px-3 py-2 text-sm"
+              type="submit"
+              disabled={create.isPending}
+            >
+              Conferma allocazione
+            </button>
+          </div>
+        </form>
+      )}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Disponibile"

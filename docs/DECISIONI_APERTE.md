@@ -12,6 +12,16 @@ possono superare il residuo disponibile.
 `backend/api/domain_views.py`, `backend/domain/wallet_balance.py`.
 
 
+## D-17 — Assegnatario delle allocazioni wallet
+
+**Decisione provvisoria da confermare con l'utente**: è applicata l'Opzione A descritta in
+`WALLET_ARCHITECTURE_ANALYSIS.md`. Ogni nuova allocazione creata dalla GUI appartiene a un solo
+architetto (`Person`); due architetti richiedono due allocazioni. Il campo resta nullable solo
+per preservare lo storico importato. I totali per architetto sono calcolati dal ledger e non
+memorizzati. La riassegnazione usa movimenti auditabili, non una sostituzione silenziosa.
+**Dove**: `backend/wallet/models.py`, `backend/domain/wallet_balance.py`,
+`backend/api/domain_views.py`, `frontend/src/features/wallet/WalletPage.tsx`.
+
 Ogni voce elenca: la domanda non risolta dalle specifiche, la scelta applicata nel codice
 (sempre la piÃ¹ conservativa) e dove vive nel codice. Da rivedere con il responsabile BMED.
 

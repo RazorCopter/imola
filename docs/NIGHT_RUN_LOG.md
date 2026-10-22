@@ -12,12 +12,22 @@ Inizio: 2026-10-23T01:35:53+02:00
 - Tutti i sei artefatti richiesti dalla verifica N0 sono presenti nel working tree.
 - Creato il tag locale `pre-night-run` su `fb61b7c` e creato/switchato il branch `fase7/night-run`, preservando integralmente il working tree.
 
-### N1 — Baseline verde e pulizia — VERIFICHE VERDI, COMMIT IN CORSO
+### N1 — Baseline verde e pulizia — CHIUSO
 
 - Obiettivo: integrare e verificare il lavoro recuperato del Blocco 0, applicare la pulizia richiesta e raggiungere tutti i gate verdi prima delle nuove feature.
 - Pulizia applicata: rimosso loader duplicato `scripts/load_demo.py`; rimosso piano operativo temporaneo; rimosso da Git e ignorato `frontend/tsconfig.app.tsbuildinfo`; documentato che i test backend girano solo in Docker; target Makefile allineato al comando vincolante.
 - Correzioni baseline: 10 errori ruff e 5 file black risolti; chiusura workbook PPM mantenuta; test E2E progetto reso indipendente dal numero/ordine delle righe tramite filtro utente reale.
 - Il file `.xlsx` aziendale sotto `docs/` e il seed sotto `data/seed/` sono rimasti non tracciati e non modificati.
+- Commit: `c5f3158 fix: stabilizza baseline fase 7 e recupera blocco 0`.
+
+### N2 — Wallet: assegnazione e residuo per architetto — CHIUSO
+
+- Implementata l'Opzione A per FG-013/FG-014: FK `assignee` nullable a `Person` per compatibilità storica; obbligatoria nell'API di creazione GUI.
+- Dominio/API: flusso arricchito con architetto; aggregazione allocato/consumato/residuo per architetto; opzioni reali; creazione atomica con permessi e blocco oltre il residuo disponibile.
+- GUI: form nuova allocazione per writer, selezione origine/attività/architetto, giornate e note; messaggio di errore; vista dei totali per architetto e architetto nel ledger.
+- Migrazione `wallet.0002_add_allocation_assignee`: applicata con successo, reversibile (sola aggiunta campi nullable su tabella corrente e storica).
+- Decisione D-17 annotata in `DECISIONI_APERTE.md` come provvisoria da confermare.
+- Verifiche: test dominio wallet 15 passed; backend completo 294 passed; ruff 0; black 148 file puliti; mypy 97 file puliti; frontend 30 passed, typecheck/lint/build exit 0; E2E reali 3 run consecutivi da 8 passed, 0 failed, 0 skipped.
 
 ## DECISIONI PRESE IN AUTONOMIA
 

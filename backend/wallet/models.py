@@ -122,6 +122,15 @@ class WalletAllocation(TrackedModel, VerifiableMixin, ImportedRecordMixin):
         related_name="allocations",
         verbose_name="attività",
     )
+    assignee = models.ForeignKey(
+        "directory.Person",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="wallet_allocations",
+        verbose_name="architetto assegnatario",
+        help_text="Obbligatorio per le nuove allocazioni create dall'interfaccia.",
+    )
     allocated_days = DaysField(verbose_name="giornate allocate")
     status = models.CharField(
         max_length=10,

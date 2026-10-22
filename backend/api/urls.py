@@ -45,6 +45,16 @@ urlpatterns = [
         name="allocation-adjust",
     ),
     path(
+        "allocations",
+        domain_views.WalletAllocationCreateView.as_view(),
+        name="allocation-create",
+    ),
+    path(
+        "allocations/options",
+        domain_views.WalletAllocationOptionsView.as_view(),
+        name="allocation-options",
+    ),
+    path(
         "audit/<str:entity_type>/<uuid:pk>",
         domain_views.AuditHistoryView.as_view(),
         name="audit-history",
@@ -66,6 +76,11 @@ urlpatterns = [
         name="wallet-balance",
     ),
     path("wallet/<int:year>/flow", domain_views.WalletFlowView.as_view(), name="wallet-flow"),
+    path(
+        "wallet/<int:year>/assignees",
+        domain_views.WalletAssigneeSummaryView.as_view(),
+        name="wallet-assignees",
+    ),
     path("canoni", domain_views.CanoneListView.as_view(), name="canone-list"),
     path("canoni/<uuid:pk>/status", domain_views.CanoneStatusView.as_view(), name="canone-status"),
     path(

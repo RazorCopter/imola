@@ -241,7 +241,7 @@ def wallet_flow(year: int) -> list[dict]:
 
     rows = (
         allocation_balance_qs(WalletAllocation.objects.filter(wallet_year__year=year))
-        .select_related("source_project", "activity")
+        .select_related("source_project", "activity", "assignee")
         .order_by("-allocated_days")
     )
     return [
@@ -254,10 +254,40 @@ def wallet_flow(year: int) -> list[dict]:
             ),
             "destinazione": row.activity.code,
             "destinazione_titolo": row.activity.title,
+            "architetto_id": row.assignee_id,
+            "architetto": row.assignee.full_name if row.assignee_id else None,
             "allocato": row.allocated_days,
             "consumato": row.consumed_days,
             "disponibile": row.available_days,
             "stato": row.status,
+        }
+        for row in rows
+    ]
+
+
+def wallet_by_assignee(year: int) -> list[dict]:
+    """Totali di allocato, consumato e residuo raggruppati per architetto."""
+    from wallet.models import WalletAllocation
+
+    rows = (
+        allocation_balance_qs(
+            WalletAllocation.objects.filter(wallet_year__year=year, assignee__isnull=False)
+        )
+        .values("assignee_id", "assignee__full_name")
+        .annotate(
+            allocated_total=Sum("allocated_days", output_field=DAYS_OUTPUT),
+            consumed_total=Sum("consumed_days", output_field=DAYS_OUTPUT),
+            available_total=Sum("available_days", output_field=DAYS_OUTPUT),
+        )
+        .order_by("assignee__full_name")
+    )
+    return [
+        {
+            "architetto_id": row["assignee_id"],
+            "architetto": row["assignee__full_name"],
+            "allocato": quantize_days(row["allocated_total"]),
+            "consumato": quantize_days(row["consumed_total"]),
+            "residuo": quantize_days(row["available_total"]),
         }
         for row in rows
     ]

@@ -18,6 +18,7 @@ from domain.wallet_balance import (
     available_residual_for_allocation,
     expiring_residuals,
     unallocated_closed_projects,
+    wallet_by_assignee,
     wallet_flow,
     wallet_year_balance,
 )
@@ -239,6 +240,29 @@ class TestFlussoWallet:
         )
         rows = wallet_flow(2026)
         assert rows[0]["origine"] == "WALLET-GENERALE"
+
+    def test_totali_per_architetto_sommano_allocato_consumato_e_residuo(self):
+        from tests.factories import PersonFactory
+
+        assignee = PersonFactory(full_name="Architetto Demo")
+        first = allocate("ASSIGNEE-1", "3.0000", "1.0000")
+        second = allocate("ASSIGNEE-2", "4.0000", "1.5000")
+        first.assignee = assignee
+        first.save(update_fields=["assignee"])
+        second.assignee = assignee
+        second.save(update_fields=["assignee"])
+
+        rows = wallet_by_assignee(2026)
+
+        assert rows == [
+            {
+                "architetto_id": assignee.id,
+                "architetto": "Architetto Demo",
+                "allocato": Decimal("7.0000"),
+                "consumato": Decimal("2.5000"),
+                "residuo": Decimal("4.5000"),
+            }
+        ]
 
     def test_il_flag_origine_da_attribuire_e_automatico(self):
         allocation = WalletAllocationFactory(

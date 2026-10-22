@@ -21,7 +21,7 @@ from core.permissions import CanUploadImports, IsAdmin, ReadOnlyOrLedgerWriter, 
 from domain.canone_status import canone_burndown, canone_status
 from domain.reconciliation import reconcile, reconciliation_summary
 from domain.residuals import residual_explanation, residual_validity
-from domain.wallet_balance import wallet_flow, wallet_year_balance
+from domain.wallet_balance import wallet_by_assignee, wallet_flow, wallet_year_balance
 
 
 class DomainResponseSerializer(serializers.Serializer):
@@ -344,6 +344,113 @@ class WalletFlowView(DocumentedAPIView):
 
     def get(self, request, year: int):
         return Response({"results": wallet_flow(year)})
+
+
+class WalletAssigneeSummaryView(DocumentedAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, year: int):
+        return Response({"results": wallet_by_assignee(year)})
+
+
+class WalletAllocationCreateView(DocumentedAPIView):
+    permission_classes = [ReadOnlyOrLedgerWriter]
+
+    @extend_schema(request=dict, responses={201: dict})
+    def post(self, request):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from django.db import transaction
+
+        from directory.models import Person
+        from domain.money import to_days
+        from domain.wallet_balance import available_residual_for_allocation
+        from projects.models import Project
+        from wallet.models import WalletActivity, WalletAllocation, WalletYear
+
+        required = ("year", "source_project", "activity", "assignee", "allocated_days")
+        missing = [field for field in required if not request.data.get(field)]
+        if missing:
+            return Response(
+                {field: ["Campo obbligatorio."] for field in missing},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            source = Project.objects.get(pk=request.data["source_project"])
+            activity = WalletActivity.objects.get(pk=request.data["activity"])
+            assignee = Person.objects.get(pk=request.data["assignee"])
+            allocated_days = to_days(request.data["allocated_days"])
+            if allocated_days <= 0:
+                raise DjangoValidationError({"allocated_days": "Deve essere maggiore di zero."})
+            available = available_residual_for_allocation(source.id)
+            if allocated_days > available:
+                raise DjangoValidationError(
+                    {
+                        "allocated_days": (
+                            f"Giornate richieste {allocated_days} superiori al disponibile "
+                            f"{available} del progetto di origine."
+                        )
+                    }
+                )
+            with transaction.atomic():
+                wallet_year, _ = WalletYear.objects.get_or_create(year=int(request.data["year"]))
+                allocation = WalletAllocation(
+                    wallet_year=wallet_year,
+                    source_project=source,
+                    activity=activity,
+                    assignee=assignee,
+                    allocated_days=allocated_days,
+                    notes=str(request.data.get("notes", "")),
+                    external_ref=str(request.data.get("external_ref", "")),
+                )
+                allocation.full_clean()
+                allocation.save()
+        except (Project.DoesNotExist, WalletActivity.DoesNotExist, Person.DoesNotExist):
+            return Response(
+                {"detail": "Origine, attività o architetto non valido."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except (ValueError, TypeError, DjangoValidationError) as exc:
+            detail = (
+                exc.message_dict if isinstance(exc, DjangoValidationError) else {"detail": str(exc)}
+            )
+            return Response(detail, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "id": allocation.id,
+                "architetto": assignee.full_name,
+                "allocated_days": str(allocation.allocated_days),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class WalletAllocationOptionsView(DocumentedAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from directory.models import Person
+        from projects.models import Project, TimesheetStatus
+        from wallet.models import WalletActivity
+
+        return Response(
+            {
+                "projects": [
+                    {"id": row.id, "code": row.code, "title": row.title}
+                    for row in Project.objects.filter(
+                        timesheet_status=TimesheetStatus.CHIUSO,
+                        actual_closure_date__isnull=False,
+                    ).order_by("code")
+                ],
+                "activities": [
+                    {"id": row.id, "code": row.code, "title": row.title}
+                    for row in WalletActivity.objects.order_by("code")
+                ],
+                "assignees": [
+                    {"id": row.id, "name": row.full_name}
+                    for row in Person.objects.order_by("full_name")
+                ],
+            }
+        )
 
 
 class CanoneListView(DocumentedAPIView):

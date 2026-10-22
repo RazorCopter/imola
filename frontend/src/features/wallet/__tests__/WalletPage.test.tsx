@@ -6,7 +6,7 @@ import { WalletPage } from "@/features/wallet/WalletPage";
 import { api } from "@/lib/api";
 
 vi.mock("@/lib/api", () => ({
-  api: { get: vi.fn(), patch: vi.fn() },
+  api: { get: vi.fn(), post: vi.fn(), patch: vi.fn() },
 }));
 
 vi.mock("@/features/auth/session", () => ({
@@ -36,7 +36,10 @@ describe("WalletPage", () => {
 
   it("formatta il residuo e la scadenza ricevuti dall'API senza ricalcolarli", async () => {
     getMock.mockImplementation((path: string) => {
-      if (path.endsWith("/flow")) return Promise.resolve({ results: [] });
+      if (path.endsWith("/flow") || path.endsWith("/assignees"))
+        return Promise.resolve({ results: [] });
+      if (path.endsWith("/options"))
+        return Promise.resolve({ projects: [], activities: [], assignees: [] });
       return Promise.resolve({
         anno: new Date().getFullYear(),
         allocato: "0.0000",
