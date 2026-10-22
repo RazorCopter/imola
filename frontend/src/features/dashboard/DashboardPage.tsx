@@ -21,6 +21,10 @@ interface WalletBalance {
   sforamenti_progetti_in_corso: string;
   residui_scaduti: string;
   residui_potenziali_da_verificare: string;
+  dettaglio_residui?: Record<
+    string,
+    { giornate: string; progetti: { codice: string; residuo: string }[] }
+  >;
 }
 
 interface ReconciliationSummary {
@@ -169,6 +173,70 @@ export function DashboardPage() {
           </>
         )}
       </div>
+
+      {wallet.data !== undefined && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section className="rounded-lg border border-border bg-card p-4">
+            <h2 className="text-sm font-semibold">Composizione wallet</h2>
+            <div className="mt-4 space-y-3">
+              {(
+                [
+                  [t("wallet.available"), wallet.data.disponibile, "bg-ok"],
+                  [t("wallet.expiring"), wallet.data.residui_in_scadenza, "bg-warn"],
+                  [t("wallet.expired"), wallet.data.residui_scaduti, "bg-danger"],
+                  [
+                    t("wallet.potential"),
+                    wallet.data.residui_potenziali_da_verificare,
+                    "bg-accent",
+                  ],
+                ] as [string, string, string][]
+              ).map(([label, value, color]) => (
+                <div key={label}>
+                  <div className="flex justify-between text-xs">
+                    <span>{label}</span>
+                    <span className="font-mono">{formatDays(value)}</span>
+                  </div>
+                  <div className="mt-1 h-2 overflow-hidden rounded bg-muted">
+                    <div
+                      className={`h-full ${color}`}
+                      style={{ width: `${Math.min(100, Math.max(3, Number.parseFloat(value)))}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="rounded-lg border border-border bg-card p-4">
+            <h2 className="text-sm font-semibold">Cosa fare ora</h2>
+            <ul className="mt-3 space-y-2 text-sm">
+              <li>
+                <Link className="text-accent hover:underline" to="/revisione">
+                  Verifica i residui potenziali
+                </Link>
+                <span className="ml-2 font-mono text-muted-foreground">
+                  {formatDays(wallet.data.residui_potenziali_da_verificare)}
+                </span>
+              </li>
+              <li>
+                <Link className="text-accent hover:underline" to="/wallet">
+                  Gestisci i residui in scadenza
+                </Link>
+                <span className="ml-2 font-mono text-muted-foreground">
+                  {formatDays(wallet.data.residui_in_scadenza)}
+                </span>
+              </li>
+              <li>
+                <Link className="text-accent hover:underline" to="/progetti">
+                  Controlla gli sforamenti attivi
+                </Link>
+                <span className="ml-2 font-mono text-muted-foreground">
+                  {formatDays(wallet.data.sforamenti_progetti_in_corso)}
+                </span>
+              </li>
+            </ul>
+          </section>
+        </div>
+      )}
 
       {reconciliation.data !== undefined && (
         <div className="rounded-lg border border-border bg-card p-4 text-sm">
