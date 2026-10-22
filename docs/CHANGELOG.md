@@ -4,6 +4,21 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
 
 ## [Non rilasciato]
 
+### Fase 3 — UI core
+
+**Aggiunto**
+
+- Layout applicativo responsive con sidebar collassabile, topbar, tema light/dark e command palette con ricerca API di progetti, attività wallet e anomalie.
+- Componenti condivisi per KPI, stati distinti, giornate, tabelle virtualizzate e stati loading/empty/error.
+- Dashboard operativa con KPI e azioni basati esclusivamente sui valori pre-calcolati dall'API.
+- Schermate Progetti (lista, filtri, dettaglio a 8 tab e wizard), Wallet (flussi e residui per validità) e Canone (selettore semestre, andamento e riepilogo uffici).
+- Test API per indice canoni, creazione progetto e ricerca globale; test componenti e flussi Playwright per dashboard e progetti.
+
+**Verificato**
+
+- Suite backend completa, gate Ruff/Black/mypy/check deploy, lint/test/build frontend ed E2E Chromium in container dedicato.
+- Sul seed reale: 40 progetti, 2 canoni, 48 sotto-attività, 21 attività wallet non tecniche, 24 allocazioni 2026 e 11 anomalie; wallet 10.1000 gg, budget in corso 60.9150 gg e sforamenti -8.2400 gg.
+
 ### Fase 2 — budget in corso senza doppio conteggio
 
 **Modificato**
