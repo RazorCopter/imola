@@ -6,7 +6,7 @@ Verifica:
 3. Precompilazione della data di chiusura proposta da data_fine_prevista.
 4. Calcolo scadenza potenziale e avviso entro 90 giorni.
 5. Ordinamento per scadenza potenziale crescente.
-6. Endpoint API GET /api/v1/projects/review-queue.
+6. Endpoint API canonico GET /api/v1/review-queue.
 7. Conteggio esatto di 12 progetti (3 CHIUSO senza data + 9 DA_VERIFICARE) sul seed reale.
 """
 
@@ -182,7 +182,7 @@ def test_api_review_queue_endpoint(api_client: APIClient):
         budget_days=Decimal("8.0000"),
     )
 
-    response = api_client.get("/api/v1/projects/review-queue?as_of=2026-10-16")
+    response = api_client.get("/api/v1/review-queue?as_of=2026-10-16")
     assert response.status_code == 200
     data = response.json()
     assert data["count"] == 2

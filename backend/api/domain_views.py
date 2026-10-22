@@ -12,7 +12,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -27,11 +27,19 @@ from domain.residuals import project_balance_qs, residual_explanation, residual_
 from domain.wallet_balance import wallet_flow, wallet_year_balance
 
 
+class DomainResponseSerializer(serializers.Serializer):
+    """Schema di fallback esplicito per risposte di dominio documentate come oggetti."""
+
+
+class DocumentedAPIView(APIView):
+    serializer_class = DomainResponseSerializer
+
+
 def current_settings() -> AppSettings:
     return AppSettings.get_solo()
 
 
-class SettingsView(APIView):
+class SettingsView(DocumentedAPIView):
     """Parametri globali: lettura per tutti, modifica solo Admin."""
 
     def get_permissions(self):
@@ -67,7 +75,7 @@ class SettingsView(APIView):
         return self.get(request)
 
 
-class ProjectListCreateView(APIView):
+class ProjectListCreateView(DocumentedAPIView):
     """Elenco anagrafico e creazione guidata dei progetti."""
 
     permission_classes = [ReadOnlyOrLedgerWriter]
@@ -123,7 +131,7 @@ class ProjectListCreateView(APIView):
         )
 
 
-class ProjectBalancesView(APIView):
+class ProjectBalancesView(DocumentedAPIView):
     """Vista calcolata project_balance, con stato di scadenza del residuo (R2)."""
 
     permission_classes = [IsAuthenticated]
@@ -172,7 +180,7 @@ class ProjectBalancesView(APIView):
         return Response({"results": rows, "count": len(rows)})
 
 
-class ProjectReviewQueueView(APIView):
+class ProjectReviewQueueView(DocumentedAPIView):
     """Coda di revisione progetti: 3 CHIUSO senza data + 9 DA_VERIFICARE (D-03)."""
 
     permission_classes = [IsAuthenticated]
@@ -208,7 +216,7 @@ class ProjectReviewQueueView(APIView):
         )
 
 
-class AnomalyListView(APIView):
+class AnomalyListView(DocumentedAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -234,7 +242,7 @@ class AnomalyListView(APIView):
         )
 
 
-class WalletBalanceView(APIView):
+class WalletBalanceView(DocumentedAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, year: int):
@@ -247,7 +255,7 @@ class WalletBalanceView(APIView):
         return Response(balance.as_dict())
 
 
-class ReleaseProjectToWalletView(APIView):
+class ReleaseProjectToWalletView(DocumentedAPIView):
     """Rende esplicitamente disponibile al wallet una quota del residuo di un progetto attivo."""
 
     permission_classes = [ReadOnlyOrLedgerWriter]
@@ -313,14 +321,14 @@ class ReleaseProjectToWalletView(APIView):
         )
 
 
-class WalletFlowView(APIView):
+class WalletFlowView(DocumentedAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, year: int):
         return Response({"results": wallet_flow(year)})
 
 
-class CanoneListView(APIView):
+class CanoneListView(DocumentedAPIView):
     """Indice minimo dei canoni per il selettore semestre della UI."""
 
     permission_classes = [IsAuthenticated]
@@ -344,7 +352,7 @@ class CanoneListView(APIView):
         )
 
 
-class CommandSearchView(APIView):
+class CommandSearchView(DocumentedAPIView):
     """Ricerca globale leggera per la command palette."""
 
     permission_classes = [IsAuthenticated]
@@ -400,7 +408,7 @@ class CommandSearchView(APIView):
         return Response({"results": results})
 
 
-class CanoneStatusView(APIView):
+class CanoneStatusView(DocumentedAPIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(responses={200: dict})
@@ -411,7 +419,7 @@ class CanoneStatusView(APIView):
         return Response(status_data)
 
 
-class ReconciliationView(APIView):
+class ReconciliationView(DocumentedAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
