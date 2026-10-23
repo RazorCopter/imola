@@ -35,6 +35,9 @@ const WalletPage = lazy(() =>
 const ReviewQueuePage = lazy(() =>
   import("@/features/review/ReviewQueuePage").then((m) => ({ default: m.ReviewQueuePage })),
 );
+const AdminPage = lazy(() =>
+  import("@/features/admin/AdminPage").then((m) => ({ default: m.AdminPage })),
+);
 
 export default function App() {
   const { status } = useSession();
@@ -77,6 +80,7 @@ export default function App() {
             <Route path="/riconciliazione" element={<ReconciliationPage />} />
             <Route path="/anomalie" element={<AnomaliesPage />} />
             <Route path="/revisione" element={<ReviewQueuePage />} />
+            <Route path="/amministrazione" element={<AdminPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

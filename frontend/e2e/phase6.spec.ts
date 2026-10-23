@@ -78,8 +78,9 @@ test("2. Creazione progetto -> verifica persistenza dopo reload", async ({ page 
 
   await expect(page.getByText(code, { exact: true })).toBeVisible({ timeout: 10000 });
 
-  // Verifica persistenza dopo reload
+  // Verifica persistenza dopo reload senza dipendere dalla virtualizzazione della tabella.
   await page.reload();
+  await page.getByPlaceholder("Codice o titolo").fill(code);
   await expect(page.getByText(code, { exact: true })).toBeVisible({ timeout: 10000 });
 
   // Verifica via API reale

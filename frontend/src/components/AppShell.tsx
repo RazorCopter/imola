@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
   ClipboardCheck,
+  Settings,
   Columns3,
   LayoutDashboard,
   ListChecks,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { useSession } from "@/features/auth/session";
+import { canAdminister } from "@/lib/permissions";
 import { applyTheme, cn, readStoredTheme, type Theme } from "@/lib/utils";
 
 const NAV = [
@@ -72,6 +74,22 @@ export function AppShell({ onOpenCommandPalette }: { onOpenCommandPalette: () =>
               {!collapsed && <span className="truncate">{t(label)}</span>}
             </NavLink>
           ))}
+          {canAdminister(session) && (
+            <NavLink
+              to="/amministrazione"
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition",
+                  isActive
+                    ? "bg-accent-subtle font-medium text-accent"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )
+              }
+            >
+              <Settings className="size-4 shrink-0" aria-hidden />
+              {!collapsed && <span>Amministrazione</span>}
+            </NavLink>
+          )}
         </nav>
 
         <button

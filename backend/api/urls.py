@@ -10,7 +10,7 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
-from api import auth_views, domain_views
+from api import admin_views, auth_views, domain_views
 
 router = DefaultRouter()
 
@@ -19,6 +19,10 @@ urlpatterns = [
     path("auth/logout", auth_views.LogoutView.as_view(), name="logout"),
     path("auth/session", auth_views.SessionView.as_view(), name="session"),
     path("settings", domain_views.SettingsView.as_view(), name="settings"),
+    path("admin/imports/seed", admin_views.SeedImportView.as_view(), name="admin-seed-import"),
+    path("admin/imports/ppm", admin_views.PpmImportView.as_view(), name="admin-ppm-import"),
+    path("admin/imports", admin_views.ImportHistoryView.as_view(), name="admin-import-history"),
+    path("admin/users", admin_views.UserRolesView.as_view(), name="admin-users"),
     path("search", domain_views.CommandSearchView.as_view(), name="command-search"),
     path("checks/run", domain_views.ChecksRunView.as_view(), name="checks-run"),
     path("anomalies", domain_views.AnomalyListView.as_view(), name="anomaly-list"),

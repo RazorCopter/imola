@@ -28,6 +28,16 @@ Inizio: 2026-10-23T01:35:53+02:00
 - Migrazione `wallet.0002_add_allocation_assignee`: applicata con successo, reversibile (sola aggiunta campi nullable su tabella corrente e storica).
 - Decisione D-17 annotata in `DECISIONI_APERTE.md` come provvisoria da confermare.
 - Verifiche: test dominio wallet 15 passed; backend completo 294 passed; ruff 0; black 148 file puliti; mypy 97 file puliti; frontend 30 passed, typecheck/lint/build exit 0; E2E reali 3 run consecutivi da 8 passed, 0 failed, 0 skipped.
+- Commit: `2bab0a8 feat: assegna allocazioni wallet agli architetti`.
+
+### N3 — Amministrazione e import GUI — CHIUSO
+
+- Ripristinata `/amministrazione` come route e voce menu esclusivamente admin.
+- Seed JSON: upload massimo 10 MB, validazione schema, dry-run reale, hash di conferma obbligatorio e apply transazionale; nessun contenuto del seed è scritto nei log.
+- PPM: upload `.xlsx`/`.pdf`, anteprima tramite importer reale, conferma vincolata allo stesso hash e apply; file temporaneo eliminato automaticamente.
+- Esposti download JSON, Excel e CSV progetti; storico ultimi 100 import; elenco utenti e assegnazione di un ruolo applicativo. Password e funzioni avanzate restano nel Django admin.
+- Sicurezza osservata: endpoint admin 200 per admin e 403 per fornitore; controlli upload/formato/hash lato server.
+- Verifiche: backend completo 294 passed, ruff/black/mypy verdi (98 file mypy); frontend 30 passed, typecheck/lint/build verdi; E2E reali 3 run consecutivi da 8 passed, 0 failed, 0 skipped. Corretto un secondo punto E2E dipendente dalla virtualizzazione usando il filtro reale.
 
 ## DECISIONI PRESE IN AUTONOMIA
 
