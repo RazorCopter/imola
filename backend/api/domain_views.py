@@ -483,7 +483,11 @@ class WalletAllocationOptionsView(DocumentedAPIView):
                     for row in WalletActivity.objects.order_by("code")
                 ],
                 "assignees": [
-                    {"id": row.id, "name": row.full_name}
+                    {"id": row.id, "name": row.full_name, "full_name": row.full_name}
+                    for row in Person.objects.order_by("full_name")
+                ],
+                "architects": [
+                    {"id": row.id, "name": row.full_name, "full_name": row.full_name}
                     for row in Person.objects.order_by("full_name")
                 ],
             }
@@ -814,29 +818,321 @@ class ProjectConfirmReviewView(DocumentedAPIView):
         )
 
 
+def update_wallet_allocation(request, alloc, data: dict, *, enforce_version: bool = True):
+    from django.core.exceptions import PermissionDenied
+    from django.db import transaction
+    from django.db.models import Sum
+    from django.utils import timezone
+    from rest_framework import serializers
+
+    from core import capabilities
+    from core.exceptions import InsufficientResidual
+    from directory.models import Person
+    from domain.money import ZERO, to_days
+    from domain.wallet_balance import available_residual_for_allocation
+    from timesheets.models import TimesheetEntry, TimesheetSource, month_start
+
+    if enforce_version:
+        check_expected_version(request, alloc)
+    elif request.headers.get("If-Match") or data.get("expected_version") is not None:
+        check_expected_version(request, alloc)
+
+    # Identifica se la richiesta tocca i consuntivi contabili
+    has_timesheet_adjust = any(
+        k in data
+        for k in (
+            "adjust_timesheet",
+            "timesheet_adjustment",
+            "timesheet_days",
+            "adjust_consumed_to",
+            "adjust_consumed_days",
+            "reversal_entry_id",
+            "timesheet_reversal_id",
+            "reversal_entry_ids",
+            "new_timesheet_entry",
+        )
+    )
+
+    if has_timesheet_adjust:
+        if not capabilities.has_capability(request.user, capabilities.ADJUST_ACCOUNTING):
+            raise PermissionDenied(
+                "La rettifica dei consuntivi contabili richiede la capability accounting.adjust."
+            )
+
+    with transaction.atomic():
+        # 1. Modifica giorni allocati
+        allocated_key = None
+        if "allocated_days" in data:
+            allocated_key = "allocated_days"
+        elif "days_allocated" in data:
+            allocated_key = "days_allocated"
+
+        if allocated_key is not None:
+            new_allocated = to_days(data[allocated_key])
+            if new_allocated < ZERO:
+                raise serializers.ValidationError(
+                    {allocated_key: "Le giornate non possono essere negative."}
+                )
+
+            # Validazione capienza del residuo del progetto sorgente (se allocazione da progetto)
+            if alloc.source_project_id is not None:
+                available = available_residual_for_allocation(
+                    alloc.source_project_id, exclude_allocation_id=alloc.id
+                )
+                if new_allocated > available:
+                    raise InsufficientResidual(
+                        f"Le giornate richieste ({new_allocated}) superano il residuo disponibile "
+                        f"del progetto di origine ({available} gg)."
+                    )
+
+            # Consuntivato attuale
+            current_consumed = (
+                TimesheetEntry.objects.filter(wallet_allocation=alloc).aggregate(total=Sum("days"))[
+                    "total"
+                ]
+                or ZERO
+            )
+            if not has_timesheet_adjust and new_allocated < current_consumed:
+                raise serializers.ValidationError(
+                    {
+                        allocated_key: (
+                            f"Le giornate allocate ({new_allocated}) non possono essere inferiori "
+                            f"a quelle già consuntivate ({current_consumed})."
+                        )
+                    }
+                )
+
+            alloc.allocated_days = new_allocated
+
+        # 2. Architetto assegnatario
+        if "assignee" in data or "assignee_id" in data:
+            assignee_val = data.get("assignee") if "assignee" in data else data.get("assignee_id")
+            if assignee_val in (None, ""):
+                alloc.assignee = None
+            else:
+                try:
+                    alloc.assignee = Person.objects.get(pk=assignee_val)
+                except (Person.DoesNotExist, ValueError) as err:
+                    raise serializers.ValidationError(
+                        {"assignee": "Architetto assegnatario non valido."}
+                    ) from err
+
+        # 3. Note / descrizione
+        if "notes" in data:
+            alloc.notes = data["notes"] or ""
+        elif "description" in data:
+            alloc.notes = data["description"] or ""
+
+        if "activity_notes" in data and alloc.activity:
+            alloc.activity.notes = data["activity_notes"] or ""
+            alloc.activity.save(update_fields=["notes"])
+
+        # 4. Stato
+        if "status" in data:
+            alloc.status = data["status"]
+
+        # 5. Rettifica consuntivi append-only (storno + nuova emissione)
+        if has_timesheet_adjust:
+            reversal_ids = []
+            if "reversal_entry_ids" in data and isinstance(data["reversal_entry_ids"], list):
+                reversal_ids = data["reversal_entry_ids"]
+            elif data.get("reversal_entry_id"):
+                reversal_ids = [data["reversal_entry_id"]]
+            elif data.get("timesheet_reversal_id"):
+                reversal_ids = [data["timesheet_reversal_id"]]
+            elif "adjust_timesheet" in data and isinstance(data["adjust_timesheet"], dict):
+                adj = data["adjust_timesheet"]
+                if adj.get("reversal_entry_id"):
+                    reversal_ids = [adj["reversal_entry_id"]]
+
+            reversal_note = (
+                data.get("reversal_note") or f"Rettifica consuntivo allocazione {alloc.id}"
+            )
+
+            for r_id in reversal_ids:
+                entry = get_object_or_404(TimesheetEntry, pk=r_id, wallet_allocation=alloc)
+                rev = entry.build_reversal(note=reversal_note)
+                rev.save()
+
+            # Eventuale nuova entry esplicita
+            new_entry_data = data.get("new_timesheet_entry")
+            if (
+                not new_entry_data
+                and "adjust_timesheet" in data
+                and isinstance(data["adjust_timesheet"], dict)
+            ):
+                adj = data["adjust_timesheet"]
+                if "new_days" in adj:
+                    new_entry_data = {
+                        "days": adj["new_days"],
+                        "period": adj.get("new_period"),
+                        "note": adj.get("new_note", "Nuova registrazione consuntivo dopo storno"),
+                    }
+
+            if new_entry_data and isinstance(new_entry_data, dict) and new_entry_data.get("days"):
+                days_val = to_days(new_entry_data["days"])
+                if days_val != ZERO:
+                    period_val = new_entry_data.get("period")
+                    if period_val:
+                        from datetime import date
+
+                        if isinstance(period_val, str):
+                            period_val = date.fromisoformat(period_val)
+                        period_val = month_start(period_val)
+                    else:
+                        period_val = month_start(timezone.now().date())
+                    TimesheetEntry.objects.create(
+                        wallet_allocation=alloc,
+                        period=period_val,
+                        days=days_val,
+                        source=TimesheetSource.MANUALE,
+                        note=new_entry_data.get("note", "Registrazione rettifica consuntivo"),
+                    )
+
+            # Rettifica sintetica del totale consuntivato (adjust_consumed_days o timesheet_days)
+            synthetic_target = None
+            for key in (
+                "adjust_consumed_days",
+                "adjust_consumed_to",
+                "timesheet_days",
+            ):
+                if key in data and data[key] is not None:
+                    synthetic_target = to_days(data[key])
+                    break
+
+            if synthetic_target is not None:
+                active_entries = list(
+                    alloc.timesheet_entries.filter(reversals__isnull=True).exclude(
+                        source=TimesheetSource.STORNO
+                    )
+                )
+                for entry in active_entries:
+                    rev = entry.build_reversal(note=reversal_note)
+                    rev.save()
+                if synthetic_target > ZERO:
+                    TimesheetEntry.objects.create(
+                        wallet_allocation=alloc,
+                        period=month_start(timezone.now().date()),
+                        days=synthetic_target,
+                        source=TimesheetSource.MANUALE,
+                        note=f"Rettifica consuntivo allocazione: {synthetic_target} gg",
+                    )
+
+        alloc.full_clean()
+        alloc.save()
+
+    final_consumed = (
+        TimesheetEntry.objects.filter(wallet_allocation=alloc).aggregate(total=Sum("days"))["total"]
+        or ZERO
+    )
+    final_available = alloc.allocated_days - final_consumed
+
+    return {
+        "id": str(alloc.id),
+        "version": alloc.version,
+        "external_ref": alloc.external_ref,
+        "allocated_days": str(alloc.allocated_days),
+        "days_allocated": str(alloc.allocated_days),
+        "consumed_days": str(final_consumed),
+        "available_days": str(final_available),
+        "status": alloc.status,
+        "notes": alloc.notes,
+        "assignee": str(alloc.assignee_id) if alloc.assignee_id else None,
+        "architetto": alloc.assignee.full_name if alloc.assignee else None,
+        "source_project": str(alloc.source_project_id) if alloc.source_project_id else None,
+        "source_project_code": alloc.source_project.code if alloc.source_project else None,
+        "source_project_title": alloc.source_project.title if alloc.source_project else None,
+        "activity": str(alloc.activity_id),
+        "activity_code": alloc.activity.code,
+        "activity_title": alloc.activity.title,
+        "year": alloc.wallet_year.year,
+    }
+
+
+class WalletAllocationDetailUpdateView(DocumentedAPIView):
+    permission_classes = [CanEditWallet]
+
+    def get_object(self, pk):
+        from wallet.models import WalletAllocation
+
+        return get_object_or_404(
+            WalletAllocation.objects.select_related(
+                "source_project", "activity", "assignee", "wallet_year"
+            ),
+            pk=pk,
+        )
+
+    @extend_schema(responses={200: dict})
+    def get(self, request, pk):
+        from django.db.models import Sum
+
+        from domain.money import ZERO
+        from timesheets.models import TimesheetEntry
+
+        alloc = self.get_object(pk)
+        consumed = (
+            TimesheetEntry.objects.filter(wallet_allocation=alloc).aggregate(total=Sum("days"))[
+                "total"
+            ]
+            or ZERO
+        )
+        available = alloc.allocated_days - consumed
+        entries = [
+            {
+                "id": str(entry.id),
+                "period": entry.period.isoformat() if entry.period else None,
+                "days": str(entry.days),
+                "source": entry.source,
+                "note": entry.note,
+                "reverses_id": str(entry.reverses_id) if entry.reverses_id else None,
+            }
+            for entry in alloc.timesheet_entries.order_by("-period", "-created_at")
+        ]
+        payload = {
+            "id": str(alloc.id),
+            "version": alloc.version,
+            "external_ref": alloc.external_ref,
+            "allocated_days": str(alloc.allocated_days),
+            "days_allocated": str(alloc.allocated_days),
+            "consumed_days": str(consumed),
+            "available_days": str(available),
+            "status": alloc.status,
+            "notes": alloc.notes,
+            "assignee": str(alloc.assignee_id) if alloc.assignee_id else None,
+            "architetto": alloc.assignee.full_name if alloc.assignee else None,
+            "source_project": str(alloc.source_project_id) if alloc.source_project_id else None,
+            "source_project_code": alloc.source_project.code if alloc.source_project else None,
+            "source_project_title": alloc.source_project.title if alloc.source_project else None,
+            "activity": str(alloc.activity_id),
+            "activity_code": alloc.activity.code,
+            "activity_title": alloc.activity.title,
+            "year": alloc.wallet_year.year,
+            "timesheet_entries": entries,
+        }
+        return Response(payload, headers={"ETag": make_etag(alloc)})
+
+    @extend_schema(request=dict, responses={200: dict})
+    def patch(self, request, pk):
+        alloc = self.get_object(pk)
+        payload = update_wallet_allocation(request, alloc, request.data, enforce_version=True)
+        return Response(payload, headers={"ETag": make_etag(alloc)})
+
+
 class WalletAllocationAdjustView(DocumentedAPIView):
     permission_classes = [CanEditWallet]
 
     @extend_schema(request=dict, responses={200: dict})
     def post(self, request, pk):
-        from domain.money import to_days
         from wallet.models import WalletAllocation
 
-        alloc = get_object_or_404(WalletAllocation, pk=pk)
-        if "allocated_days" in request.data:
-            alloc.allocated_days = to_days(request.data["allocated_days"])
-        if "status" in request.data:
-            alloc.status = request.data["status"]
-        alloc.full_clean()
-        alloc.save()
-        return Response(
-            {
-                "id": alloc.id,
-                "external_ref": alloc.external_ref,
-                "allocated_days": str(alloc.allocated_days),
-                "status": alloc.status,
-            }
+        alloc = get_object_or_404(
+            WalletAllocation.objects.select_related(
+                "source_project", "activity", "assignee", "wallet_year"
+            ),
+            pk=pk,
         )
+        payload = update_wallet_allocation(request, alloc, request.data, enforce_version=False)
+        return Response(payload, headers={"ETag": make_etag(alloc)})
 
 
 class AuditHistoryView(DocumentedAPIView):

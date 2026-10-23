@@ -7,7 +7,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
-import { canWriteLedger } from "@/lib/permissions";
+import { canEditWallet, canWriteLedger } from "@/lib/permissions";
+import { EditAllocationDialog } from "./EditAllocationDialog";
 
 interface Balance {
   anno: number;
@@ -68,6 +69,7 @@ export function WalletPage() {
   const [assignee, setAssignee] = useState("");
   const [days, setDays] = useState("");
   const [notes, setNotes] = useState("");
+  const [editingAllocationId, setEditingAllocationId] = useState<string | null>(null);
   const balance = useQuery({
     queryKey: ["wallet", "balance", year],
     queryFn: () => api.get<Balance>(`/wallet/${year}/balance`),
@@ -268,22 +270,36 @@ export function WalletPage() {
                   <div>
                     <StatusBadge status={row.stato} />
                   </div>
-                  {canWriteLedger(session) && (
-                    <div className="mt-2 flex justify-end gap-1">
+                  <div className="mt-2 flex items-center justify-end gap-1.5">
+                    {canEditWallet(session) && (
                       <button
-                        className="rounded border border-border px-2 py-1 text-[10px]"
-                        onClick={() => adjust.mutate({ id: row.id, allocated_days: row.consumato })}
+                        type="button"
+                        onClick={() => setEditingAllocationId(row.id)}
+                        data-testid={`edit-allocation-${row.id}`}
+                        className="inline-flex items-center justify-center rounded bg-amber-500 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-slate-950 shadow-sm transition-colors hover:bg-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
                       >
-                        Riduci al consumato
+                        EDIT
                       </button>
-                      <button
-                        className="rounded border border-danger/40 px-2 py-1 text-[10px] text-danger"
-                        onClick={() => adjust.mutate({ id: row.id, status: "CHIUSA" })}
-                      >
-                        Chiudi
-                      </button>
-                    </div>
-                  )}
+                    )}
+                    {canWriteLedger(session) && (
+                      <>
+                        <button
+                          className="rounded border border-border px-2 py-1 text-[10px]"
+                          onClick={() =>
+                            adjust.mutate({ id: row.id, allocated_days: row.consumato })
+                          }
+                        >
+                          Riduci al consumato
+                        </button>
+                        <button
+                          className="rounded border border-danger/40 px-2 py-1 text-[10px] text-danger"
+                          onClick={() => adjust.mutate({ id: row.id, status: "CHIUSA" })}
+                        >
+                          Chiudi
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -317,6 +333,11 @@ export function WalletPage() {
           </div>
         </aside>
       </div>
+      <EditAllocationDialog
+        allocationId={editingAllocationId}
+        year={year}
+        onClose={() => setEditingAllocationId(null)}
+      />
     </section>
   );
 }

@@ -64,6 +64,26 @@ urlpatterns = [
         name="project-confirm-review",
     ),
     path(
+        "wallet/allocations/<uuid:pk>",
+        domain_views.WalletAllocationDetailUpdateView.as_view(),
+        name="wallet-allocation-detail",
+    ),
+    path(
+        "wallet/allocations/<uuid:pk>/",
+        domain_views.WalletAllocationDetailUpdateView.as_view(),
+        name="wallet-allocation-detail-slash",
+    ),
+    path(
+        "allocations/<uuid:pk>",
+        domain_views.WalletAllocationDetailUpdateView.as_view(),
+        name="allocation-detail",
+    ),
+    path(
+        "allocations/<uuid:pk>/",
+        domain_views.WalletAllocationDetailUpdateView.as_view(),
+        name="allocation-detail-slash",
+    ),
+    path(
         "allocations/<uuid:pk>/adjust",
         domain_views.WalletAllocationAdjustView.as_view(),
         name="allocation-adjust",
@@ -77,6 +97,16 @@ urlpatterns = [
         "allocations/options",
         domain_views.WalletAllocationOptionsView.as_view(),
         name="allocation-options",
+    ),
+    path(
+        "wallet/allocation-options",
+        domain_views.WalletAllocationOptionsView.as_view(),
+        name="wallet-allocation-options",
+    ),
+    path(
+        "wallet/allocation-options/",
+        domain_views.WalletAllocationOptionsView.as_view(),
+        name="wallet-allocation-options-slash",
     ),
     path(
         "audit/<str:entity_type>/<uuid:pk>",

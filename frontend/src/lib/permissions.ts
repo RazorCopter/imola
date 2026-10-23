@@ -65,3 +65,19 @@ export function canUploadPpmDryRun(session: Session | null): boolean {
     (legacy) => legacy.roles.includes("fornitore") || legacy.can_write,
   );
 }
+
+export function canEditWallet(session: Session | null): boolean {
+  return hasCapability(
+    session,
+    CAPABILITIES.EDIT_WALLET,
+    (legacy) => legacy.is_admin || Boolean(legacy.roles?.includes("responsabile_bmed")),
+  );
+}
+
+export function canAdjustAccounting(session: Session | null): boolean {
+  return hasCapability(
+    session,
+    CAPABILITIES.ADJUST_ACCOUNTING,
+    (legacy) => legacy.is_admin || Boolean(legacy.roles?.includes("responsabile_bmed")),
+  );
+}

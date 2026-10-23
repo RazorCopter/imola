@@ -247,12 +247,16 @@ def wallet_flow(year: int) -> list[dict]:
     return [
         {
             "id": row.id,
+            "version": row.version,
+            "notes": row.notes,
             "riferimento": row.external_ref,
             "origine": row.source_project.code if row.source_project_id else "WALLET-GENERALE",
+            "origine_id": row.source_project_id,
             "origine_titolo": (
                 row.source_project.title if row.source_project_id else "Wallet senza origine"
             ),
             "destinazione": row.activity.code,
+            "destinazione_id": row.activity_id,
             "destinazione_titolo": row.activity.title,
             "architetto_id": row.assignee_id,
             "architetto": row.assignee.full_name if row.assignee_id else None,
