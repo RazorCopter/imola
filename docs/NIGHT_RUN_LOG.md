@@ -38,6 +38,34 @@ Inizio: 2026-10-23T01:35:53+02:00
 - Esposti download JSON, Excel e CSV progetti; storico ultimi 100 import; elenco utenti e assegnazione di un ruolo applicativo. Password e funzioni avanzate restano nel Django admin.
 - Sicurezza osservata: endpoint admin 200 per admin e 403 per fornitore; controlli upload/formato/hash lato server.
 - Verifiche: backend completo 294 passed, ruff/black/mypy verdi (98 file mypy); frontend 30 passed, typecheck/lint/build verdi; E2E reali 3 run consecutivi da 8 passed, 0 failed, 0 skipped. Corretto un secondo punto E2E dipendente dalla virtualizzazione usando il filtro reale.
+- Commit: `a011a06 feat: aggiunge amministrazione e import controllati`.
+
+### N4 — Completamento flussi parziali ad alto valore — CHIUSO
+
+- Coda revisione: form reale con conferma, gestione data/stato, permessi writer, invalidazione dati e feedback errore; persistenza coperta dall'E2E reale.
+- Dettaglio progetto: modifica data prevista/note, storico audit, link operativi e persistenza reload già presenti e verificati.
+- Riconciliazione: KPI, righe, azioni suggerite e navigazione al progetto presenti su API reale; l'azione di risoluzione operativa avviene sul progetto/anomalia correlata.
+- Canone: selezione semestre, dettaglio KPI, formula target, uffici/sottoattività e burndown presenti su API reale.
+- Navigazione: azioni e menu condizionati dalle capability; amministrazione esclusivamente admin (FG-034).
+- Dashboard: KPI wallet/riconciliazione coerenti con le API e stati dati mancanti espliciti.
+- Non sono state introdotte ulteriori modifiche applicative: la ricognizione e i gate N1-N3 dimostrano che questi percorsi del Blocco 0 erano già implementati. Restano PARZIALI nella matrice perché la verifica manuale FG-039 è riservata all'utente e non è lecito marcarli COMPLETI.
+
+### N5 — Capability SOLO BACKEND rimanenti — CHIUSO / SALTATO SE NON PREVISTE
+
+- FG-009 non viene esposta: il piano e le regole correnti vietano il rilascio manuale di residuo da progetto attivo; l'endpoint legacy risponde 409 in modo esplicito.
+- FG-024 e FG-028 rollback import: non esposti in GUI perché la specifica N3 richiede apply/storico ma non rollback distruttivo; i meccanismi append-only/CLI restano disponibili e protetti.
+- FG-029/030/031 sono ora esposti come download nella GUI amministrativa.
+- FG-035 impostazioni applicative: non è prevista una GUI nel piano; resta Django admin/API.
+- FG-036 ledger timesheet append-only in sola consultazione: il piano non prevede una pagina dedicata; i dati aggregati sono consultabili nei progetti, wallet, canone e riconciliazione. Non implementato un CRUD che violerebbe l'append-only.
+
+### N6 — Import storico Excel (FG-026) — BLOCCATO
+
+- In `data/seed/` non sono presenti file `.xlsx`, solo il seed JSON reale ignorato da Git. Come richiesto, non è stato implementato alcun converter e il seed non è stato letto o modificato.
+- Il file `.xlsx` non tracciato in `docs/` è trattato conservativamente come dato aziendale fuori dalla posizione autorizzata e non è stato analizzato.
+
+### N7 — Scheduler controlli (FG-037) — SALTATO
+
+- `PLAN.md` dichiara esplicitamente nessun Celery in v1 e non prevede uno scheduler. Nessuna implementazione aggiunta.
 
 ## DECISIONI PRESE IN AUTONOMIA
 
