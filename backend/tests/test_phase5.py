@@ -6,9 +6,11 @@ from decimal import Decimal
 from io import BytesIO
 
 import pytest
+from django.contrib.auth.models import Group
 from openpyxl import Workbook, load_workbook
 from rest_framework.test import APIClient
 
+from core import roles
 from exporters import export_csv_bytes, export_excel_bytes, export_json_bytes
 from importers.ppm import apply_ppm, dry_run_ppm, parse_ppm_xlsx, rollback_ppm
 from imports.models import ImportBatch, ImportStatus
@@ -109,7 +111,10 @@ def test_export_schema_csv_ed_excel_multifoglio():
 def test_api_export_richiede_autenticazione():
     client = APIClient()
     assert client.get("/api/v1/export/json").status_code == 401
-    client.force_authenticate(user=UserFactory())
+    admin_user = UserFactory()
+    roles.ensure_groups()
+    admin_user.groups.add(Group.objects.get(name=roles.ADMIN))
+    client.force_authenticate(user=admin_user)
     assert client.get("/api/v1/export/json").status_code == 200
     assert client.get("/api/v1/export/csv/projects").status_code == 200
     assert client.get("/api/v1/export/excel").status_code == 200

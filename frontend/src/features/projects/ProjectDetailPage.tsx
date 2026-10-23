@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Link, useParams } from "react-router-dom";
@@ -5,7 +6,10 @@ import { Link, useParams } from "react-router-dom";
 import { DaysValue } from "@/components/DaysValue";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
+import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
+import { canEditProjects } from "@/lib/permissions";
+import { EditProjectDialog } from "./EditProjectDialog";
 import type { ProjectBalance } from "./ProjectsPage";
 
 interface ProjectResponse {
@@ -15,6 +19,8 @@ interface ProjectResponse {
 export function ProjectDetailPage() {
   const { projectId } = useParams();
   const client = useQueryClient();
+  const { session } = useSession();
+  const [editOpen, setEditOpen] = useState(false);
   const query = useQuery({
     queryKey: ["projects", "balances"],
     queryFn: () => api.get<ProjectResponse>("/projects/balances"),
@@ -45,7 +51,7 @@ export function ProjectDetailPage() {
   if (query.isError) return <ErrorState title="Impossibile caricare il progetto" />;
   const project = query.data?.results.find((item) => item.id === projectId);
   if (!project) return <EmptyState title="Progetto non trovato" />;
-  const canAnnotate = project.permissions.annotate;
+  const canAnnotate = Boolean(project.permissions?.annotate);
 
   const metrics = [
     ["Budget", project.budget],
@@ -72,14 +78,32 @@ export function ProjectDetailPage() {
         <Link to="/progetti" className="text-sm text-accent">
           ← Progetti
         </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="font-mono text-xl font-semibold">{project.codice}</h1>
-          <StatusBadge status={project.stato_consuntivazione} domain="timesheet" />
-          <StatusBadge status={project.stato_fatturazione} domain="billing" />
-          <StatusBadge status={project.stato_offerta} domain="offer" />
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-mono text-xl font-semibold">{project.codice}</h1>
+            <StatusBadge status={project.stato_consuntivazione} domain="timesheet" />
+            <StatusBadge status={project.stato_fatturazione} domain="billing" />
+            <StatusBadge status={project.stato_offerta} domain="offer" />
+          </div>
+          {(canEditProjects(session) ||
+            project.permissions?.edit ||
+            project.permissions?.annotate) && (
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              data-testid="edit-project-detail-button"
+              className="inline-flex items-center justify-center rounded bg-amber-500 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-950 shadow-sm transition-colors hover:bg-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
+            >
+              EDIT PROGETTO
+            </button>
+          )}
         </div>
         <p className="mt-1 text-muted-foreground">{project.titolo}</p>
       </header>
+
+      {editOpen && projectId && (
+        <EditProjectDialog projectId={projectId} open={editOpen} onOpenChange={setEditOpen} />
+      )}
       <Tabs.Root defaultValue="Panoramica">
         <Tabs.List
           className="flex gap-1 overflow-x-auto border-b border-border"

@@ -77,6 +77,9 @@ async function authenticatedPage(page: import("@playwright/test").Page) {
   await page.route("**/api/v1/canoni", (route) =>
     route.fulfill({ json: { results: [], count: 0 } }),
   );
+  await page.route("**/api/v1/audit/**", (route) =>
+    route.fulfill({ json: { results: [] } }),
+  );
 }
 
 test("dashboard espone KPI API senza ricalcolarli", async ({ page }) => {

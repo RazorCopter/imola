@@ -47,6 +47,11 @@ urlpatterns = [
         name="anomaly-action",
     ),
     path("projects", domain_views.ProjectListCreateView.as_view(), name="project-list-create"),
+    path(
+        "projects/options",
+        domain_views.ProjectFormOptionsView.as_view(),
+        name="project-form-options",
+    ),
     path("projects/balances", domain_views.ProjectBalancesView.as_view(), name="project-balances"),
     path(
         "projects/<uuid:pk>",

@@ -111,20 +111,26 @@ def test_responsabile_puo_creare_un_progetto_dal_wizard():
     assert response.json()["version"] == 1
 
 
-def test_fornitore_non_puo_creare_un_progetto():
+def test_fornitore_senza_override_capability_segue_matrice_di_creazione():
     roles.ensure_groups()
     user = UserFactory()
     user.groups.add(Group.objects.get(name=roles.SUPPLIER))
     client = APIClient()
     client.force_authenticate(user=user)
 
+    # Con la matrice canonica di Fase 7, Fornitore ha projects.create di default
     response = client.post(
         "/api/v1/projects",
-        {"code": "NO", "title": "Negato", "contract_type": "AQL", "budget_days": "1"},
+        {
+            "code": "PRJ-FORNITORE-OK",
+            "title": "Creato da fornitore",
+            "contract_type": "AQL",
+            "budget_days": "1",
+        },
         format="json",
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 201
 
 
 def test_command_search_trova_progetti():

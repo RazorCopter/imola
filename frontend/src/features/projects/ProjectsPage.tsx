@@ -10,7 +10,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
-import { canCreateProjects } from "@/lib/permissions";
+import { canCreateProjects, canEditProjects } from "@/lib/permissions";
+import { EditProjectDialog } from "./EditProjectDialog";
 import { NewProjectDialog } from "./NewProjectDialog";
 
 export interface ProjectBalance {
@@ -32,7 +33,10 @@ export interface ProjectBalance {
   residuo_giorni_alla_scadenza: number | null;
   residuo_motivo: string;
   spiegazione_residuo: string;
-  permissions: { annotate: boolean };
+  permissions: {
+    edit?: boolean;
+    annotate?: boolean;
+  };
 }
 
 interface ProjectResponse {
@@ -40,58 +44,91 @@ interface ProjectResponse {
   count: number;
 }
 
-const columns: ColumnDef<ProjectBalance>[] = [
-  {
-    accessorKey: "codice",
-    header: "Codice",
-    cell: ({ row }) => (
-      <span className="font-mono font-medium text-accent">{row.original.codice}</span>
-    ),
-  },
-  { accessorKey: "titolo", header: "Titolo" },
-  { accessorKey: "tipo_contratto", header: "Tipo" },
-  {
-    accessorKey: "budget",
-    header: "Budget",
-    cell: ({ row }) => <DaysValue value={row.original.budget} suffix={false} label="Budget API" />,
-  },
-  {
-    accessorKey: "consumato_totale",
-    header: "Consumato",
-    cell: ({ row }) => (
-      <DaysValue value={row.original.consumato_totale} suffix={false} label="Consumato API" />
-    ),
-  },
-  {
-    accessorKey: "residuo",
-    header: "Residuo",
-    cell: ({ row }) => (
-      <DaysValue
-        value={row.original.residuo}
-        suffix={false}
-        label={row.original.spiegazione_residuo}
-      />
-    ),
-  },
-  {
-    accessorKey: "stato_consuntivazione",
-    header: "Consuntivazione",
-    cell: ({ row }) => (
-      <StatusBadge status={row.original.stato_consuntivazione} domain="timesheet" />
-    ),
-  },
-  {
-    accessorKey: "stato_fatturazione",
-    header: "Fatturazione",
-    cell: ({ row }) => <StatusBadge status={row.original.stato_fatturazione} domain="billing" />,
-  },
-];
-
 export function ProjectsPage() {
   const navigate = useNavigate();
   const { session } = useSession();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+
+  const canGlobalEdit = canEditProjects(session);
+
+  const columns = useMemo<ColumnDef<ProjectBalance>[]>(
+    () => [
+      {
+        accessorKey: "codice",
+        header: "Codice",
+        cell: ({ row }) => (
+          <span className="font-mono font-medium text-accent">{row.original.codice}</span>
+        ),
+      },
+      { accessorKey: "titolo", header: "Titolo" },
+      { accessorKey: "tipo_contratto", header: "Tipo" },
+      {
+        accessorKey: "budget",
+        header: "Budget",
+        cell: ({ row }) => (
+          <DaysValue value={row.original.budget} suffix={false} label="Budget API" />
+        ),
+      },
+      {
+        accessorKey: "consumato_totale",
+        header: "Consumato",
+        cell: ({ row }) => (
+          <DaysValue value={row.original.consumato_totale} suffix={false} label="Consumato API" />
+        ),
+      },
+      {
+        accessorKey: "residuo",
+        header: "Residuo",
+        cell: ({ row }) => (
+          <DaysValue
+            value={row.original.residuo}
+            suffix={false}
+            label={row.original.spiegazione_residuo}
+          />
+        ),
+      },
+      {
+        accessorKey: "stato_consuntivazione",
+        header: "Consuntivazione",
+        cell: ({ row }) => (
+          <StatusBadge status={row.original.stato_consuntivazione} domain="timesheet" />
+        ),
+      },
+      {
+        accessorKey: "stato_fatturazione",
+        header: "Fatturazione",
+        cell: ({ row }) => (
+          <StatusBadge status={row.original.stato_fatturazione} domain="billing" />
+        ),
+      },
+      {
+        id: "actions",
+        header: "Azioni",
+        cell: ({ row }) => {
+          const item = row.original;
+          const showEdit = canGlobalEdit || item.permissions?.edit || item.permissions?.annotate;
+          if (!showEdit) return null;
+
+          return (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingProjectId(item.id);
+              }}
+              data-testid={`edit-project-${item.id}`}
+              className="inline-flex items-center justify-center rounded bg-amber-500 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-slate-950 shadow-sm transition-colors hover:bg-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
+            >
+              EDIT
+            </button>
+          );
+        },
+      },
+    ],
+    [canGlobalEdit],
+  );
   const query = useQuery({
     queryKey: ["projects", "balances"],
     queryFn: () => api.get<ProjectResponse>("/projects/balances"),
@@ -167,6 +204,16 @@ export function ProjectsPage() {
           columns={columns}
           emptyLabel="Nessun progetto corrisponde ai filtri."
           onRowClick={(project) => navigate(`/progetti/${project.id}`)}
+        />
+      )}
+
+      {editingProjectId && (
+        <EditProjectDialog
+          projectId={editingProjectId}
+          open={Boolean(editingProjectId)}
+          onOpenChange={(open) => {
+            if (!open) setEditingProjectId(null);
+          }}
         />
       )}
     </section>

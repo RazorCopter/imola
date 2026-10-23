@@ -28,7 +28,7 @@ export function hasCapability(
   legacyFallback: (session: Session) => boolean = () => false,
 ): boolean {
   if (!session) return false;
-  if (session.capabilities !== undefined) return session.capabilities.includes(capability);
+  if (Array.isArray(session.capabilities)) return session.capabilities.includes(capability);
   return legacyFallback(session);
 }
 
@@ -42,6 +42,20 @@ export function canAdminister(session: Session | null): boolean {
 
 export function canCreateProjects(session: Session | null): boolean {
   return hasCapability(session, CAPABILITIES.CREATE_PROJECTS, (legacy) => legacy.can_write);
+}
+
+export function canEditProjects(session: Session | null): boolean {
+  return hasCapability(
+    session,
+    CAPABILITIES.EDIT_PROJECTS,
+    (legacy) => legacy.is_admin || Boolean(legacy.roles?.includes("responsabile_bmed")),
+  );
+}
+
+export function canAnnotateOwnProjects(session: Session | null): boolean {
+  return hasCapability(session, CAPABILITIES.ANNOTATE_OWN_PROJECTS, (legacy) =>
+    Boolean(legacy.roles?.includes("referente_bmed")),
+  );
 }
 
 export function canUploadPpmDryRun(session: Session | null): boolean {

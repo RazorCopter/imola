@@ -87,28 +87,49 @@ export function DataTable<T>({
           ))}
         </thead>
         <tbody style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
-          {virtualizer.getVirtualItems().map((virtualRow) => {
-            const row = rows[virtualRow.index];
-            if (row === undefined) return null;
-            return (
-              <tr
-                key={row.id}
-                className={
-                  onRowClick
-                    ? "absolute left-0 top-0 flex w-full cursor-pointer border-b border-border hover:bg-muted/60"
-                    : "absolute left-0 top-0 flex w-full border-b border-border"
-                }
-                style={{ height: virtualRow.size, transform: `translateY(${virtualRow.start}px)` }}
-                onClick={() => onRowClick?.(row.original)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="flex-1 truncate px-3 py-2">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-            );
-          })}
+          {virtualizer.getVirtualItems().length > 0
+            ? virtualizer.getVirtualItems().map((virtualRow) => {
+                const row = rows[virtualRow.index];
+                if (row === undefined) return null;
+                return (
+                  <tr
+                    key={row.id}
+                    className={
+                      onRowClick
+                        ? "absolute left-0 top-0 flex w-full cursor-pointer border-b border-border hover:bg-muted/60"
+                        : "absolute left-0 top-0 flex w-full border-b border-border"
+                    }
+                    style={{
+                      height: virtualRow.size,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                    onClick={() => onRowClick?.(row.original)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="flex-1 truncate px-3 py-2">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
+            : rows.map((row) => (
+                <tr
+                  key={row.id}
+                  className={
+                    onRowClick
+                      ? "flex w-full cursor-pointer border-b border-border hover:bg-muted/60"
+                      : "flex w-full border-b border-border"
+                  }
+                  onClick={() => onRowClick?.(row.original)}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className="flex-1 truncate px-3 py-2">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))}
         </tbody>
       </table>
     </div>

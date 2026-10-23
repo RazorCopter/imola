@@ -16,6 +16,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.concurrency import etag_matches, make_etag
+from api.project_serializers import (
+    PROJECT_ANNOTATION_FIELDS,
+    PROJECT_CONTROL_FIELDS,
+    PROJECT_EDITABLE_FIELDS,
+    ProjectUpdateSerializer,
+)
 from canone.models import Canone
 from core import capabilities
 from core.exceptions import PreconditionRequired, StaleResource
@@ -185,6 +191,7 @@ class ProjectBalancesView(DocumentedAPIView):
                 years_valid_after_closure=settings_obj.residual_years_after_closure,
                 expiring_window_days=settings_obj.residual_expiring_window_days,
             )
+            can_edit = capabilities.has_capability(request.user, capabilities.EDIT_PROJECTS)
             can_annotate = ReferentCanAnnotate.can_annotate(request.user, project)
             rows.append(
                 {
@@ -210,7 +217,10 @@ class ProjectBalancesView(DocumentedAPIView):
                         project.direct_consumed_days,
                         project.allocated_to_wallet_days,
                     ),
-                    "permissions": {"annotate": can_annotate},
+                    "permissions": {
+                        "edit": can_edit,
+                        "annotate": can_annotate,
+                    },
                 }
             )
         return Response({"results": rows, "count": len(rows)})
@@ -650,13 +660,55 @@ class ReconciliationView(DocumentedAPIView):
         )
 
 
+def project_detail_payload(project, user) -> dict:
+    """Anagrafica persistita modificabile, senza campi tecnici, import o valori calcolati."""
+    can_edit = capabilities.has_capability(user, capabilities.EDIT_PROJECTS)
+    can_annotate = ReferentCanAnnotate.can_annotate(user, project)
+    return {
+        "id": project.id,
+        "code": project.code,
+        "title": project.title,
+        "contract_type": project.contract_type,
+        "aro_code": project.aro_code,
+        "rda_code": project.rda_code,
+        "deliverable": project.deliverable,
+        "client_owner": project.client_owner_id,
+        "supplier_owner": project.supplier_owner_id,
+        "budget_days": str(project.budget_days),
+        "start_date": str(project.start_date) if project.start_date else None,
+        "planned_end_date": str(project.planned_end_date) if project.planned_end_date else None,
+        "actual_closure_date": (
+            str(project.actual_closure_date) if project.actual_closure_date else None
+        ),
+        "offer_status": project.offer_status,
+        "timesheet_status": project.timesheet_status,
+        "billing_status": project.billing_status,
+        "notes": project.notes,
+        "reliability": project.reliability,
+        "verification_points": project.verification_points,
+        "version": project.version,
+        "permissions": {
+            "edit": can_edit,
+            "annotate": can_annotate,
+            "editable_fields": sorted(
+                PROJECT_EDITABLE_FIELDS if can_edit else PROJECT_ANNOTATION_FIELDS
+            ),
+        },
+        "readonly": {
+            "code": "Il codice è bloccato perché può essere referenziato da import e ledger.",
+        },
+    }
+
+
 class ProjectDetailUpdateView(DocumentedAPIView):
     permission_classes = [ReferentCanAnnotate]
 
     def get_object(self, pk):
         from projects.models import Project
 
-        obj = get_object_or_404(Project, pk=pk)
+        obj = get_object_or_404(
+            Project.objects.select_related("client_owner", "supplier_owner"), pk=pk
+        )
         self.check_object_permissions(self.request, obj)
         return obj
 
@@ -664,50 +716,68 @@ class ProjectDetailUpdateView(DocumentedAPIView):
     def get(self, request, pk):
         project = self.get_object(pk)
         return Response(
-            {
-                "id": project.id,
-                "codice": project.code,
-                "titolo": project.title,
-                "tipo_contratto": project.contract_type,
-                "stato_consuntivazione": project.timesheet_status,
-                "stato_fatturazione": project.billing_status,
-                "stato_offerta": project.offer_status,
-                "budget_days": str(project.budget_days),
-                "start_date": str(project.start_date) if project.start_date else None,
-                "planned_end_date": (
-                    str(project.planned_end_date) if project.planned_end_date else None
-                ),
-                "actual_closure_date": (
-                    str(project.actual_closure_date) if project.actual_closure_date else None
-                ),
-                "notes": project.notes,
-                "version": project.version,
-            },
-            headers={"ETag": make_etag(project)},
+            project_detail_payload(project, request.user), headers={"ETag": make_etag(project)}
         )
 
-    @extend_schema(request=dict, responses={200: dict})
+    @extend_schema(request=ProjectUpdateSerializer, responses={200: dict})
     def patch(self, request, pk):
-        from datetime import date
-
         project = self.get_object(pk)
         check_expected_version(request, project)
-        if "notes" in request.data:
-            project.notes = str(request.data["notes"])
-        if "planned_end_date" in request.data:
-            val = request.data["planned_end_date"]
-            project.planned_end_date = date.fromisoformat(val) if val else None
-        if capabilities.has_capability(request.user, capabilities.EDIT_PROJECTS):
-            if "actual_closure_date" in request.data:
-                val = request.data["actual_closure_date"]
-                project.actual_closure_date = date.fromisoformat(val) if val else None
-            if "timesheet_status" in request.data:
-                project.timesheet_status = request.data["timesheet_status"]
-            if "billing_status" in request.data:
-                project.billing_status = request.data["billing_status"]
-        project.full_clean()
-        project.save()
-        return self.get(request, pk)
+        supplied_fields = set(request.data) - PROJECT_CONTROL_FIELDS
+        allowed_fields = (
+            PROJECT_EDITABLE_FIELDS
+            if capabilities.has_capability(request.user, capabilities.EDIT_PROJECTS)
+            else PROJECT_ANNOTATION_FIELDS
+        )
+        forbidden = supplied_fields - allowed_fields
+        if forbidden:
+            raise serializers.ValidationError(
+                dict.fromkeys(forbidden, "Campo non modificabile per il ruolo corrente.")
+            )
+        serializer = ProjectUpdateSerializer(project, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        project = serializer.save()
+        return Response(
+            project_detail_payload(project, request.user), headers={"ETag": make_etag(project)}
+        )
+
+
+class ProjectFormOptionsView(DocumentedAPIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(operation_id="project_form_options", responses={200: dict})
+    def get(self, request):
+        from core.models import Reliability
+        from directory.models import Organization, Person
+        from projects.models import BillingStatus, ContractType, OfferStatus, TimesheetStatus
+
+        def choices(values):
+            return [{"value": value, "label": label} for value, label in values]
+
+        organizations = Organization.objects.order_by("kind", "name")
+        people = Person.objects.filter(is_active=True).select_related("organization")
+        return Response(
+            {
+                "contract_types": choices(ContractType.choices),
+                "offer_statuses": choices(OfferStatus.choices),
+                "timesheet_statuses": choices(TimesheetStatus.choices),
+                "billing_statuses": choices(BillingStatus.choices),
+                "reliabilities": choices(Reliability.choices),
+                "organizations": [
+                    {"id": item.id, "code": item.code, "name": item.name, "kind": item.kind}
+                    for item in organizations
+                ],
+                "people": [
+                    {
+                        "id": item.id,
+                        "name": item.full_name,
+                        "organization_id": item.organization_id,
+                        "organization_kind": item.organization.kind,
+                    }
+                    for item in people
+                ],
+            }
+        )
 
 
 class ProjectConfirmReviewView(DocumentedAPIView):

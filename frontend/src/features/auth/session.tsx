@@ -33,8 +33,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const data = await api.get<Session>("/auth/session", { expectUnauthorized: true });
-      setSession(data);
+      const data = await api.get<Session & { user?: Partial<Session> }>("/auth/session", {
+        expectUnauthorized: true,
+      });
+      const resolved: Session = data.user
+        ? {
+            username: data.user.username ?? "",
+            full_name: data.user.full_name ?? data.user.username ?? "",
+            email: data.user.email ?? "",
+            roles: data.user.roles ?? [],
+            capabilities: data.user.capabilities,
+            is_admin: data.user.is_admin ?? Boolean(data.user.roles?.includes("admin")),
+            can_write:
+              data.user.can_write ??
+              Boolean(data.user.roles?.some((r) => ["admin", "responsabile_bmed"].includes(r))),
+          }
+        : data;
+      setSession(resolved);
       setStatus("authenticated");
       setExpired(false);
     } catch (error) {
