@@ -1,9 +1,4 @@
-"""Catalogo statico delle capability applicative e default per ruolo.
-
-Le capability sono il contratto canonico condiviso da API e frontend. In questa tranche i
-valori effettivi derivano dai gruppi/ruoli Django esistenti; la configurabilità persistente è
-rinviata e non richiede migrazioni.
-"""
+"""Catalogo canonico e risoluzione persistente delle capability per ruolo."""
 
 from __future__ import annotations
 
@@ -70,12 +65,34 @@ ROLE_DEFAULTS: Final = {
     ),
 }
 
+RESERVED_CAPABILITIES: Final = frozenset({RESET_DATA, MANAGE_USERS, MANAGE_PRIVILEGES})
+
+
+def capabilities_for_role(role: str) -> set[str]:
+    """Legge gli override dal DB a ogni richiesta; in assenza usa i default canonici."""
+    if role == roles.ADMIN:
+        return set(ALL_CAPABILITIES)
+    defaults = set(ROLE_DEFAULTS.get(role, ()))
+    from core.models import RoleCapabilityOverride
+
+    overrides = RoleCapabilityOverride.objects.filter(role=role).values_list(
+        "capability", "enabled"
+    )
+    for capability, enabled in overrides:
+        if capability in RESERVED_CAPABILITIES:
+            continue
+        if enabled:
+            defaults.add(capability)
+        else:
+            defaults.discard(capability)
+    return defaults - set(RESERVED_CAPABILITIES)
+
 
 def capabilities_for(user) -> set[str]:
-    """Restituisce le capability effettive derivanti dai ruoli correnti dell'utente."""
+    """Restituisce l'unione delle capability effettive dei ruoli correnti."""
     effective: set[str] = set()
     for role in roles.roles_of(user):
-        effective.update(ROLE_DEFAULTS.get(role, ()))
+        effective.update(capabilities_for_role(role))
     return effective
 
 

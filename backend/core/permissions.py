@@ -29,6 +29,14 @@ class IsAdmin(HasCapability):
     capability = capabilities.MANAGE_PRIVILEGES
 
 
+class CanManageUsers(HasCapability):
+    capability = capabilities.MANAGE_USERS
+
+
+class CanManagePrivileges(HasCapability):
+    capability = capabilities.MANAGE_PRIVILEGES
+
+
 class CanCreateProjects(HasCapability):
     capability = capabilities.CREATE_PROJECTS
 

@@ -31,6 +31,75 @@ async function login(page: Page, username = ADMIN_USER, password = ADMIN_PASS) {
 
 test.describe.configure({ mode: "serial" });
 
+const E2E_MANAGED_USER = `e2e-managed-${Date.now()}`;
+
+async function openAdmin(page: Page) {
+  await login(page);
+  await page.goto("/admin");
+  await expect(page.getByRole("heading", { name: "Amministrazione" })).toBeVisible();
+}
+
+async function csrfToken(page: Page): Promise<string> {
+  await page.request.get("/api/v1/auth/session");
+  return (
+    (await page.context().cookies()).find((cookie) => cookie.name === "sl_csrftoken")?.value ?? ""
+  );
+}
+
+async function adminRequest(
+  page: Page,
+  method: "POST" | "PUT" | "DELETE",
+  path: string,
+  data?: unknown,
+) {
+  return page.request.fetch(path, {
+    method,
+    data,
+    headers: { "X-CSRFToken": await csrfToken(page) },
+  });
+}
+
+test("0. Admin gestisce un utente e modifica un privilegio non riservato", async ({ page }) => {
+  await openAdmin(page);
+  await page.getByRole("tab", { name: "Utenti" }).click();
+  await page.getByRole("button", { name: "Crea utente" }).click();
+  await page.getByLabel("Username").fill(E2E_MANAGED_USER);
+  await page.getByLabel("Email").fill(`${E2E_MANAGED_USER}@example.test`);
+  await page.getByLabel("Password iniziale").fill("E2E-Managed-2026!");
+  await page.getByRole("button", { name: "Salva" }).click();
+  await expect(page.getByText(E2E_MANAGED_USER)).toBeVisible();
+
+  await page.getByRole("tab", { name: "Ruoli e privilegi" }).click();
+  const capability = page.getByLabel("Fornitore (Imola): projects.create");
+  const original = await capability.isChecked();
+  await capability.click();
+  await page.getByRole("button", { name: "Salva Fornitore (Imola)" }).click();
+  await expect(page.getByRole("status")).toContainText("Privilegi salvati");
+
+  const rolesResponse = await page.request.get("/api/v1/admin/roles/capabilities");
+  const matrix = await rolesResponse.json();
+  const supplier = matrix.roles.find((role: { key: string }) => role.key === "fornitore");
+  const restored = new Set<string>(supplier.capabilities);
+  if (original) restored.add("projects.create");
+  else restored.delete("projects.create");
+  expect(
+    (
+      await adminRequest(page, "PUT", "/api/v1/admin/roles/capabilities", {
+        role: "fornitore",
+        capabilities: [...restored],
+      })
+    ).ok(),
+  ).toBeTruthy();
+
+  const usersResponse = await page.request.get("/api/v1/admin/users");
+  const managed = (await usersResponse.json()).results.find(
+    (user: { username: string }) => user.username === E2E_MANAGED_USER,
+  );
+  expect(
+    (await adminRequest(page, "DELETE", `/api/v1/admin/users/${managed.id}`)).ok(),
+  ).toBeTruthy();
+});
+
 test("1. Login reale -> dashboard con KPI reali (non mock)", async ({ page }) => {
   await login(page, ADMIN_USER, ADMIN_PASS);
   await page.goto("/");
@@ -166,9 +235,7 @@ test("5. Aggiornamento progetto (es. data fine) -> verifica persistenza", async 
   await dateInput.fill(newPlannedEnd);
 
   const [updateRes] = await Promise.all([
-    page.waitForResponse(
-      (r) => r.url().includes("/projects/") && r.request().method() === "PATCH",
-    ),
+    page.waitForResponse((r) => r.url().includes("/projects/") && r.request().method() === "PATCH"),
     page.getByRole("button", { name: "Aggiorna data fine prevista" }).click(),
   ]);
   expect(updateRes.ok()).toBeTruthy();
@@ -286,7 +353,9 @@ test("8. Caso negativo: fornitore tenta mutation -> riceve 403", async ({ browse
   // Verifica persistenza DB: il progetto vietato non deve esistere
   const checkListRes = await page.request.get("/api/v1/projects/balances");
   const checkListData = await checkListRes.json();
-  const exists = checkListData.results.some((p: { codice: string }) => p.codice === "DEMO-UNAUTH-PRJ");
+  const exists = checkListData.results.some(
+    (p: { codice: string }) => p.codice === "DEMO-UNAUTH-PRJ",
+  );
   expect(exists).toBeFalsy();
 
   await context.close();

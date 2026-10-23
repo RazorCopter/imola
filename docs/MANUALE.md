@@ -20,6 +20,14 @@
 
 ![Import PPM demo](screenshots/demo-import-ppm.png)
 
+## Amministrazione utenti e privilegi
+
+La pagina **Amministrazione**, disponibile agli account autorizzati, è divisa in **Import ed export**, **Utenti** e **Ruoli e privilegi**.
+
+Nel tab **Utenti** è possibile creare un account con password iniziale, aggiornare anagrafica/email/ruolo/stato, impostare una nuova password e disattivare l'account. La cancellazione definitiva viene rifiutata quando l'account ha riferimenti applicativi: in quel caso usare **Disattiva**. Non è possibile disattivare o eliminare il proprio account né lasciare il sistema senza un amministratore attivo.
+
+Nel tab **Ruoli e privilegi** le checkbox Admin e le capability riservate sono bloccate. Per gli altri privilegi modificare la matrice e usare il pulsante **Salva** del ruolo: la variazione vale dalla richiesta successiva.
+
 ## Coda di revisione
 
 La pagina **Coda di revisione** mostra i progetti con dati incompleti o da confermare. Per ciascun progetto:

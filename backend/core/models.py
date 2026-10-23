@@ -14,6 +14,51 @@ from simple_history.models import HistoricalRecords
 from core.current_user import get_current_user
 
 
+class RoleCapabilityOverride(models.Model):
+    """Fonte persistente delle capability effettive per i ruoli applicativi."""
+
+    role = models.CharField(max_length=64)
+    capability = models.CharField(max_length=64)
+    enabled = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("role", "capability"), name="core_unique_role_capability"
+            )
+        ]
+        ordering = ("role", "capability")
+
+    def __str__(self) -> str:
+        return f"{self.role}: {self.capability}={self.enabled}"
+
+
+class AdminAuditEvent(models.Model):
+    """Audit minimale delle operazioni amministrative, senza dati segreti."""
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="admin_audit_events",
+    )
+    actor_username = models.CharField(max_length=150, blank=True)
+    action = models.CharField(max_length=64)
+    target_type = models.CharField(max_length=32)
+    target_id = models.CharField(max_length=128, blank=True)
+    target_label = models.CharField(max_length=150, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ("-created_at", "-id")
+
+    def __str__(self) -> str:
+        return f"{self.created_at.isoformat()} {self.actor_username or '-'} {self.action}"
+
+
 class Reliability(models.TextChoices):
     CERTO = "CERTO", "Certo"
     DA_VERIFICARE = "DA_VERIFICARE", "Da verificare"

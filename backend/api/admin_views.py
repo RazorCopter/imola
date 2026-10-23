@@ -6,15 +6,20 @@ import hashlib
 import tempfile
 from pathlib import Path
 
+from django.apps import apps
 from django.contrib.auth.models import Group, User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.files.uploadedfile import UploadedFile
-from rest_framework import status
+from django.db import models, transaction
+from rest_framework import serializers, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core import roles
-from core.permissions import IsAdmin
+from core import capabilities, roles
+from core.models import AdminAuditEvent, RoleCapabilityOverride
+from core.permissions import CanManagePrivileges, CanManageUsers, IsAdmin
 from importers.batch import apply_seed, default_schema_path, dry_run_seed
 from importers.ppm import apply_ppm, dry_run_ppm
 from importers.schema import load_schema, validate_seed
@@ -153,30 +158,265 @@ class ImportHistoryView(APIView):
         )
 
 
+class UserWriteSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150, required=False)
+    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    is_active = serializers.BooleanField(required=False)
+    roles = serializers.ListField(
+        child=serializers.ChoiceField(choices=roles.ALL_ROLES), required=False
+    )
+    password = serializers.CharField(write_only=True, required=False, trim_whitespace=False)
+
+    def validate_username(self, value):
+        queryset = User.objects.filter(username__iexact=value)
+        instance = self.context.get("instance")
+        if instance is not None:
+            queryset = queryset.exclude(pk=instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("Username già utilizzato.")
+        return value
+
+    def validate_password(self, value):
+        try:
+            validate_password(value, user=self.context.get("instance"))
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(list(exc.messages)) from exc
+        return value
+
+    def validate_roles(self, value):
+        return list(dict.fromkeys(value))
+
+
+class PasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate_password(self, value):
+        try:
+            validate_password(value, user=self.context.get("instance"))
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(list(exc.messages)) from exc
+        return value
+
+
+def _user_payload(user: User) -> dict:
+    return {
+        "id": user.id,
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "is_active": user.is_active,
+        "is_staff": user.is_staff,
+        "is_superuser": user.is_superuser,
+        "roles": sorted(roles.roles_of(user)),
+        "last_login": user.last_login,
+        "date_joined": user.date_joined,
+    }
+
+
+def _audit(request, action: str, target_type: str, target, details=None) -> None:
+    AdminAuditEvent.objects.create(
+        actor=request.user,
+        actor_username=request.user.username,
+        action=action,
+        target_type=target_type,
+        target_id=str(getattr(target, "pk", target)),
+        target_label=str(getattr(target, "username", target)),
+        details=details or {},
+    )
+
+
+def _active_admin_count(exclude_user_id=None) -> int:
+    queryset = User.objects.filter(is_active=True).filter(
+        models.Q(is_superuser=True) | models.Q(groups__name=roles.ADMIN)
+    )
+    if exclude_user_id is not None:
+        queryset = queryset.exclude(pk=exclude_user_id)
+    return queryset.distinct().count()
+
+
+def _would_remove_last_admin(user: User, new_roles: list[str], is_active: bool) -> bool:
+    currently_admin = roles.is_admin(user) and user.is_active
+    remains_admin = is_active and (user.is_superuser or roles.ADMIN in new_roles)
+    return currently_admin and not remains_admin and _active_admin_count(user.pk) == 0
+
+
+def _has_domain_references(user: User) -> bool:
+    """Conta anche FK con related_name='+' e SET_NULL: sono comunque riferimenti storici."""
+    for model in apps.get_models():
+        if model in {User, Group, AdminAuditEvent}:
+            continue
+        for field in model._meta.fields:
+            if field.is_relation and field.related_model is User:
+                if model._default_manager.filter(**{field.name: user}).exists():
+                    return True
+    return False
+
+
 class UserRolesView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [CanManageUsers]
 
     def get(self, request):
         return Response(
             {
-                "roles": list(roles.ALL_ROLES),
+                "roles": [{"key": role, "label": roles.LABELS[role]} for role in roles.ALL_ROLES],
                 "results": [
-                    {
-                        "id": user.id,
-                        "username": user.username,
-                        "email": user.email,
-                        "roles": list(user.groups.values_list("name", flat=True)),
-                    }
+                    _user_payload(user)
                     for user in User.objects.prefetch_related("groups").order_by("username")
                 ],
             }
         )
 
+    @transaction.atomic
     def post(self, request):
-        user = User.objects.filter(pk=request.data.get("user_id")).first()
-        role = str(request.data.get("role", ""))
-        if user is None or role not in roles.ALL_ROLES:
-            return Response({"detail": "Utente o ruolo non valido."}, status=400)
+        serializer = UserWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        if not data.get("username") or not data.get("password"):
+            return Response(
+                {"detail": "Username e password iniziale sono obbligatori."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        selected_roles = data.pop("roles", [])
+        password = data.pop("password")
+        user = User(**data)
+        user.set_password(password)
+        user.save()
         roles.ensure_groups()
-        user.groups.set([Group.objects.get(name=role)])
-        return Response({"id": user.id, "roles": [role]})
+        user.groups.set(Group.objects.filter(name__in=selected_roles))
+        _audit(request, "user.created", "user", user, {"roles": selected_roles})
+        return Response(_user_payload(user), status=status.HTTP_201_CREATED)
+
+
+class UserDetailView(APIView):
+    permission_classes = [CanManageUsers]
+
+    def _get_user(self, pk):
+        return User.objects.prefetch_related("groups").filter(pk=pk).first()
+
+    @transaction.atomic
+    def patch(self, request, pk):
+        user = self._get_user(pk)
+        if user is None:
+            return Response({"detail": "Utente inesistente."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = UserWriteSerializer(
+            data=request.data, partial=True, context={"instance": user}
+        )
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        data.pop("password", None)
+        selected_roles = data.pop("roles", sorted(roles.roles_of(user)))
+        new_active = data.get("is_active", user.is_active)
+        if user.pk == request.user.pk and not new_active:
+            return Response(
+                {"detail": "Non puoi disattivare il tuo account."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if _would_remove_last_admin(user, selected_roles, new_active):
+            return Response(
+                {"detail": "L'ultimo amministratore attivo non può perdere i privilegi."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        for field, value in data.items():
+            setattr(user, field, value)
+        user.save(update_fields=[*data.keys()] if data else None)
+        roles.ensure_groups()
+        user.groups.set(Group.objects.filter(name__in=selected_roles))
+        _audit(request, "user.updated", "user", user, {"roles": selected_roles})
+        return Response(_user_payload(user))
+
+    @transaction.atomic
+    def delete(self, request, pk):
+        user = self._get_user(pk)
+        if user is None:
+            return Response({"detail": "Utente inesistente."}, status=status.HTTP_404_NOT_FOUND)
+        if user.pk == request.user.pk:
+            return Response(
+                {"detail": "Non puoi eliminare il tuo account; usa la disattivazione."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if user.is_active and roles.is_admin(user) and _active_admin_count(user.pk) == 0:
+            return Response(
+                {"detail": "L'ultimo amministratore attivo non può essere eliminato."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if _has_domain_references(user):
+            return Response(
+                {"detail": "Utente referenziato: disattivalo invece di eliminarlo."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        target = {"id": user.pk, "username": user.username}
+        user.delete()
+        _audit(request, "user.deleted", "user", target["id"], {"username": target["username"]})
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserPasswordView(APIView):
+    permission_classes = [CanManageUsers]
+
+    def post(self, request, pk):
+        user = User.objects.filter(pk=pk).first()
+        if user is None:
+            return Response({"detail": "Utente inesistente."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = PasswordSerializer(data=request.data, context={"instance": user})
+        serializer.is_valid(raise_exception=True)
+        user.set_password(serializer.validated_data["password"])
+        user.save(update_fields=["password"])
+        _audit(request, "user.password_set", "user", user)
+        return Response({"detail": "Password aggiornata."})
+
+
+class RoleCapabilitiesView(APIView):
+    permission_classes = [CanManagePrivileges]
+
+    def get(self, request):
+        return Response(
+            {
+                "capabilities": sorted(capabilities.ALL_CAPABILITIES),
+                "reserved": sorted(capabilities.RESERVED_CAPABILITIES),
+                "roles": [
+                    {
+                        "key": role,
+                        "label": roles.LABELS[role],
+                        "capabilities": sorted(capabilities.capabilities_for_role(role)),
+                    }
+                    for role in roles.ALL_ROLES
+                ],
+            }
+        )
+
+    @transaction.atomic
+    def put(self, request):
+        role = str(request.data.get("role", ""))
+        selected = set(request.data.get("capabilities", []))
+        if role not in roles.ALL_ROLES or not selected <= set(capabilities.ALL_CAPABILITIES):
+            return Response({"detail": "Ruolo o capability non validi."}, status=400)
+        if role == roles.ADMIN:
+            return Response({"detail": "I privilegi Admin non sono riducibili."}, status=409)
+        if selected & set(capabilities.RESERVED_CAPABILITIES):
+            return Response({"detail": "Capability riservata ad Admin."}, status=400)
+        RoleCapabilityOverride.objects.filter(role=role).delete()
+        RoleCapabilityOverride.objects.bulk_create(
+            [
+                RoleCapabilityOverride(
+                    role=role,
+                    capability=capability,
+                    enabled=capability in selected,
+                )
+                for capability in capabilities.ALL_CAPABILITIES
+                if capability not in capabilities.RESERVED_CAPABILITIES
+                and (capability in selected) != (capability in capabilities.ROLE_DEFAULTS[role])
+            ]
+        )
+        _audit(
+            request,
+            "role.capabilities_updated",
+            "role",
+            role,
+            {"capabilities": sorted(selected)},
+        )
+        return Response(
+            {"role": role, "capabilities": sorted(capabilities.capabilities_for_role(role))}
+        )

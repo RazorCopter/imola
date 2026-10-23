@@ -23,6 +23,21 @@ urlpatterns = [
     path("admin/imports/ppm", admin_views.PpmImportView.as_view(), name="admin-ppm-import"),
     path("admin/imports", admin_views.ImportHistoryView.as_view(), name="admin-import-history"),
     path("admin/users", admin_views.UserRolesView.as_view(), name="admin-users"),
+    path(
+        "admin/users/<int:pk>",
+        admin_views.UserDetailView.as_view(),
+        name="admin-user-detail",
+    ),
+    path(
+        "admin/users/<int:pk>/password",
+        admin_views.UserPasswordView.as_view(),
+        name="admin-user-password",
+    ),
+    path(
+        "admin/roles/capabilities",
+        admin_views.RoleCapabilitiesView.as_view(),
+        name="admin-role-capabilities",
+    ),
     path("search", domain_views.CommandSearchView.as_view(), name="command-search"),
     path("checks/run", domain_views.ChecksRunView.as_view(), name="checks-run"),
     path("anomalies", domain_views.AnomalyListView.as_view(), name="anomaly-list"),
