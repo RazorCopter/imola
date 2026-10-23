@@ -4,6 +4,32 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
 
 ## [Non rilasciato]
 
+### Fase 7 — Rifiniture evolutive e conformità operativa (7 Tranche)
+
+**Aggiunto**
+
+- **Tranche 1 (Contratti e Autorizzazioni Granulari)**: introdotto catalogo di 13 capability granulari (`backend/core/capabilities.py`), modello di autorizzazione su API REST e controllo di concorrenza ottimistica (`ETag` / `expected_version` con HTTP 428/409).
+- **Tranche 2 (UX Amministrazione e Allineamenti Nomenclatura)**:
+  - Tasto "Conferma e applica" evidenziato, incorniciato e verde nella sezione amministrazione.
+  - Ridenominazione di interfaccia "CANONE" in "ORGANICO ALLARGATO".
+  - Preselezione automatica dell'ultimo semestre movimentato.
+  - Visualizzazione colonna `nome_progetto` nella tabella di riconciliazione PPM.
+- **Tranche 3 (Gestione Utenti e Matrice Privilegi)**:
+  - Tab dedicato per gestione CRUD utenti, reset password e assegnazione ruoli.
+  - Tab "Ruoli e Privilegi" per configurare a runtime le capability per ciascun ruolo (`RoleCapabilityOverride`).
+  - Protezione per utente Admin (privilegi pieni immutabili) e audit trail amministrativo (`AdminAuditEvent`).
+- **Tranche 4 (Editing Progetti con Pulsante Arancione EDIT)**:
+  - Pulsante arancione **EDIT** su ogni riga di `ProjectsPage` e nella testata di `ProjectDetailPage`.
+  - Modale di editing completa con blocco read-only esplicito del codice progetto e controllo optimistic locking.
+- **Tranche 5 (Editing Wallet e Rettifiche Append-Only)**:
+  - Pulsante arancione **EDIT** sulle allocazioni in `WalletPage`.
+  - Modale di modifica giornate, assegnatario architetto e note.
+  - Sezione di rettifica contabile append-only tramite storno (`TimesheetEntry.build_reversal()`) e nuova registrazione senza violazione dei trigger PostgreSQL.
+- **Tranche 6 (Reset Dati Applicativi "ELIMINA DB")**:
+  - Zona pericolosa in amministrazione con pulsante rosso **ELIMINA DB**.
+  - Dialog di controverifica con anteprima conteggi, token di sicurezza effimero e digitazione obbligatoria di `ELIMINA`.
+  - Pulizia atomica delle sole tabelle operative (progetti, consuntivi, wallet, canoni, import, anomalie), preservando utenti, gruppi, ruoli e impostazioni.
+
 ### Fase 5 — Import PPM ed export
 
 **Aggiunto**

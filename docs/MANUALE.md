@@ -53,11 +53,23 @@ Nel dettaglio progetto sono disponibili:
 
 La pagina wallet mostra il flusso progetto origine → attività. Gli utenti autorizzati possono:
 
+- modificare l'allocazione tramite il pulsante arancione **EDIT** (giornate allocate, assegnatario architetto, note);
+- rettificare i consuntivi collegati in modalità append-only (storno automatico dell'entry originale ed eventuale nuova registrazione a conguaglio);
 - ridurre l'allocazione al consumato;
 - chiudere un'allocazione;
 - consultare lo storico modifiche dell'allocazione tramite le API di audit.
 
 ![Wallet demo](screenshots/demo-wallet.png)
+
+## Zona Pericolosa: Funzione "ELIMINA DB"
+
+In fondo alla pagina di **Amministrazione** gli utenti autorizzati (con capability `data.reset`) visualizzano la sezione **Zona Pericolosa — Reset Completo DB**.
+
+1. Cliccare sul pulsante rosso **ELIMINA DB**.
+2. Il sistema apre un dialog di controverifica che mostra il conteggio esatto dei record operativi presenti per categoria (progetti, consuntivi, wallet, organico allargato, importazioni, anomalie).
+3. Viene generato un token di sicurezza crittografico effimero e monouso a scadenza.
+4. Per confermare, l'amministratore deve digitare esattamente la parola chiave **ELIMINA** nel campo di testo dedicato.
+5. Al clic su **Conferma eliminazione DB**, la transazione rimuove tutte le entità operative tramite procedura certificata, preservando integralmente utenti, password, ruoli, permessi configurati e impostazioni di sistema.
 
 ## Anomalie
 

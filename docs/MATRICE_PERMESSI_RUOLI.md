@@ -1,4 +1,4 @@
-# Matrice permessi per ruolo — Fase 7, Tranche 3
+# Matrice permessi per ruolo — Fase 7
 
 ## Contratto
 
@@ -42,6 +42,7 @@ Le PATCH dei progetti espongono `version` ed `ETag` e richiedono la versione att
 | Gestione utenti | `users.manage` | CRUD, password, disattivazione ed eliminazione sicura; self-disable/self-delete e ultimo Admin protetti. |
 | Gestione matrice ruoli | `privileges.manage` | Override persistenti solo per ruoli non-Admin e capability non riservate. |
 | Import amministrativi | `privileges.manage` tramite `IsAdmin` | Solo Admin, preservando gli endpoint correnti. |
+| Reset sicuro DB applicativo | `data.reset` | Solo Admin con controverifica digitata 'ELIMINA' e token di sicurezza effimero. |
 
 Le letture di dashboard, progetti, Wallet, anomalie e riconciliazione restano disponibili a tutti i ruoli autenticati. La UI non costituisce un confine di sicurezza: una mutation non autorizzata riceve `403` anche se invocata direttamente.
 
