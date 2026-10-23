@@ -66,6 +66,14 @@ class Command(BaseCommand):
                 "is_superuser": True,
             },
         )
+        admin_alias, _ = User.objects.update_or_create(
+            username="demo-admin",
+            defaults={
+                "email": "admin@demo.local",
+                "is_staff": True,
+                "is_superuser": True,
+            },
+        )
         manager, _ = User.objects.update_or_create(
             username="demo_responsabile",
             defaults={"email": "responsabile@demo.local", "is_staff": True},
@@ -81,6 +89,7 @@ class Command(BaseCommand):
 
         user_role_map = [
             (admin, roles.ADMIN),
+            (admin_alias, roles.ADMIN),
             (manager, roles.MANAGER),
             (referent, roles.REFERENT),
             (supplier, roles.SUPPLIER),
