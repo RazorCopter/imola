@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { DaysValue } from "@/components/DaysValue";
-import { ErrorState, LoadingState } from "@/components/UiState";
+import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { api } from "@/lib/api";
 
 interface CanoneIndex {
@@ -10,6 +10,11 @@ interface CanoneIndex {
   semestre: string;
   progetto_codice: string;
   progetto_titolo: string;
+  ultimo_movimento: string | null;
+}
+interface CanoneIndexResponse {
+  results: CanoneIndex[];
+  default_canone_id: string | null;
 }
 interface CanoneStatus {
   semestre: string;
@@ -43,24 +48,32 @@ interface CanoneStatus {
 export function CanonePage() {
   const index = useQuery({
     queryKey: ["canoni"],
-    queryFn: () => api.get<{ results: CanoneIndex[] }>("/canoni"),
+    queryFn: () => api.get<CanoneIndexResponse>("/canoni"),
   });
-  const [selected, setSelected] = useState<string>("");
-  const canoneId = selected || index.data?.results[0]?.id || "";
+  const [selected, setSelected] = useState<string | null>(null);
+  const canoneId = selected ?? index.data?.default_canone_id ?? "";
   const status = useQuery({
     queryKey: ["canone", canoneId, "status"],
     queryFn: () => api.get<CanoneStatus>(`/canoni/${canoneId}/status`),
     enabled: canoneId !== "",
   });
   if (index.isLoading || (canoneId && status.isLoading)) return <LoadingState />;
-  if (index.isError || status.isError) return <ErrorState title="Impossibile caricare i canoni" />;
-  if (!status.data) return <ErrorState title="Nessun canone disponibile" />;
+  if (index.isError || status.isError)
+    return <ErrorState title="Impossibile caricare l'Organico Allargato" />;
+  if (!index.data?.results.length)
+    return (
+      <EmptyState
+        title="Nessun periodo di Organico Allargato disponibile"
+        detail="Non sono ancora stati configurati semestri da consultare."
+      />
+    );
+  if (!status.data) return <ErrorState title="Periodo di Organico Allargato non disponibile" />;
   const data = status.data;
   return (
     <section className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Canone</h1>
+          <h1 className="text-xl font-semibold">Organico Allargato</h1>
           <p className="text-sm text-muted-foreground">
             Target, delta e forecast calcolati dal dominio.
           </p>
@@ -105,7 +118,7 @@ export function CanonePage() {
         <h2 className="font-medium">Andamento</h2>
         <div
           className="mt-4 flex h-48 items-end gap-1 overflow-x-auto border-b border-l border-border p-2"
-          aria-label="Burn-down canone"
+          aria-label="Burn-down Organico Allargato"
         >
           {data.burndown.map((point) => (
             <div

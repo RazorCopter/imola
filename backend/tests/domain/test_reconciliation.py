@@ -67,6 +67,8 @@ class TestRiconciliazione:
         )
 
         row = next(r for r in reconcile() if r.project_code == project.code)
+        assert row.project_name == project.title
+        assert row.as_dict()["nome_progetto"] == project.title
         assert row.internal_days == Decimal("8.6900")
         assert row.ppm_days == Decimal("8.6875")
         assert row.delta == Decimal("0.0025")
@@ -113,6 +115,7 @@ class TestRiconciliazione:
         PpmSnapshotFactory(extracted_at=aware(2026, 10, 16))
 
         row = next(r for r in reconcile() if r.project_code == project.code)
+        assert row.project_name == project.title
         assert row.missing_in_ppm
         assert row.outcome == "ASSENTE_IN_PPM"
         assert row.ppm_days is None

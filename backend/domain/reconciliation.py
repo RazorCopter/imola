@@ -40,6 +40,7 @@ class ReconciliationRow:
     """Vista calcolata `reconciliation` (par. 3.2)."""
 
     project_code: str
+    project_name: str | None
     project_id: object
     internal_days: Decimal
     ppm_days: Decimal | None
@@ -59,6 +60,7 @@ class ReconciliationRow:
     def as_dict(self) -> dict:
         return {
             "codice_progetto": self.project_code,
+            "nome_progetto": self.project_name,
             "progetto_id": self.project_id,
             "interno": self.internal_days,
             "ppm": self.ppm_days,
@@ -107,6 +109,7 @@ def reconcile(
             result.append(
                 ReconciliationRow(
                     project_code=project.code,
+                    project_name=project.title or None,
                     project_id=project.id,
                     internal_days=internal,
                     ppm_days=None,
@@ -130,6 +133,7 @@ def reconcile(
         result.append(
             ReconciliationRow(
                 project_code=project.code,
+                project_name=project.title or None,
                 project_id=project.id,
                 internal_days=internal,
                 ppm_days=ppm_days,

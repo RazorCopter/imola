@@ -71,12 +71,38 @@ describe("ReconciliationPage", () => {
         snapshot_estratto_il: "2026-10-16T11:05:00+02:00",
       },
       tolleranza: "0.0100",
-      results: [],
+      results: [
+        {
+          codice_progetto: "IM26-CODICE-COMPLETO",
+          nome_progetto: "Portale clienti",
+          progetto_id: "project-1",
+          interno: "4.0000",
+          ppm: "4.0000",
+          delta: "0.0000",
+          esito: "OK",
+          snapshot_estratto_il: "2026-10-16T11:05:00+02:00",
+          azione_suggerita: "",
+        },
+        {
+          codice_progetto: "IM26-SENZA-NOME",
+          nome_progetto: null,
+          progetto_id: "project-2",
+          interno: "0.0000",
+          ppm: "0.0000",
+          delta: "0.0000",
+          esito: "OK",
+          snapshot_estratto_il: "2026-10-16T11:05:00+02:00",
+          azione_suggerita: "",
+        },
+      ],
     });
 
     renderPage();
 
     expect(await screen.findByText("Allineato")).toBeInTheDocument();
     expect(screen.getByText(/1 · 100,0%/)).toBeInTheDocument();
+    expect(screen.getByText("IM26-CODICE-COMPLETO")).toBeInTheDocument();
+    expect(screen.getByText("Portale clienti")).toBeInTheDocument();
+    expect(screen.getByText("Progetto non associato")).toBeInTheDocument();
   });
 });

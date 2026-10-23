@@ -39,6 +39,8 @@ function ImportPanel({
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
+  const hasValidPreview = preview?.mode === "dry-run" && Boolean(preview.confirmation_hash);
+  const applyHelpId = `apply-help-${kind}`;
   const upload = useMutation({
     mutationFn: async (apply: boolean) => {
       if (!file) throw new Error("File mancante");
@@ -64,7 +66,7 @@ function ImportPanel({
           setPreview(null);
         }}
       />
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-start gap-4">
         <button
           className="rounded border px-3 py-2 text-sm"
           disabled={!file || upload.isPending}
@@ -72,13 +74,21 @@ function ImportPanel({
         >
           Valida e simula
         </button>
-        <button
-          className="bg-primary text-primary-foreground rounded px-3 py-2 text-sm"
-          disabled={!preview || preview.mode !== "dry-run" || upload.isPending}
-          onClick={() => upload.mutate(true)}
-        >
-          Conferma e applica
-        </button>
+        <div className="border-l border-border pl-4">
+          <button
+            className="rounded-md border-2 border-emerald-800 bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:border-slate-400 disabled:bg-slate-200 disabled:text-slate-600 disabled:shadow-none"
+            disabled={!hasValidPreview || upload.isPending}
+            aria-describedby={applyHelpId}
+            onClick={() => upload.mutate(true)}
+          >
+            Conferma e applica
+          </button>
+          <p id={applyHelpId} className="mt-1 max-w-xs text-xs text-muted-foreground">
+            {hasValidPreview
+              ? "Anteprima valida: l'applicazione userà l'hash di conferma mostrato."
+              : "Esegui prima “Valida e simula” per abilitare l'applicazione."}
+          </p>
+        </div>
       </div>
       {upload.isError && (
         <p className="text-destructive text-sm">

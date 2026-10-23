@@ -1,37 +1,81 @@
 from __future__ import annotations
 
+from datetime import date
+from decimal import Decimal
+
 import pytest
 from django.contrib.auth.models import Group
 from rest_framework.test import APIClient
 
-from canone.models import Canone
+from canone.models import Canone, CanoneSubactivity
 from core import roles
 from projects.models import Project
-from tests.factories import ProjectFactory, UserFactory
+from tests.factories import ProjectFactory, TimesheetEntryFactory, UserFactory
 
 pytestmark = pytest.mark.django_db
 
 
-def test_canone_index_espone_solo_identificativi_e_testi_non_calcolati():
-    project = ProjectFactory(code="IM-UI", title="Canone UI")
-    canone = Canone.objects.create(project=project, semester="2026-S2", total_days="100")
+def test_canone_index_espone_default_dell_ultimo_semestre_movimentato_per_data():
+    older_project = ProjectFactory(code="IM-OLD", title="Organico precedente")
+    older = Canone.objects.create(project=older_project, semester="2026-S1", total_days="100")
+    older_subactivity = CanoneSubactivity.objects.create(canone=older, title="Attività precedente")
+    TimesheetEntryFactory(
+        canone_subactivity=older_subactivity,
+        period=date(2026, 6, 1),
+        days=Decimal("1.0000"),
+    )
+    recent_project = ProjectFactory(code="IM-UI", title="Organico UI")
+    recent = Canone.objects.create(project=recent_project, semester="2026-S2", total_days="100")
+    recent_subactivity = CanoneSubactivity.objects.create(canone=recent, title="Attività recente")
+    TimesheetEntryFactory(
+        canone_subactivity=recent_subactivity,
+        period=date(2026, 5, 1),
+        days=Decimal("1.0000"),
+    )
     client = APIClient()
     client.force_authenticate(user=UserFactory())
 
     response = client.get("/api/v1/canoni")
 
     assert response.status_code == 200
-    assert response.json() == {
-        "results": [
-            {
-                "id": str(canone.id),
-                "semestre": "2026-S2",
-                "progetto_codice": "IM-UI",
-                "progetto_titolo": "Canone UI",
-            }
-        ],
-        "count": 1,
-    }
+    body = response.json()
+    assert body["default_canone_id"] == str(older.id)
+    assert body["count"] == 2
+    assert body["results"] == [
+        {
+            "id": str(recent.id),
+            "semestre": "2026-S2",
+            "progetto_codice": "IM-UI",
+            "progetto_titolo": "Organico UI",
+            "ultimo_movimento": "2026-05-01",
+        },
+        {
+            "id": str(older.id),
+            "semestre": "2026-S1",
+            "progetto_codice": "IM-OLD",
+            "progetto_titolo": "Organico precedente",
+            "ultimo_movimento": "2026-06-01",
+        },
+    ]
+
+
+def test_canone_index_senza_movimenti_usa_il_periodo_piu_recente():
+    older = Canone.objects.create(
+        project=ProjectFactory(code="IM-S1"), semester="2026-S1", total_days="100"
+    )
+    recent = Canone.objects.create(
+        project=ProjectFactory(code="IM-S2"), semester="2026-S2", total_days="100"
+    )
+    client = APIClient()
+    client.force_authenticate(user=UserFactory())
+
+    body = client.get("/api/v1/canoni").json()
+
+    assert body["default_canone_id"] == str(recent.id)
+    assert (
+        next(row for row in body["results"] if row["id"] == str(older.id))["ultimo_movimento"]
+        is None
+    )
 
 
 def test_canone_index_richiede_autenticazione():

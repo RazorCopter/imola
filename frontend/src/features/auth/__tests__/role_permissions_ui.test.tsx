@@ -70,7 +70,7 @@ describe("coerenza visibilità e navigazione per ruolo", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Progetti" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Wallet" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Canone" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Organico Allargato" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Riconciliazione PPM" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Anomalie" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Coda di revisione" })).toBeInTheDocument();

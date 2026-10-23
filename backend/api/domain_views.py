@@ -487,7 +487,21 @@ class CanoneListView(DocumentedAPIView):
 
     @extend_schema(responses={200: dict})
     def get(self, request):
-        rows = Canone.objects.select_related("project").order_by("-semester")
+        from django.db.models import Max
+
+        rows = list(
+            Canone.objects.select_related("project")
+            .annotate(
+                ultimo_movimento=Max("subactivities__timesheet_entries__period"),
+            )
+            .order_by("-semester", "project__code")
+        )
+        last_moved = max(
+            (row for row in rows if row.ultimo_movimento is not None),
+            key=lambda row: (row.ultimo_movimento, row.semester),
+            default=None,
+        )
+        default_canone = last_moved or (rows[0] if rows else None)
         return Response(
             {
                 "results": [
@@ -496,10 +510,12 @@ class CanoneListView(DocumentedAPIView):
                         "semestre": row.semester,
                         "progetto_codice": row.project.code,
                         "progetto_titolo": row.project.title,
+                        "ultimo_movimento": row.ultimo_movimento,
                     }
                     for row in rows
                 ],
-                "count": rows.count(),
+                "count": len(rows),
+                "default_canone_id": default_canone.id if default_canone else None,
             }
         )
 

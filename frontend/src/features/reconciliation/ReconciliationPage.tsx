@@ -9,6 +9,7 @@ import { formatPercent } from "@/lib/format";
 
 interface Row {
   codice_progetto: string;
+  nome_progetto: string | null;
   progetto_id: string;
   interno: string;
   ppm: string | null;
@@ -94,7 +95,8 @@ export function ReconciliationPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
             <tr>
-              <th className="p-3">Progetto</th>
+              <th className="p-3">Codice progetto</th>
+              <th className="p-3">Nome progetto</th>
               <th className="p-3">Interno</th>
               <th className="p-3">PPM</th>
               <th className="p-3">Delta</th>
@@ -105,7 +107,8 @@ export function ReconciliationPage() {
           <tbody>
             {rows.map((row) => (
               <tr key={row.progetto_id} className="border-t border-border">
-                <td className="p-3 font-mono">{row.codice_progetto.split("-", 1)[0]}</td>
+                <td className="p-3 font-mono">{row.codice_progetto}</td>
+                <td className="p-3">{row.nome_progetto ?? "Progetto non associato"}</td>
                 <td className="p-3">
                   <DaysValue value={row.interno} />
                 </td>
@@ -125,7 +128,7 @@ export function ReconciliationPage() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td className="p-6 text-center text-muted-foreground" colSpan={6}>
+                <td className="p-6 text-center text-muted-foreground" colSpan={7}>
                   {dataMessage ?? "Nessun dato disponibile."}
                 </td>
               </tr>
