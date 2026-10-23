@@ -11,6 +11,7 @@ from django.contrib.auth.models import Group, User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.files.uploadedfile import UploadedFile
+from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.db import models, transaction
 from rest_framework import serializers, status
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -19,7 +20,7 @@ from rest_framework.views import APIView
 
 from core import capabilities, roles
 from core.models import AdminAuditEvent, RoleCapabilityOverride
-from core.permissions import CanManagePrivileges, CanManageUsers, IsAdmin
+from core.permissions import CanManagePrivileges, CanManageUsers, CanResetData, IsAdmin
 from importers.batch import apply_seed, default_schema_path, dry_run_seed
 from importers.ppm import apply_ppm, dry_run_ppm
 from importers.schema import load_schema, validate_seed
@@ -419,4 +420,135 @@ class RoleCapabilitiesView(APIView):
         )
         return Response(
             {"role": role, "capabilities": sorted(capabilities.capabilities_for_role(role))}
+        )
+
+
+class AdminDataResetView(APIView):
+    """Reset sicuro e transazionale di tutti i dati applicativi operativi (Tranche 6).
+
+    Preserva gli account utente, i gruppi, i ruoli e la configurazione di sistema.
+    Richiede la capability 'data.reset', token effimero e conferma con 'ELIMINA'.
+    """
+
+    permission_classes = [CanResetData]
+
+    def get(self, request):
+        from anomalies.models import Anomaly
+        from canone.models import Canone, CanoneSubactivity
+        from imports.models import ImportBatch, ImportIssue
+        from ppm.models import PpmSnapshot, PpmSnapshotRow
+        from projects.models import BillingMilestone, Project
+        from timesheets.models import TimesheetEntry
+        from wallet.models import WalletActivity, WalletAllocation, WalletYear
+
+        signer = TimestampSigner()
+        token = signer.sign(f"{request.user.id}:data.reset")
+
+        preview = {
+            "progetti": Project.objects.count(),
+            "milestone": BillingMilestone.objects.count(),
+            "consuntivi": TimesheetEntry.objects.count(),
+            "allocazioni_wallet": WalletAllocation.objects.count(),
+            "attivita_wallet": WalletActivity.objects.count(),
+            "anni_wallet": WalletYear.objects.count(),
+            "canoni": Canone.objects.count(),
+            "sottoattivita_canone": CanoneSubactivity.objects.count(),
+            "snapshot_ppm": PpmSnapshot.objects.count(),
+            "righe_snapshot_ppm": PpmSnapshotRow.objects.count(),
+            "anomalie": Anomaly.objects.count(),
+            "batch_import": ImportBatch.objects.count(),
+            "issues_import": ImportIssue.objects.count(),
+        }
+        total = sum(preview.values())
+        return Response(
+            {
+                "preview": preview,
+                "total_records": total,
+                "confirmation_keyword": "ELIMINA",
+                "token": token,
+            }
+        )
+
+    def post(self, request):
+        from anomalies.models import Anomaly
+        from canone.models import Canone, CanoneSubactivity
+        from imports.models import ImportBatch, ImportIssue
+        from ppm.models import PpmSnapshot, PpmSnapshotRow
+        from projects.models import BillingMilestone, Project
+        from timesheets.models import TimesheetEntry
+        from timesheets.mutations import allow_ledger_mutation
+        from wallet.models import WalletActivity, WalletAllocation, WalletYear
+
+        confirmation = str(request.data.get("confirmation", "")).strip()
+        if confirmation != "ELIMINA":
+            return Response(
+                {
+                    "detail": (
+                        "Per confermare l'eliminazione dei dati è necessario digitare "
+                        "esattamente 'ELIMINA'."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        token = request.data.get("token")
+        if not token:
+            return Response(
+                {"detail": "Token di sicurezza mancante. Ricarica la preview e riprova."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        signer = TimestampSigner()
+        try:
+            val = signer.unsign(token, max_age=300)
+            expected = f"{request.user.id}:data.reset"
+            if val != expected:
+                return Response(
+                    {"detail": "Token non valido per questa sessione."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except SignatureExpired:
+            return Response(
+                {"detail": "Token di conferma scaduto. Ricarica la preview e riprova."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except BadSignature:
+            return Response(
+                {"detail": "Firma del token non valida."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        deleted_counts: dict[str, int] = {}
+        with transaction.atomic():
+            with allow_ledger_mutation(
+                reason=f"Reset operativo totale autorizzato da {request.user.username}"
+            ):
+                deleted_counts["anomalie"] = Anomaly.objects.all().delete()[0]
+                deleted_counts["righe_snapshot_ppm"] = PpmSnapshotRow.objects.all().delete()[0]
+                deleted_counts["snapshot_ppm"] = PpmSnapshot.objects.all().delete()[0]
+                deleted_counts["consuntivi"] = TimesheetEntry.objects.all().delete()[0]
+                deleted_counts["allocazioni_wallet"] = WalletAllocation.objects.all().delete()[0]
+                deleted_counts["attivita_wallet"] = WalletActivity.objects.all().delete()[0]
+                deleted_counts["anni_wallet"] = WalletYear.objects.all().delete()[0]
+                deleted_counts["sottoattivita_canone"] = CanoneSubactivity.objects.all().delete()[0]
+                deleted_counts["canoni"] = Canone.objects.all().delete()[0]
+                deleted_counts["milestone"] = BillingMilestone.objects.all().delete()[0]
+                deleted_counts["progetti"] = Project.objects.all().delete()[0]
+                deleted_counts["issues_import"] = ImportIssue.objects.all().delete()[0]
+                deleted_counts["batch_import"] = ImportBatch.objects.all().delete()[0]
+
+            _audit(
+                request,
+                "data.reset",
+                "database",
+                "operational_data",
+                {"deleted": deleted_counts, "executed_by": request.user.username},
+            )
+
+        return Response(
+            {
+                "status": "success",
+                "detail": "Tutti i dati operativi sono stati eliminati con successo.",
+                "deleted": deleted_counts,
+            }
         )

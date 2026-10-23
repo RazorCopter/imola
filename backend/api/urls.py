@@ -38,6 +38,16 @@ urlpatterns = [
         admin_views.RoleCapabilitiesView.as_view(),
         name="admin-role-capabilities",
     ),
+    path(
+        "admin/reset-data",
+        admin_views.AdminDataResetView.as_view(),
+        name="admin-reset-data",
+    ),
+    path(
+        "admin/reset-data/",
+        admin_views.AdminDataResetView.as_view(),
+        name="admin-reset-data-slash",
+    ),
     path("search", domain_views.CommandSearchView.as_view(), name="command-search"),
     path("checks/run", domain_views.ChecksRunView.as_view(), name="checks-run"),
     path("anomalies", domain_views.AnomalyListView.as_view(), name="anomaly-list"),

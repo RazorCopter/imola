@@ -40,6 +40,10 @@ export function canAdminister(session: Session | null): boolean {
   return hasCapability(session, CAPABILITIES.MANAGE_PRIVILEGES, (legacy) => legacy.is_admin);
 }
 
+export function canResetData(session: Session | null): boolean {
+  return hasCapability(session, CAPABILITIES.RESET_DATA, (legacy) => legacy.is_admin);
+}
+
 export function canCreateProjects(session: Session | null): boolean {
   return hasCapability(session, CAPABILITIES.CREATE_PROJECTS, (legacy) => legacy.can_write);
 }

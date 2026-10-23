@@ -15,6 +15,25 @@ vi.mock("@/lib/api", async () => {
   };
 });
 
+vi.mock("@/features/auth/session", () => ({
+  useSession: () => ({
+    session: {
+      username: "admin",
+      full_name: "Admin",
+      email: "",
+      roles: ["admin"],
+      capabilities: ["data.reset", "users.manage", "privileges.manage"],
+      is_admin: true,
+      can_write: true,
+    },
+    status: "authenticated",
+    expired: false,
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    refresh: vi.fn(),
+  }),
+}));
+
 const getMock = vi.mocked(api.get);
 const postMock = vi.mocked(api.post);
 const putMock = vi.mocked(api.put);
@@ -145,5 +164,36 @@ describe("AdminPage", () => {
     await user.type(screen.getByLabelText("Password iniziale"), "Password-test-123!");
     await user.click(screen.getByRole("button", { name: "Salva" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Username già utilizzato.");
+  });
+
+  it("mostra la Zona Pericolosa con pulsante ELIMINA DB e apre il dialog", async () => {
+    getMock.mockImplementation((path: string) => {
+      if (path === "/admin/reset-data") {
+        return Promise.resolve({
+          preview: { progetti: 5, consuntivi: 10 },
+          total_records: 15,
+          confirmation_keyword: "ELIMINA",
+          token: "test-token-123",
+        });
+      }
+      if (path === "/admin/imports") return Promise.resolve({ results: [] });
+      if (path === "/admin/users") return Promise.resolve(users);
+      if (path === "/admin/roles/capabilities") return Promise.resolve(roleCapabilities);
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    const deleteDbBtn = await screen.findByTestId("open-delete-db-dialog-btn");
+    expect(deleteDbBtn).toBeInTheDocument();
+    expect(deleteDbBtn).toHaveTextContent("ELIMINA DB");
+
+    await user.click(deleteDbBtn);
+    expect(
+      await screen.findByRole("heading", { name: /Sei sicuro di voler eliminare il DB\?/i }),
+    ).toBeVisible();
+    expect(screen.getByTestId("delete-db-confirmation-input")).toBeInTheDocument();
+    expect(screen.getByTestId("confirm-delete-db-btn")).toBeDisabled();
   });
 });

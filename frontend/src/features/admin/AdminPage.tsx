@@ -1,8 +1,12 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle } from "lucide-react";
 
 import { ErrorState, LoadingState } from "@/components/UiState";
 import { API_BASE, ApiError, api } from "@/lib/api";
+import { useSession } from "@/features/auth/session";
+import { canResetData } from "@/lib/permissions";
+import { DeleteDatabaseDialog } from "./DeleteDatabaseDialog";
 
 interface Preview {
   mode: string;
@@ -496,6 +500,8 @@ function RolesPanel({ data }: { data: RolesPayload }) {
 
 export function AdminPage() {
   const [tab, setTab] = useState<Tab>("imports");
+  const [showDeleteDbDialog, setShowDeleteDbDialog] = useState(false);
+  const { session } = useSession();
   const imports = useQuery({
     queryKey: ["admin", "imports"],
     queryFn: () => api.get<{ results: ImportRow[] }>("/admin/imports"),
@@ -576,6 +582,36 @@ export function AdminPage() {
       )}
       {tab === "users" && <UsersPanel data={users.data} />}
       {tab === "roles" && <RolesPanel data={roleCapabilities.data} />}
+
+      {canResetData(session) && (
+        <section className="mt-8 rounded-lg border-2 border-danger/40 bg-danger/5 p-4">
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-bold text-danger">
+                <AlertTriangle className="h-5 w-5" /> Zona Pericolosa — Reset Completo DB
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Cancellazione irreversibile di tutti i dati operativi (progetti, consuntivi, wallet,
+                canoni, anomalie, import). Gli utenti e le impostazioni restano intatti. Richiede
+                digitazione obbligatoria di conferma.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDeleteDbDialog(true)}
+              data-testid="open-delete-db-dialog-btn"
+              className="inline-flex shrink-0 items-center justify-center rounded-md border-2 border-danger bg-danger px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-danger/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+            >
+              ELIMINA DB
+            </button>
+          </div>
+        </section>
+      )}
+
+      <DeleteDatabaseDialog
+        open={showDeleteDbDialog}
+        onClose={() => setShowDeleteDbDialog(false)}
+      />
     </section>
   );
 }

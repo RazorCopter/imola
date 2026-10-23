@@ -29,6 +29,10 @@ class IsAdmin(HasCapability):
     capability = capabilities.MANAGE_PRIVILEGES
 
 
+class CanResetData(HasCapability):
+    capability = capabilities.RESET_DATA
+
+
 class CanManageUsers(HasCapability):
     capability = capabilities.MANAGE_USERS
 
