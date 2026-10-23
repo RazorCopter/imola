@@ -8,7 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from openpyxl import Workbook
 from rest_framework.test import APIClient
 
-from core import roles
+from core import capabilities, roles
 from tests.factories import (
     PersonFactory,
     ProjectFactory,
@@ -46,7 +46,7 @@ def test_tutti_i_ruoli_possono_consultare_le_pagine_api(role_name):
         assert client.get(path).status_code == 200, path
 
 
-@pytest.mark.parametrize("role_name", (roles.REFERENT, roles.SUPPLIER))
+@pytest.mark.parametrize("role_name", (roles.REFERENT,))
 def test_ruoli_read_only_non_possono_eseguire_mutation_ledger(role_name):
     client, _ = make_client_for_role(role_name)
     project = ProjectFactory(notes="Iniziale")
@@ -64,6 +64,42 @@ def test_ruoli_read_only_non_possono_eseguire_mutation_ledger(role_name):
 
     assert create_response.status_code == 403
     assert review_response.status_code == 403
+
+
+def test_fornitore_puo_creare_progetti_ma_non_modificare_ledger_registrato():
+    client, _ = make_client_for_role(roles.SUPPLIER)
+    project = ProjectFactory(notes="Iniziale")
+
+    create_response = client.post(
+        "/api/v1/projects",
+        {
+            "code": "SUPPLIER-NEW",
+            "title": "Creato",
+            "contract_type": "AQL",
+            "budget_days": "0.0000",
+        },
+        format="json",
+    )
+    review_response = client.post(
+        f"/api/v1/projects/{project.id}/confirm-review",
+        {"timesheet_status": "CHIUSO", "actual_closure_date": "2026-06-30"},
+        format="json",
+    )
+
+    assert create_response.status_code == 201
+    assert review_response.status_code == 403
+
+
+def test_default_capability_fornitore_esclude_ledger_e_applicazione_import():
+    client, user = make_client_for_role(roles.SUPPLIER)
+
+    assert capabilities.CREATE_PROJECTS in capabilities.capabilities_for(user)
+    assert capabilities.CREATE_TIMESHEETS in capabilities.capabilities_for(user)
+    assert capabilities.ADJUST_ACCOUNTING not in capabilities.capabilities_for(user)
+    assert capabilities.APPLY_IMPORTS not in capabilities.capabilities_for(user)
+    assert client.get("/api/v1/auth/session").json()["capabilities"] == sorted(
+        capabilities.ROLE_DEFAULTS[roles.SUPPLIER]
+    )
 
 
 def test_project_balances_espone_permission_object_level_per_referente():
@@ -86,7 +122,9 @@ def test_admin_puo_modificare_qualsiasi_progetto():
     client, _ = make_client_for_role(roles.ADMIN)
     project = ProjectFactory(notes="Iniziale")
     res = client.patch(
-        f"/api/v1/projects/{project.id}", {"notes": "Aggiornato da admin"}, format="json"
+        f"/api/v1/projects/{project.id}",
+        {"notes": "Aggiornato da admin", "expected_version": 1},
+        format="json",
     )
     assert res.status_code == 200
     assert res.json()["notes"] == "Aggiornato da admin"
@@ -96,7 +134,9 @@ def test_responsabile_puo_modificare_qualsiasi_progetto():
     client, _ = make_client_for_role(roles.MANAGER)
     project = ProjectFactory(notes="Iniziale")
     res = client.patch(
-        f"/api/v1/projects/{project.id}", {"notes": "Aggiornato da manager"}, format="json"
+        f"/api/v1/projects/{project.id}",
+        {"notes": "Aggiornato da manager", "expected_version": 1},
+        format="json",
     )
     assert res.status_code == 200
     assert res.json()["notes"] == "Aggiornato da manager"
@@ -113,7 +153,11 @@ def test_referente_puo_modificare_solo_i_propri_progetti():
     # Modifica del proprio progetto
     res_my = client.patch(
         f"/api/v1/projects/{my_project.id}",
-        {"notes": "Note aggiornate dal referente", "planned_end_date": "2026-12-31"},
+        {
+            "notes": "Note aggiornate dal referente",
+            "planned_end_date": "2026-12-31",
+            "expected_version": 1,
+        },
         format="json",
     )
     assert res_my.status_code == 200
@@ -122,10 +166,28 @@ def test_referente_puo_modificare_solo_i_propri_progetti():
     # Tentativo di modifica su progetto altrui -> 403 Forbidden
     res_other = client.patch(
         f"/api/v1/projects/{other_project.id}",
-        {"notes": "Tentativo non autorizzato"},
+        {"notes": "Tentativo non autorizzato", "expected_version": 1},
         format="json",
     )
     assert res_other.status_code == 403
+
+
+def test_patch_progetto_risponde_409_su_versione_cambiata():
+    client, _ = make_client_for_role(roles.ADMIN)
+    project = ProjectFactory(notes="Iniziale")
+    project.notes = "Modifica concorrente"
+    project.save()
+
+    response = client.patch(
+        f"/api/v1/projects/{project.id}",
+        {"notes": "Sovrascrittura", "expected_version": 1},
+        format="json",
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "risorsa-obsoleta"
+    project.refresh_from_db()
+    assert project.notes == "Modifica concorrente"
 
 
 def test_fornitore_in_sola_lettura_su_progetti():

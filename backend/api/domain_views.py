@@ -15,9 +15,21 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from api.concurrency import etag_matches, make_etag
 from canone.models import Canone
+from core import capabilities
+from core.exceptions import PreconditionRequired, StaleResource
 from core.models import AppSettings
-from core.permissions import CanUploadImports, IsAdmin, ReadOnlyOrLedgerWriter, ReferentCanAnnotate
+from core.permissions import (
+    CanEditWallet,
+    CanExport,
+    CanResolveAnomalies,
+    CanUploadImports,
+    IsAdmin,
+    ReadOnlyOrCanCreateProjects,
+    ReadOnlyOrLedgerWriter,
+    ReferentCanAnnotate,
+)
 from domain.canone_status import canone_burndown, canone_status
 from domain.reconciliation import reconcile, reconciliation_summary
 from domain.residuals import residual_explanation, residual_validity
@@ -44,6 +56,21 @@ class DocumentedAPIView(APIView):
 
 def current_settings() -> AppSettings:
     return AppSettings.get_solo()
+
+
+def check_expected_version(request, instance) -> None:
+    """Contratto comune PATCH: If-Match o expected_version, conflitto sempre 409."""
+    header = request.headers.get("If-Match", "")
+    expected_version = request.data.get("expected_version")
+    if not header and expected_version in (None, ""):
+        raise PreconditionRequired()
+    if not etag_matches(header, instance) and str(expected_version) != str(instance.version):
+        raise StaleResource(
+            detail=(
+                "La risorsa è stata modificata da un altro utente "
+                f"(versione attuale {instance.version}): ricarica i dati e riprova."
+            )
+        )
 
 
 class SettingsView(DocumentedAPIView):
@@ -85,7 +112,7 @@ class SettingsView(DocumentedAPIView):
 class ProjectListCreateView(DocumentedAPIView):
     """Elenco anagrafico e creazione guidata dei progetti."""
 
-    permission_classes = [ReadOnlyOrLedgerWriter]
+    permission_classes = [ReadOnlyOrCanCreateProjects]
 
     @extend_schema(operation_id="project_list", responses={200: ProjectListResponseSerializer})
     def get(self, request):
@@ -285,7 +312,7 @@ class ChecksRunView(DocumentedAPIView):
 
 
 class AnomalyActionView(DocumentedAPIView):
-    permission_classes = [ReadOnlyOrLedgerWriter]
+    permission_classes = [CanResolveAnomalies]
 
     @extend_schema(request=DomainResponseSerializer, responses={200: DomainResponseSerializer})
     def post(self, request, pk, action: str):
@@ -354,7 +381,7 @@ class WalletAssigneeSummaryView(DocumentedAPIView):
 
 
 class WalletAllocationCreateView(DocumentedAPIView):
-    permission_classes = [ReadOnlyOrLedgerWriter]
+    permission_classes = [CanEditWallet]
 
     @extend_schema(request=dict, responses={201: dict})
     def post(self, request):
@@ -534,7 +561,7 @@ class CommandSearchView(DocumentedAPIView):
 
 
 class ExportJsonView(DocumentedAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [CanExport]
 
     def get(self, request):
         from exporters import export_json_bytes
@@ -547,7 +574,7 @@ class ExportJsonView(DocumentedAPIView):
 
 
 class ExportCsvView(DocumentedAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [CanExport]
 
     def get(self, request, entity: str):
         from exporters import export_csv_bytes
@@ -564,7 +591,7 @@ class ExportCsvView(DocumentedAPIView):
 
 
 class ExportExcelView(DocumentedAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [CanExport]
 
     def get(self, request):
         from exporters import export_excel_bytes
@@ -638,22 +665,23 @@ class ProjectDetailUpdateView(DocumentedAPIView):
                     str(project.actual_closure_date) if project.actual_closure_date else None
                 ),
                 "notes": project.notes,
-            }
+                "version": project.version,
+            },
+            headers={"ETag": make_etag(project)},
         )
 
     @extend_schema(request=dict, responses={200: dict})
     def patch(self, request, pk):
         from datetime import date
 
-        from core import roles
-
         project = self.get_object(pk)
+        check_expected_version(request, project)
         if "notes" in request.data:
             project.notes = str(request.data["notes"])
         if "planned_end_date" in request.data:
             val = request.data["planned_end_date"]
             project.planned_end_date = date.fromisoformat(val) if val else None
-        if roles.can_write_ledger(request.user):
+        if capabilities.has_capability(request.user, capabilities.EDIT_PROJECTS):
             if "actual_closure_date" in request.data:
                 val = request.data["actual_closure_date"]
                 project.actual_closure_date = date.fromisoformat(val) if val else None
@@ -701,7 +729,7 @@ class ProjectConfirmReviewView(DocumentedAPIView):
 
 
 class WalletAllocationAdjustView(DocumentedAPIView):
-    permission_classes = [ReadOnlyOrLedgerWriter]
+    permission_classes = [CanEditWallet]
 
     @extend_schema(request=dict, responses={200: dict})
     def post(self, request, pk):

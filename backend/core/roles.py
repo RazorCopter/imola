@@ -42,5 +42,7 @@ def is_admin(user) -> bool:
 
 
 def can_write_ledger(user) -> bool:
-    """Scrittura su progetti, wallet, canone."""
-    return has_role(user, ADMIN, MANAGER)
+    """Compatibilità legacy: modifica di ledger e wallet già registrati."""
+    from core.capabilities import ADJUST_ACCOUNTING, has_capability
+
+    return has_capability(user, ADJUST_ACCOUNTING)

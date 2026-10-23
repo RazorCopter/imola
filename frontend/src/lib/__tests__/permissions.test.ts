@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { Session } from "@/features/auth/session";
-import { canAdminister, canUploadPpmDryRun, canWriteLedger } from "@/lib/permissions";
+import {
+  CAPABILITIES,
+  canAdminister,
+  canCreateProjects,
+  canUploadPpmDryRun,
+  canWriteLedger,
+} from "@/lib/permissions";
 
 function session(overrides: Partial<Session>): Session {
   return {
@@ -34,9 +40,29 @@ describe("permission UI derivate dalla sessione", () => {
     expect(canUploadPpmDryRun(session({ roles: ["referente_bmed"] }))).toBe(false);
   });
 
+  it("usa le capability quando presenti, anche se i flag legacy differiscono", () => {
+    const supplier = session({
+      roles: ["fornitore"],
+      capabilities: [CAPABILITIES.CREATE_PROJECTS, CAPABILITIES.UPLOAD_IMPORTS],
+      can_write: true,
+      is_admin: true,
+    });
+
+    expect(canCreateProjects(supplier)).toBe(true);
+    expect(canUploadPpmDryRun(supplier)).toBe(true);
+    expect(canWriteLedger(supplier)).toBe(false);
+    expect(canAdminister(supplier)).toBe(false);
+  });
+
+  it("mantiene il fallback legacy se capabilities è assente", () => {
+    expect(canCreateProjects(session({ can_write: true }))).toBe(true);
+    expect(canUploadPpmDryRun(session({ roles: ["fornitore"] }))).toBe(true);
+  });
+
   it("nega tutte le capability in assenza di sessione", () => {
     expect(canWriteLedger(null)).toBe(false);
     expect(canAdminister(null)).toBe(false);
     expect(canUploadPpmDryRun(null)).toBe(false);
+    expect(canCreateProjects(null)).toBe(false);
   });
 });

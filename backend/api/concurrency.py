@@ -1,9 +1,9 @@
 """ETag e lock ottimistico.
 
 Ogni entità modificabile espone `version`. La GET restituisce un ETag debole derivato da
-(id, version); la PATCH deve inviare `If-Match` con quell'ETag. Se la versione nel frattempo
-è cambiata si risponde 412 invece di sovrascrivere il lavoro di un altro utente, e 428 se
-l'intestazione manca del tutto.
+(id, version); la PATCH deve inviare `If-Match` con quell'ETag oppure `expected_version` nel
+payload. Se la versione nel frattempo è cambiata si risponde 409 invece di sovrascrivere il
+lavoro di un altro utente, e 428 se la versione attesa manca del tutto.
 """
 
 from __future__ import annotations
@@ -44,9 +44,12 @@ class OptimisticLockMixin(MixinBase):
         if self.request.method not in self.unsafe_methods:
             return
         header = self.request.headers.get("If-Match", "")
-        if not header:
+        data = self.request.data
+        expected_version = data.get("expected_version") if isinstance(data, dict) else None
+        if not header and expected_version in (None, ""):
             raise PreconditionRequired()
-        if not etag_matches(header, instance):
+        version_matches = str(expected_version) == str(getattr(instance, "version", 1))
+        if not etag_matches(header, instance) and not version_matches:
             raise StaleResource(
                 detail=(
                     "La risorsa è stata modificata da un altro utente "
@@ -74,9 +77,10 @@ class OptimisticLockMixin(MixinBase):
 
     def update(self, request: Any, *args: Any, **kwargs: Any) -> Response:
         instance = self.get_object()
-        serializer = self.get_serializer(
-            instance, data=request.data, partial=kwargs.pop("partial", False)
-        )
+        data = request.data.copy()
+        if hasattr(data, "pop"):
+            data.pop("expected_version", None)
+        serializer = self.get_serializer(instance, data=data, partial=kwargs.pop("partial", False))
         serializer.is_valid(raise_exception=True)
         serializer.save()
         instance.refresh_from_db()

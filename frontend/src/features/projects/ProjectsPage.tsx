@@ -10,7 +10,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
-import { canWriteLedger } from "@/lib/permissions";
+import { canCreateProjects } from "@/lib/permissions";
 import { NewProjectDialog } from "./NewProjectDialog";
 
 export interface ProjectBalance {
@@ -118,7 +118,7 @@ export function ProjectsPage() {
             Budget, consumi e residui calcolati dal ledger.
           </p>
         </div>
-        {canWriteLedger(session) && <NewProjectDialog />}
+        {canCreateProjects(session) && <NewProjectDialog />}
       </header>
       <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-card p-3">
         <label className="flex min-w-64 flex-1 items-center gap-2 rounded-md border border-input px-3">

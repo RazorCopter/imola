@@ -71,7 +71,7 @@ class SessionExpired(APIException):
 
 
 class StaleResource(APIException):
-    status_code = status.HTTP_412_PRECONDITION_FAILED
+    status_code = status.HTTP_409_CONFLICT
     error_code = "risorsa-obsoleta"
     default_detail = "La risorsa è stata modificata da un altro utente: ricarica i dati e riprova."
 

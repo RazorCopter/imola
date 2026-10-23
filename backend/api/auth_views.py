@@ -14,7 +14,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core import roles
+from core import capabilities, roles
 from core.auth.providers import get_auth_provider
 from core.throttles import LoginRateThrottle
 
@@ -29,6 +29,7 @@ class SessionSerializer(serializers.Serializer):
     full_name = serializers.CharField()
     email = serializers.EmailField(allow_blank=True)
     roles = serializers.ListField(child=serializers.CharField())
+    capabilities = serializers.ListField(child=serializers.CharField())
     is_admin = serializers.BooleanField()
     can_write = serializers.BooleanField()
 
@@ -40,6 +41,7 @@ def session_payload(user) -> dict:
         "full_name": user.get_full_name() or user.username,
         "email": user.email or "",
         "roles": user_roles,
+        "capabilities": sorted(capabilities.capabilities_for(user)),
         "is_admin": roles.is_admin(user),
         "can_write": roles.can_write_ledger(user),
     }

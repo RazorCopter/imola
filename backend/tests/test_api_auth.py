@@ -11,7 +11,7 @@ import pytest
 from django.contrib.auth.models import Group, User
 from rest_framework.test import APIClient
 
-from core import roles
+from core import capabilities, roles
 
 pytestmark = pytest.mark.django_db
 
@@ -62,6 +62,7 @@ class TestLogin:
         body = response.json()
         assert body["username"] == "responsabile"
         assert body["roles"] == [roles.MANAGER]
+        assert body["capabilities"] == sorted(capabilities.ROLE_DEFAULTS[roles.MANAGER])
         assert body["can_write"] is True
         assert body["is_admin"] is False
 

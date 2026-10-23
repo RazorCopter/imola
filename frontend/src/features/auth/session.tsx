@@ -8,6 +8,8 @@ export interface Session {
   full_name: string;
   email: string;
   roles: string[];
+  /** Assente soltanto durante il rollout da backend legacy. */
+  capabilities?: string[];
   is_admin: boolean;
   can_write: boolean;
 }
