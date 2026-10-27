@@ -82,6 +82,8 @@ interface Detail {
 const fieldClass = "h-9 rounded-md border border-input bg-background px-3 text-sm";
 const buttonClass =
   "rounded-md border border-input px-3 py-2 text-sm hover:bg-muted disabled:opacity-50";
+const dangerButtonClass =
+  "rounded-md border border-red-700 bg-red-700 px-3 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50";
 
 function message(error: unknown): string {
   if (!(error instanceof ApiError)) return "Operazione non riuscita.";
@@ -630,13 +632,85 @@ export function CanonePage() {
                               >
                                 Modifica attività
                               </button>
-                              <button className={buttonClass} onClick={() => removeSub.mutate(row)}>
-                                Elimina attività
+                              <button
+                                className={dangerButtonClass}
+                                onClick={() => removeSub.mutate(row)}
+                              >
+                                ELIMINA
                               </button>
                             </>
                           )}
                         </div>
                       </div>
+                      {editingSubactivity?.id === row.id && (
+                        <div className="border-primary/50 grid gap-2 rounded border bg-muted/30 p-3 sm:grid-cols-3">
+                          <div className="flex items-center justify-between sm:col-span-3">
+                            <strong>Modifica attività</strong>
+                            <button
+                              className={buttonClass}
+                              onClick={() => {
+                                setEditingSubactivity(null);
+                                setSubForm({
+                                  office: "",
+                                  title: "",
+                                  reserved_days: "",
+                                  start_date: "",
+                                  end_date: "",
+                                  quarter_estimate_days: "",
+                                  forecast_remaining_days: "",
+                                  notes: "",
+                                });
+                              }}
+                            >
+                              Annulla
+                            </button>
+                          </div>
+                          <input
+                            className={fieldClass}
+                            aria-label="Titolo attività in modifica"
+                            value={subForm.title}
+                            onChange={(e) => setSubForm({ ...subForm, title: e.target.value })}
+                          />
+                          <select
+                            className={fieldClass}
+                            aria-label="Dominio attività in modifica"
+                            value={subForm.office}
+                            onChange={(e) => setSubForm({ ...subForm, office: e.target.value })}
+                          >
+                            {["EA", "TA", "SA", "CROSS"].map((office) => (
+                              <option key={office}>{office}</option>
+                            ))}
+                          </select>
+                          <input
+                            className={fieldClass}
+                            aria-label="Giornate riservate in modifica"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value={subForm.reserved_days}
+                            onChange={(e) =>
+                              setSubForm({ ...subForm, reserved_days: e.target.value })
+                            }
+                          />
+                          <input
+                            className={fieldClass}
+                            aria-label="Data inizio attività in modifica"
+                            type="date"
+                            value={subForm.start_date}
+                            onChange={(e) => setSubForm({ ...subForm, start_date: e.target.value })}
+                          />
+                          <input
+                            className={fieldClass}
+                            aria-label="Data fine attività in modifica"
+                            type="date"
+                            value={subForm.end_date}
+                            onChange={(e) => setSubForm({ ...subForm, end_date: e.target.value })}
+                          />
+                          <button className={buttonClass} onClick={() => addSub.mutate()}>
+                            Salva modifiche
+                          </button>
+                        </div>
+                      )}
                       {timesheetActivity === row.id && (
                         <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-4">
                           <input
@@ -732,31 +806,8 @@ export function CanonePage() {
                       )}
                     </div>
                   ))}
-                  {editable && (
+                  {editable && !editingSubactivity && (
                     <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-3">
-                      {editingSubactivity && (
-                        <div className="flex items-center justify-between sm:col-span-3">
-                          <strong>Modifica attività</strong>
-                          <button
-                            className={buttonClass}
-                            onClick={() => {
-                              setEditingSubactivity(null);
-                              setSubForm({
-                                office: "",
-                                title: "",
-                                reserved_days: "",
-                                start_date: "",
-                                end_date: "",
-                                quarter_estimate_days: "",
-                                forecast_remaining_days: "",
-                                notes: "",
-                              });
-                            }}
-                          >
-                            Annulla
-                          </button>
-                        </div>
-                      )}
                       <input
                         className={fieldClass}
                         aria-label="Titolo attività"
@@ -800,7 +851,7 @@ export function CanonePage() {
                         onChange={(e) => setSubForm({ ...subForm, end_date: e.target.value })}
                       />
                       <button className={buttonClass} onClick={() => addSub.mutate()}>
-                        {editingSubactivity ? "Salva modifiche" : "Aggiungi attività"}
+                        Aggiungi attività
                       </button>
                     </div>
                   )}

@@ -153,4 +153,14 @@ describe("CanonePage", () => {
     expect(screen.getByRole("button", { name: "Nuovo canone" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Modifica" })).toBeInTheDocument();
   });
+
+  it("modifica l'attività inline ed evidenzia l'eliminazione", async () => {
+    const user = userEvent.setup();
+    renderPage(["canone.manage"]);
+    await user.click(await screen.findByRole("button", { name: "Modifica attività" }));
+    expect(screen.getByLabelText("Titolo attività in modifica")).toHaveValue("Analisi");
+    expect(screen.getByLabelText("Giornate riservate in modifica")).toHaveValue(50);
+    expect(screen.queryByRole("button", { name: "Aggiungi attività" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ELIMINA" })).toHaveClass("bg-red-700");
+  });
 });
