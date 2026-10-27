@@ -1500,7 +1500,7 @@ class CanoneStatusView(DocumentedAPIView):
 
     @extend_schema(responses={200: dict})
     def get(self, request, pk):
-        canone = Canone.objects.get(pk=pk)
+        canone = get_object_or_404(Canone, pk=pk)
         status_data = canone_status(canone).as_dict()
         status_data["burndown"] = canone_burndown(canone)
         return Response(status_data)

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { AccessibleBarChart, CHART_PALETTE } from "@/components/AccessibleBarChart";
 import { DaysValue } from "@/components/DaysValue";
-import { MetricLabel } from "@/components/InfoTooltip";
+import { KpiCard } from "@/components/KpiCard";
+import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { ApiError, api } from "@/lib/api";
@@ -75,7 +77,16 @@ interface Detail {
   cap_at_total: boolean;
   start_date: string | null;
   end_date: string | null;
-  status: { consuntivato: string; residuo?: string; forecast: string };
+  status: {
+    consuntivato: string;
+    residuo?: string;
+    target_alla_data: string;
+    delta: string;
+    forecast: string;
+    percentuale_forecast: string;
+    proiezione: string;
+    giornate_non_usate_previste: string;
+  };
   subactivities: Subactivity[];
 }
 
@@ -93,7 +104,21 @@ function message(error: unknown): string {
   return error.message;
 }
 
+function deltaTone(value: string): "neutral" | "ok" | "danger" {
+  const delta = Number(value);
+  if (delta > 0) return "ok";
+  if (delta < 0) return "danger";
+  return "neutral";
+}
+
+function projectionStatus(value: string): string {
+  if (value === "Sotto-utilizzo previsto") return "CANONE_SOTTO_UTILIZZO";
+  if (value === "Sovra-utilizzo previsto") return "CANONE_SOVRA_UTILIZZO";
+  return "CANONE_IN_LINEA";
+}
+
 export function CanonePage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { session } = useSession();
   const editable = canManageCanone(session);
@@ -167,6 +192,7 @@ export function CanonePage() {
     queryKey: ["canone", canoneId, appliedFilters.office, appliedFilters.search, filterRevision],
     queryFn: () => api.get<Detail>(`/canoni/${canoneId}${detailQuery}`),
     enabled: Boolean(canoneId),
+    placeholderData: keepPreviousData,
   });
 
   const filteredSubactivities = useMemo(() => {
@@ -191,6 +217,7 @@ export function CanonePage() {
       return true;
     });
   }, [detail.data?.subactivities, appliedFilters.office, appliedFilters.search]);
+  const detailIsCurrent = detail.data?.id === canoneId;
 
   useEffect(() => {
     if (!detail.data || editing) return;
@@ -314,10 +341,8 @@ export function CanonePage() {
     <section className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Organico Allargato</h1>
-          <p className="text-sm text-muted-foreground">
-            Gestione canoni e attività che ne riservano il monte giornate.
-          </p>
+          <h1 className="text-xl font-semibold">{t("canone.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("canone.description")}</p>
         </div>
         {editable && (
           <button
@@ -342,39 +367,27 @@ export function CanonePage() {
         )}
       </header>
       <div className="grid gap-3 sm:grid-cols-4">
-        {(
-          [
-            [
-              "Monte canoni",
-              data.summary.pianificato,
-              "Monte giornate complessivo dei canoni visualizzati.",
-            ],
-            [
-              "Riservato attività",
-              data.summary.riservato,
-              "Giornate assegnate alle attività censite sui canoni visualizzati.",
-            ],
-            [
-              "Disponibile da riservare",
-              data.summary.disponibile,
-              "Monte dei canoni non ancora assegnato ad attività.",
-            ],
-          ] satisfies Array<[string, string, string]>
-        ).map(([label, value, description]) => (
-          <div key={label} className="rounded-lg border bg-card p-4">
-            <MetricLabel label={label} description={description} />
-            <p className="text-xl font-semibold">
-              <DaysValue value={value} />
-            </p>
-          </div>
-        ))}
-        <div className="rounded-lg border bg-card p-4">
-          <MetricLabel
-            label="Attività"
-            description="Numero di attività operative censite sui canoni visualizzati."
-          />
-          <p className="text-xl font-semibold">{data.summary.sottoattivita}</p>
-        </div>
+        <KpiCard
+          label={t("canone.plannedTotal")}
+          value={<DaysValue value={data.summary.pianificato} />}
+          tooltip={t("canone.plannedTotalTooltip")}
+        />
+        <KpiCard
+          label={t("canone.reservedActivities")}
+          value={<DaysValue value={data.summary.riservato} />}
+          tooltip={t("canone.reservedActivitiesTooltip")}
+        />
+        <KpiCard
+          label={t("canone.availableToReserve")}
+          value={<DaysValue value={data.summary.disponibile} />}
+          tooltip={t("canone.availableToReserveTooltip")}
+          tone="ok"
+        />
+        <KpiCard
+          label={t("canone.activities")}
+          value={data.summary.sottoattivita}
+          tooltip={t("canone.activitiesTooltip")}
+        />
       </div>
       <div
         className="h-72 rounded-lg border bg-card p-4"
@@ -397,15 +410,23 @@ export function CanonePage() {
       </div>
       <h2 className="text-lg font-semibold">Canoni trimestrali e semestrali</h2>
       <div className="flex flex-wrap gap-2">
+        <label className="sr-only" htmlFor="canone-search">
+          {t("canone.search")}
+        </label>
         <input
-          aria-label="Ricerca"
+          id="canone-search"
+          aria-label={t("canone.search")}
           className={fieldClass}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Cerca codice o titolo"
         />
+        <label className="sr-only" htmlFor="canone-period-filter">
+          {t("canone.period")}
+        </label>
         <select
-          aria-label="Periodo"
+          id="canone-period-filter"
+          aria-label={t("canone.period")}
           className={fieldClass}
           value={semester}
           onChange={(e) => setSemester(e.target.value)}
@@ -415,8 +436,12 @@ export function CanonePage() {
             <option key={value}>{value}</option>
           ))}
         </select>
+        <label className="sr-only" htmlFor="canone-domain-filter">
+          {t("canone.domain")}
+        </label>
         <select
-          aria-label="Dominio"
+          id="canone-domain-filter"
+          aria-label={t("canone.domain")}
           className={fieldClass}
           value={office}
           onChange={(e) => setOffice(e.target.value)}
@@ -426,8 +451,12 @@ export function CanonePage() {
             <option key={value}>{value}</option>
           ))}
         </select>
+        <label className="sr-only" htmlFor="canone-state-filter">
+          {t("canone.state")}
+        </label>
         <select
-          aria-label="Stato"
+          id="canone-state-filter"
+          aria-label={t("canone.state")}
           className={fieldClass}
           value={state}
           onChange={(e) => setState(e.target.value)}
@@ -447,7 +476,7 @@ export function CanonePage() {
             setFilterRevision((value) => value + 1);
           }}
         >
-          Applica filtri
+          {t("canone.applyFilters")}
         </button>
         <button
           className={buttonClass}
@@ -463,7 +492,7 @@ export function CanonePage() {
             setFilterRevision((value) => value + 1);
           }}
         >
-          Azzera
+          {t("canone.resetFilters")}
         </button>
       </div>
       {!data.results.length ? (
@@ -538,7 +567,7 @@ export function CanonePage() {
                 <h2 className="font-semibold">
                   {creating ? "Nuovo canone" : `${detail.data?.name} · ${detail.data?.semester}`}
                 </h2>
-                {editable && !creating && (
+                {editable && !creating && detailIsCurrent && (
                   <div className="flex gap-2">
                     <button className={buttonClass} onClick={() => setEditing(!editing)}>
                       {editing ? "Annulla" : "Modifica"}
@@ -619,6 +648,50 @@ export function CanonePage() {
               )}
               {!creating && detail.data && (
                 <div className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                    <KpiCard
+                      label={t("canone.consumed")}
+                      value={<DaysValue value={detail.data.status.consuntivato} />}
+                      tooltip={t("canone.consumedTooltip")}
+                    />
+                    <KpiCard
+                      label={t("canone.target")}
+                      value={<DaysValue value={detail.data.status.target_alla_data} />}
+                      tooltip={t("canone.targetTooltip")}
+                    />
+                    <KpiCard
+                      label={t("canone.delta")}
+                      value={<DaysValue value={detail.data.status.delta} />}
+                      tone={deltaTone(detail.data.status.delta)}
+                      tooltip={t("canone.deltaTooltip")}
+                    />
+                    <KpiCard
+                      label={t("canone.forecast")}
+                      value={<DaysValue value={detail.data.status.forecast} />}
+                      hint={`${detail.data.status.percentuale_forecast}%`}
+                      tone={
+                        detail.data.status.proiezione === "Sovra-utilizzo previsto"
+                          ? "danger"
+                          : detail.data.status.proiezione === "Sotto-utilizzo previsto"
+                            ? "warn"
+                            : "ok"
+                      }
+                      tooltip={t("canone.forecastTooltip")}
+                      action={
+                        <StatusBadge status={projectionStatus(detail.data.status.proiezione)} />
+                      }
+                    />
+                    <KpiCard
+                      label={t("canone.unusedForecast")}
+                      value={<DaysValue value={detail.data.status.giornate_non_usate_previste} />}
+                      tooltip={t("canone.unusedForecastTooltip")}
+                    />
+                  </div>
+                  {detail.isFetching && (
+                    <p className="text-xs text-muted-foreground" role="status">
+                      {t("canone.updatingDetail")}
+                    </p>
+                  )}
                   <div>
                     <h3 className="text-lg font-semibold">Attività del canone</h3>
                     <p className="text-sm text-muted-foreground">
@@ -651,7 +724,7 @@ export function CanonePage() {
                             </p>
                           </div>
                           <div className="flex gap-2">
-                            {canConsuntiva && (
+                            {canConsuntiva && detailIsCurrent && (
                               <button
                                 className={buttonClass}
                                 onClick={() => {
@@ -663,7 +736,7 @@ export function CanonePage() {
                                 Consuntiva
                               </button>
                             )}
-                            {editable && (
+                            {editable && detailIsCurrent && (
                               <>
                                 <button
                                   className={buttonClass}
@@ -860,7 +933,7 @@ export function CanonePage() {
                       </div>
                     ))
                   )}
-                  {editable && !editingSubactivity && (
+                  {editable && detailIsCurrent && !editingSubactivity && (
                     <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-3">
                       <input
                         className={fieldClass}

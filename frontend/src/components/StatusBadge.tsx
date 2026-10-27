@@ -21,6 +21,9 @@ const LABELS: Record<string, string> = {
   PARZIALE: "Parziale",
   TOTALE: "Totale",
   NON_FATTURABILE: "Non fatturabile",
+  CANONE_IN_LINEA: "In linea con il monte",
+  CANONE_SOTTO_UTILIZZO: "Sotto-utilizzo previsto",
+  CANONE_SOVRA_UTILIZZO: "Sovra-utilizzo previsto",
   INVIATA: "Inviata",
   ACCETTATA: "Accettata",
   SCADUTA: "Scaduta",
@@ -38,7 +41,8 @@ const DOMAIN_LABELS: Record<StatusDomain, string> = {
 };
 
 function statusTone(status: string): Tone {
-  if (["ALLINEATO", "CHIUSO", "TOTALE", "ACCETTATA", "RISOLTA"].includes(status)) return "ok";
+  if (["ALLINEATO", "CHIUSO", "TOTALE", "ACCETTATA", "RISOLTA", "CANONE_IN_LINEA"].includes(status))
+    return "ok";
   if (
     [
       "DA_VERIFICARE",
@@ -48,10 +52,12 @@ function statusTone(status: string): Tone {
       "WALLET",
       "IN_CORSO",
       "CHIUSURA_DA_VALIDARE",
+      "CANONE_SOTTO_UTILIZZO",
     ].includes(status)
   )
     return "warn";
-  if (["NON_ALLINEATO", "SCADUTA", "NON_ACCETTATA"].includes(status)) return "danger";
+  if (["NON_ALLINEATO", "SCADUTA", "NON_ACCETTATA", "CANONE_SOVRA_UTILIZZO"].includes(status))
+    return "danger";
   return "neutral";
 }
 

@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import "@/i18n";
 import { CanonePage } from "@/features/canone/CanonePage";
 import { api } from "@/lib/api";
 
@@ -80,7 +81,15 @@ const detail = {
   cap_at_total: true,
   start_date: "2026-01-01",
   end_date: "2026-06-30",
-  status: { consuntivato: "25.0000", forecast: "75.0000" },
+  status: {
+    consuntivato: "25.0000",
+    target_alla_data: "30.0000",
+    delta: "5.0000",
+    forecast: "75.0000",
+    percentuale_forecast: "75.0000",
+    proiezione: "In linea con il monte",
+    giornate_non_usate_previste: "25.0000",
+  },
   subactivities: [
     {
       id: "s1",

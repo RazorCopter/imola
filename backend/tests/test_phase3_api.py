@@ -83,6 +83,17 @@ def test_canone_index_richiede_autenticazione():
     assert response.json()["code"] == "session_expired"
 
 
+def test_canone_status_inesistente_restituisce_404():
+    import uuid
+
+    client = APIClient()
+    client.force_authenticate(user=UserFactory())
+
+    response = client.get(f"/api/v1/canoni/{uuid.uuid4()}/status")
+
+    assert response.status_code == 404
+
+
 def test_responsabile_puo_creare_un_progetto_dal_wizard():
     roles.ensure_groups()
     user = UserFactory()
