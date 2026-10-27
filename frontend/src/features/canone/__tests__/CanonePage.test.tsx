@@ -144,7 +144,12 @@ describe("CanonePage", () => {
     const search = screen.getByLabelText("Ricerca");
     await user.type(search, "CAN");
     expect(search).toHaveValue("CAN");
+    expect(getMock.mock.calls.length).toBe(callsBeforeFilter);
+    await user.selectOptions(screen.getByLabelText("Dominio"), "EA");
+    await user.click(screen.getByRole("button", { name: "Applica filtri" }));
     await waitFor(() => expect(getMock.mock.calls.length).toBeGreaterThan(callsBeforeFilter));
+    expect(getMock.mock.calls.at(-1)?.[0]).toContain("search=CAN");
+    expect(getMock.mock.calls.at(-1)?.[0]).toContain("office=EA");
     expect(screen.getByRole("button", { name: "Nuovo canone" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Modifica" })).toBeInTheDocument();
   });

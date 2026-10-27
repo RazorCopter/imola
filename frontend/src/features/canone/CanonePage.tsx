@@ -101,6 +101,12 @@ export function CanonePage() {
   const [search, setSearch] = useState("");
   const [state, setState] = useState("");
   const [office, setOffice] = useState("");
+  const [appliedFilters, setAppliedFilters] = useState({
+    semester: "",
+    search: "",
+    state: "",
+    office: "",
+  });
   const [selected, setSelected] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -131,12 +137,12 @@ export function CanonePage() {
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetRow | null>(null);
 
   const params = new URLSearchParams({ management: "1" });
-  if (semester) params.set("semester", semester);
-  if (search) params.set("search", search);
-  if (state) params.set("state", state);
-  if (office) params.set("office", office);
+  if (appliedFilters.semester) params.set("semester", appliedFilters.semester);
+  if (appliedFilters.search) params.set("search", appliedFilters.search);
+  if (appliedFilters.state) params.set("state", appliedFilters.state);
+  if (appliedFilters.office) params.set("office", appliedFilters.office);
   const index = useQuery({
-    queryKey: ["canoni", semester, search, state, office],
+    queryKey: ["canoni", appliedFilters],
     queryFn: () => api.get<CanoneList>(`/canoni${params.size ? `?${params}` : ""}`),
     placeholderData: keepPreviousData,
   });
@@ -392,6 +398,32 @@ export function CanonePage() {
             <option key={value}>{value}</option>
           ))}
         </select>
+        <button
+          className={buttonClass}
+          onClick={() => {
+            setSelected(null);
+            setCreating(false);
+            setEditing(false);
+            setAppliedFilters({ semester, search: search.trim(), state, office });
+          }}
+        >
+          Applica filtri
+        </button>
+        <button
+          className={buttonClass}
+          onClick={() => {
+            setSemester("");
+            setSearch("");
+            setState("");
+            setOffice("");
+            setSelected(null);
+            setCreating(false);
+            setEditing(false);
+            setAppliedFilters({ semester: "", search: "", state: "", office: "" });
+          }}
+        >
+          Azzera
+        </button>
       </div>
       {!data.results.length ? (
         <EmptyState
