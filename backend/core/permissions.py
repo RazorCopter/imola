@@ -53,6 +53,10 @@ class CanValidateProjectClosure(HasCapability):
     capability = capabilities.VALIDATE_PROJECT_CLOSURE
 
 
+class CanCreateTimesheets(HasCapability):
+    capability = capabilities.CREATE_TIMESHEETS
+
+
 class ReadOnlyOrCanCreateProjects(IsAuthenticatedRole):
     def has_permission(self, request, view) -> bool:
         if not super().has_permission(request, view):

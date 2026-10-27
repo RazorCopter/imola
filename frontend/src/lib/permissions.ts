@@ -42,6 +42,10 @@ export function canWriteLedger(session: Session | null): boolean {
   return hasCapability(session, CAPABILITIES.ADJUST_ACCOUNTING, (legacy) => legacy.can_write);
 }
 
+export function canCreateTimesheets(session: Session | null): boolean {
+  return hasCapability(session, CAPABILITIES.CREATE_TIMESHEETS, (legacy) => legacy.can_write);
+}
+
 export function canAdminister(session: Session | null): boolean {
   return hasCapability(session, CAPABILITIES.MANAGE_PRIVILEGES, (legacy) => legacy.is_admin);
 }

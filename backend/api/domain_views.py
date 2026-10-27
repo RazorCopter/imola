@@ -34,6 +34,7 @@ from core import capabilities
 from core.exceptions import DomainError, PreconditionRequired, StaleResource
 from core.models import AdminAuditEvent, AppSettings
 from core.permissions import (
+    CanCreateTimesheets,
     CanEditProjects,
     CanEditWallet,
     CanExport,
@@ -289,9 +290,14 @@ class ProjectBalancesView(DocumentedAPIView):
                     "budget": project.budget_days,
                     "consuntivi_diretti": project.direct_consumed_days,
                     "allocato_a_wallet": project.allocated_to_wallet_days,
+                    "rimanente_allocato_wallet": (
+                        project.allocated_to_wallet_days - project.consumed_via_wallet_days
+                    ),
                     "consumato_via_wallet": project.consumed_via_wallet_days,
                     "consumato_totale": project.total_consumed_days,
                     "residuo": project.residual_days,
+                    "data_inizio": project.start_date,
+                    "data_fine_prevista": project.planned_end_date,
                     "stato_consuntivazione": project.timesheet_status,
                     "stato_operativo": project_operational_status(project),
                     "stato_fatturazione": project.billing_status,
@@ -318,6 +324,135 @@ class ProjectBalancesView(DocumentedAPIView):
                 }
             )
         return Response({"results": rows, "count": len(rows)})
+
+
+class ProjectLedgerView(DocumentedAPIView):
+    """Consuntivi diretti e attività wallet finanziate dal progetto."""
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [CanCreateTimesheets()]
+        return [IsAuthenticated()]
+
+    @staticmethod
+    def get_project(pk):
+        from projects.models import Project
+
+        return get_object_or_404(Project, pk=pk)
+
+    def get(self, request, pk):
+        from timesheets.models import TimesheetEntry
+        from wallet.models import WalletAllocation
+
+        project = self.get_project(pk)
+        timesheets = (
+            TimesheetEntry.objects.filter(project=project)
+            .select_related("created_by")
+            .order_by("-period", "-created_at", "-id")
+        )
+        allocations = (
+            WalletAllocation.objects.filter(source_project=project)
+            .select_related("activity", "assignee")
+            .annotate(consumed=Sum("timesheet_entries__days"))
+            .order_by("activity__code", "created_at")
+        )
+        return Response(
+            {
+                "consuntivi": [
+                    {
+                        "id": entry.id,
+                        "periodo": entry.period,
+                        "giornate": entry.days,
+                        "descrizione": entry.note,
+                        "utente": (
+                            (entry.created_by.get_full_name() or entry.created_by.username)
+                            if entry.created_by
+                            else "Importazione"
+                        ),
+                        "origine": entry.source,
+                    }
+                    for entry in timesheets
+                ],
+                "wallet": [
+                    {
+                        "id": allocation.id,
+                        "codice": allocation.activity.code,
+                        "attivita": allocation.activity.title,
+                        "assegnatario": (
+                            allocation.assignee.full_name if allocation.assignee else None
+                        ),
+                        "allocato": allocation.allocated_days,
+                        "consumato": allocation.consumed or 0,
+                        "rimanente": allocation.allocated_days - (allocation.consumed or 0),
+                        "stato": allocation.status,
+                    }
+                    for allocation in allocations
+                ],
+            }
+        )
+
+    @transaction.atomic
+    def post(self, request, pk):
+        from decimal import Decimal, InvalidOperation
+
+        from projects.models import TimesheetStatus
+        from timesheets.models import TimesheetEntry, TimesheetSource, month_start
+
+        project = self.get_project(pk)
+        if project.timesheet_status == TimesheetStatus.CHIUSO:
+            return Response(
+                {"detail": "Il progetto è chiuso: non è possibile aggiungere consuntivi diretti."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        try:
+            days = Decimal(str(request.data.get("giornate", "")))
+        except InvalidOperation:
+            return Response({"giornate": ["Inserire un numero valido."]}, status=400)
+        description = str(request.data.get("descrizione", "")).strip()
+        if days <= 0:
+            return Response(
+                {"giornate": ["Le giornate devono essere maggiori di zero."]}, status=400
+            )
+        if not description:
+            return Response({"descrizione": ["La descrizione è obbligatoria."]}, status=400)
+        if len(description) > 300:
+            return Response({"descrizione": ["Massimo 300 caratteri."]}, status=400)
+        direct_consumed = (
+            TimesheetEntry.objects.filter(project=project).aggregate(total=Sum("days"))["total"]
+            or 0
+        )
+        allocated_to_wallet = (
+            project.wallet_allocations.aggregate(total=Sum("allocated_days"))["total"] or 0
+        )
+        if days > project.budget_days - direct_consumed - allocated_to_wallet:
+            return Response(
+                {"giornate": ["Le giornate superano il residuo diretto del progetto."]},
+                status=400,
+            )
+        raw_period = request.data.get("periodo")
+        try:
+            period = (
+                month_start(date.fromisoformat(str(raw_period)))
+                if raw_period
+                else month_start(timezone.localdate())
+            )
+        except ValueError:
+            return Response({"periodo": ["Inserire una data valida."]}, status=400)
+        entry = TimesheetEntry(
+            project=project,
+            period=period,
+            days=days,
+            source=TimesheetSource.MANUALE,
+            note=description,
+            created_by=request.user,
+            updated_by=request.user,
+        )
+        try:
+            entry.full_clean()
+            entry.save()
+        except DjangoValidationError as exc:
+            return Response(getattr(exc, "message_dict", {"detail": exc.messages}), status=400)
+        return Response({"id": entry.id}, status=status.HTTP_201_CREATED)
 
 
 class ProjectReviewQueueView(DocumentedAPIView):

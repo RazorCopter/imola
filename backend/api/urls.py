@@ -76,6 +76,11 @@ urlpatterns = [
     ),
     path("projects/balances", domain_views.ProjectBalancesView.as_view(), name="project-balances"),
     path(
+        "projects/<uuid:pk>/ledger",
+        domain_views.ProjectLedgerView.as_view(),
+        name="project-ledger",
+    ),
+    path(
         "projects/<uuid:pk>",
         domain_views.ProjectDetailUpdateView.as_view(),
         name="project-detail-update",

@@ -23,9 +23,12 @@ export interface ProjectBalance {
   budget: string;
   consuntivi_diretti: string;
   allocato_a_wallet: string;
+  rimanente_allocato_wallet: string;
   consumato_via_wallet: string;
   consumato_totale: string;
   residuo: string;
+  data_inizio: string | null;
+  data_fine_prevista: string | null;
   stato_consuntivazione: string;
   stato_operativo: string;
   stato_fatturazione: string;
