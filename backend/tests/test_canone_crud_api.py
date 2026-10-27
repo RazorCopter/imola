@@ -149,3 +149,57 @@ def test_canone_trimestrale_e_riserva_attivita_non_superano_il_monte():
     )
     assert overflow.status_code == 400
     assert "reserved_days" in str(overflow.data)
+
+
+def test_canone_indipendente_attivita_e_consuntivi_append_only():
+    manager = client_for(roles.MANAGER)
+    created = manager.post(
+        "/api/v1/canoni",
+        {
+            "name": "Organico Allargato",
+            "semester": "2027-S2",
+            "periodicity": CanonePeriodicity.SEMIANNUAL,
+            "total_days": "175",
+        },
+        format="json",
+    )
+    assert created.status_code == 201, created.data
+    assert created.json()["name"] == "Organico Allargato"
+    canone_id = created.json()["id"]
+    activity = manager.post(
+        f"/api/v1/canoni/{canone_id}/subactivities",
+        {
+            "title": "Assessment architetturale",
+            "office": "EA",
+            "reserved_days": "10",
+            "start_date": "2027-07-01",
+            "end_date": "2027-09-30",
+        },
+        format="json",
+    )
+    assert activity.status_code == 201, activity.data
+    activity_id = activity.json()["subactivities"][0]["id"]
+
+    supplier = client_for(roles.SUPPLIER)
+    entry = supplier.post(
+        f"/api/v1/canoni/{canone_id}/subactivities/{activity_id}/timesheets",
+        {"data": "2027-07-15", "giornate": "3", "descrizione": "Analisi iniziale"},
+        format="json",
+    )
+    assert entry.status_code == 201, entry.data
+    entry_id = entry.json()["subactivities"][0]["consuntivi"][0]["id"]
+    overflow = supplier.post(
+        f"/api/v1/canoni/{canone_id}/subactivities/{activity_id}/timesheets",
+        {"data": "2027-07-16", "giornate": "8", "descrizione": "Eccesso"},
+        format="json",
+    )
+    assert overflow.status_code == 400
+
+    admin = client_for(roles.ADMIN)
+    corrected = admin.patch(
+        f"/api/v1/canoni/{canone_id}/subactivities/{activity_id}/timesheets/{entry_id}",
+        {"data": "2027-07-16", "giornate": "2", "descrizione": "Analisi corretta"},
+        format="json",
+    )
+    assert corrected.status_code == 200, corrected.data
+    assert corrected.json()["subactivities"][0]["consuntivato"] == "2.0000"

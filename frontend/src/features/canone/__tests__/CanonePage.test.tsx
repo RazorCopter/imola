@@ -42,10 +42,7 @@ const list = {
       version: 1,
       semestre: "2026-S1",
       periodicita: "SEMESTRALE",
-      progetto_id: "p1",
-      progetto_codice: "CAN-1",
-      progetto_titolo: "Organico",
-      fornitore: "Imola",
+      nome: "Canone Organico",
       pianificato: "100.0000",
       riservato: "50.0000",
       disponibile: "50.0000",
@@ -64,14 +61,11 @@ const list = {
     sottoattivita: 1,
   },
   filters: { semestri: ["2026-S1"], stati: ["IN_CORSO"] },
-  project_options: [{ id: "p1", code: "CAN-1", title: "Organico" }],
 };
 const detail = {
   id: "one",
   version: 1,
-  project_id: "p1",
-  progetto_codice: "CAN-1",
-  progetto_titolo: "Organico",
+  name: "Canone Organico",
   semester: "2026-S1",
   periodicity: "SEMESTRALE",
   total_days: "100.0000",
@@ -90,6 +84,8 @@ const detail = {
       office: "EA",
       title: "Analisi",
       reserved_days: "50.0000",
+      start_date: "2026-01-01",
+      end_date: "2026-06-30",
       remaining_reserved_days: "25.0000",
       redmine_ref: "",
       quarter_estimate_days: null,
@@ -98,6 +94,7 @@ const detail = {
       needs_review: false,
       consuntivato: "25.0000",
       timesheet_count: 2,
+      consuntivi: [],
     },
   ],
 };
@@ -128,7 +125,7 @@ describe("CanonePage", () => {
     expect(
       screen.getByLabelText("Confronto pianificato, consuntivato e residuo per voce"),
     ).toBeInTheDocument();
-    const row = screen.getByText("CAN-1 · Organico").closest("tr")!;
+    const row = screen.getByText("Canone Organico").closest("tr")!;
     row.focus();
     await user.keyboard("{Enter}");
     expect(await screen.findByText("Analisi")).toBeInTheDocument();
@@ -138,7 +135,7 @@ describe("CanonePage", () => {
   it("applica filtri e abilita CRUD con canone.manage", async () => {
     const user = userEvent.setup();
     renderPage(["canone.manage"]);
-    await screen.findByText("CAN-1 · Organico");
+    await screen.findByText("Canone Organico");
     const callsBeforeFilter = getMock.mock.calls.length;
     const search = screen.getByLabelText("Ricerca");
     await user.type(search, "CAN");

@@ -45,15 +45,13 @@ def test_canone_index_espone_default_dell_ultimo_semestre_movimentato_per_data()
         {
             "id": str(recent.id),
             "semestre": "2026-S2",
-            "progetto_codice": "IM-UI",
-            "progetto_titolo": "Organico UI",
+                "nome": "Organico UI",
             "ultimo_movimento": "2026-05-01",
         },
         {
             "id": str(older.id),
             "semestre": "2026-S1",
-            "progetto_codice": "IM-OLD",
-            "progetto_titolo": "Organico precedente",
+                "nome": "Organico precedente",
             "ultimo_movimento": "2026-06-01",
         },
     ]

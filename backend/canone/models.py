@@ -47,9 +47,12 @@ class CanonePeriodicity(models.TextChoices):
 
 
 class Canone(TrackedModel, ImportedRecordMixin):
+    name = models.CharField(max_length=200, blank=True, verbose_name="nome canone")
     project = models.ForeignKey(
         "projects.Project",
-        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
         related_name="canoni",
         verbose_name="progetto",
     )
@@ -80,7 +83,7 @@ class Canone(TrackedModel, ImportedRecordMixin):
         verbose_name_plural = "canoni"
         ordering = ("-semester",)
         constraints = [
-            models.UniqueConstraint(fields=("project", "semester"), name="canone_unique_semester"),
+            models.UniqueConstraint(fields=("name", "semester"), name="canone_unique_name_period"),
             models.CheckConstraint(
                 condition=models.Q(total_days__gt=0),
                 name="canone_total_days_positive",
@@ -88,7 +91,12 @@ class Canone(TrackedModel, ImportedRecordMixin):
         ]
 
     def __str__(self) -> str:
-        return f"Canone {self.semester}"
+        return f"{self.name or 'Canone'} {self.semester}"
+
+    def save(self, *args, **kwargs) -> None:
+        if not self.name and self.project_id:
+            self.name = self.project.title or self.project.code
+        super().save(*args, **kwargs)
 
     def clean(self) -> None:
         if not PERIOD_RE.match(self.semester or ""):
@@ -134,6 +142,8 @@ class CanoneSubactivity(TrackedModel, ImportedRecordMixin):
     )
     title = models.CharField(max_length=400, verbose_name="titolo")
     reserved_days = DaysField(default=0, verbose_name="giornate riservate")
+    start_date = models.DateField(null=True, blank=True, verbose_name="data inizio")
+    end_date = models.DateField(null=True, blank=True, verbose_name="data fine")
     redmine_ref = models.CharField(
         max_length=20,
         blank=True,
@@ -172,6 +182,10 @@ class CanoneSubactivity(TrackedModel, ImportedRecordMixin):
 
     def __str__(self) -> str:
         return self.title[:80]
+
+    def clean(self) -> None:
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError({"end_date": "La data fine precede la data inizio."})
 
     def save(self, *args, **kwargs) -> None:
         if not self.redmine_ref:

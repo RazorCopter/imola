@@ -6,17 +6,14 @@ import { MetricLabel } from "@/components/InfoTooltip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { ApiError, api } from "@/lib/api";
-import { canManageCanone } from "@/lib/permissions";
+import { canCreateTimesheets, canManageCanone } from "@/lib/permissions";
 
 interface CanoneRow {
   id: string;
   version: number;
   semestre: string;
   periodicita: "TRIMESTRALE" | "SEMESTRALE";
-  progetto_id: string;
-  progetto_codice: string;
-  progetto_titolo: string;
-  fornitore: string | null;
+  nome: string;
   pianificato: string;
   riservato: string;
   disponibile: string;
@@ -37,7 +34,14 @@ interface CanoneList {
     sottoattivita: number;
   };
   filters: { semestri: string[]; stati: string[] };
-  project_options: { id: string; code: string; title: string }[];
+}
+interface TimesheetRow {
+  id: string;
+  data: string;
+  giornate: string;
+  descrizione: string;
+  utente: string;
+  origine: string;
 }
 interface Subactivity {
   id: string;
@@ -45,6 +49,8 @@ interface Subactivity {
   office: string;
   title: string;
   reserved_days: string;
+  start_date: string | null;
+  end_date: string | null;
   remaining_reserved_days: string;
   redmine_ref: string;
   quarter_estimate_days: string | null;
@@ -53,13 +59,12 @@ interface Subactivity {
   needs_review: boolean;
   consuntivato: string;
   timesheet_count: number;
+  consuntivi: TimesheetRow[];
 }
 interface Detail {
   id: string;
   version: number;
-  project_id: string;
-  progetto_codice: string;
-  progetto_titolo: string;
+  name: string;
   semester: string;
   periodicity: "TRIMESTRALE" | "SEMESTRALE";
   total_days: string;
@@ -90,6 +95,8 @@ export function CanonePage() {
   const queryClient = useQueryClient();
   const { session } = useSession();
   const editable = canManageCanone(session);
+  const canConsuntiva = canCreateTimesheets(session);
+  const isAdmin = Boolean(session?.is_admin);
   const [semester, setSemester] = useState("");
   const [search, setSearch] = useState("");
   const [state, setState] = useState("");
@@ -98,7 +105,7 @@ export function CanonePage() {
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState("");
   const [form, setForm] = useState({
-    project_id: "",
+    name: "",
     semester: "",
     periodicity: "SEMESTRALE" as "TRIMESTRALE" | "SEMESTRALE",
     total_days: "",
@@ -111,10 +118,15 @@ export function CanonePage() {
     office: "",
     title: "",
     reserved_days: "",
+    start_date: "",
+    end_date: "",
     quarter_estimate_days: "",
     forecast_remaining_days: "",
     notes: "",
   });
+  const [timesheetActivity, setTimesheetActivity] = useState<string | null>(null);
+  const [timesheetForm, setTimesheetForm] = useState({ data: "", giornate: "", descrizione: "" });
+  const [editingTimesheet, setEditingTimesheet] = useState<TimesheetRow | null>(null);
 
   const params = new URLSearchParams({ management: "1" });
   if (semester) params.set("semester", semester);
@@ -135,7 +147,7 @@ export function CanonePage() {
   useEffect(() => {
     if (!detail.data || editing) return;
     setForm({
-      project_id: detail.data.project_id,
+      name: detail.data.name,
       semester: detail.data.semester,
       periodicity: detail.data.periodicity,
       total_days: detail.data.total_days,
@@ -183,12 +195,38 @@ export function CanonePage() {
         office: "",
         title: "",
         reserved_days: "",
+        start_date: "",
+        end_date: "",
         quarter_estimate_days: "",
         forecast_remaining_days: "",
         notes: "",
       });
       await refresh(canoneId);
     },
+    onError: (error) => setFormError(message(error)),
+  });
+  const saveTimesheet = useMutation({
+    mutationFn: () =>
+      editingTimesheet
+        ? api.patch<Detail>(
+            `/canoni/${canoneId}/subactivities/${timesheetActivity}/timesheets/${editingTimesheet.id}`,
+            timesheetForm,
+          )
+        : api.post<Detail>(
+            `/canoni/${canoneId}/subactivities/${timesheetActivity}/timesheets`,
+            timesheetForm,
+          ),
+    onSuccess: async () => {
+      setTimesheetForm({ data: "", giornate: "", descrizione: "" });
+      setEditingTimesheet(null);
+      await refresh(canoneId);
+    },
+    onError: (error) => setFormError(message(error)),
+  });
+  const removeTimesheet = useMutation({
+    mutationFn: ({ activityId, entryId }: { activityId: string; entryId: string }) =>
+      api.delete<void>(`/canoni/${canoneId}/subactivities/${activityId}/timesheets/${entryId}`),
+    onSuccess: async () => refresh(canoneId),
     onError: (error) => setFormError(message(error)),
   });
   const removeSub = useMutation({
@@ -204,7 +242,7 @@ export function CanonePage() {
   if (index.isError) return <ErrorState title="Impossibile caricare l’Organico Allargato" />;
   const data = index.data!;
   const chart = data.results.map((row) => ({
-    name: `${row.semestre} · ${row.progetto_codice}`,
+    name: `${row.semestre} · ${row.nome}`,
     pianificato: Number(row.pianificato),
     consuntivato: Number(row.consuntivato),
     residuo: Number(row.residuo),
@@ -226,7 +264,7 @@ export function CanonePage() {
               setCreating(true);
               setEditing(true);
               setForm({
-                project_id: "",
+                name: "",
                 semester: "",
                 periodicity: "SEMESTRALE",
                 total_days: "",
@@ -339,7 +377,7 @@ export function CanonePage() {
               <tr className="border-b bg-muted/50 text-left">
                 <th className="p-3">Periodo</th>
                 <th>Periodicità</th>
-                <th>Progetto</th>
+                <th>Canone</th>
                 <th>Monte</th>
                 <th>Riservato</th>
                 <th>Disponibile</th>
@@ -365,9 +403,7 @@ export function CanonePage() {
                 >
                   <td className="p-3">{row.semestre}</td>
                   <td>{row.periodicita === "TRIMESTRALE" ? "Trimestrale" : "Semestrale"}</td>
-                  <td>
-                    {row.progetto_codice} · {row.progetto_titolo}
-                  </td>
+                  <td>{row.nome}</td>
                   <td>
                     <DaysValue value={row.pianificato} />
                   </td>
@@ -399,9 +435,7 @@ export function CanonePage() {
             <>
               <div className="flex justify-between">
                 <h2 className="font-semibold">
-                  {creating
-                    ? "Nuovo canone"
-                    : `${detail.data?.progetto_codice} · ${detail.data?.semester}`}
+                  {creating ? "Nuovo canone" : `${detail.data?.name} · ${detail.data?.semester}`}
                 </h2>
                 {editable && !creating && (
                   <div className="flex gap-2">
@@ -417,20 +451,14 @@ export function CanonePage() {
               {(editing || creating) && (
                 <div className="grid gap-3 sm:grid-cols-3">
                   <label className="text-sm">
-                    Progetto
-                    <select
-                      aria-label="Progetto del canone"
+                    Nome canone
+                    <input
+                      aria-label="Nome canone"
                       className={`${fieldClass} mt-1 w-full`}
-                      value={form.project_id}
-                      onChange={(e) => setForm({ ...form, project_id: e.target.value })}
-                    >
-                      <option value="">Seleziona progetto</option>
-                      {data.project_options.map((project) => (
-                        <option key={project.id} value={project.id}>
-                          {project.code} · {project.title}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Es. Organico Allargato"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    />
                   </label>
                   <label className="text-sm">
                     Periodicità
@@ -498,27 +526,134 @@ export function CanonePage() {
                     </p>
                   </div>
                   {detail.data.subactivities.map((row) => (
-                    <div
-                      key={row.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded border p-3"
-                    >
-                      <div>
-                        <strong>{row.title}</strong>
-                        <p className="text-sm text-muted-foreground">
-                          Gruppo {row.office} · riservato <DaysValue value={row.reserved_days} /> ·
-                          consuntivato <DaysValue value={row.consuntivato} /> · residuo attività{" "}
-                          <DaysValue value={row.remaining_reserved_days} />
-                        </p>
+                    <div key={row.id} className="space-y-3 rounded border p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <strong>{row.title}</strong>
+                          <p className="text-sm text-muted-foreground">
+                            Dominio {row.office} · {row.start_date} → {row.end_date} · riservato{" "}
+                            <DaysValue value={row.reserved_days} /> · consuntivato{" "}
+                            <DaysValue value={row.consuntivato} /> · residuo{" "}
+                            <DaysValue value={row.remaining_reserved_days} />
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {canConsuntiva && (
+                            <button
+                              className={buttonClass}
+                              onClick={() => {
+                                setTimesheetActivity(row.id);
+                                setEditingTimesheet(null);
+                                setTimesheetForm({ data: "", giornate: "", descrizione: "" });
+                              }}
+                            >
+                              Consuntiva
+                            </button>
+                          )}
+                          {editable && (
+                            <button className={buttonClass} onClick={() => removeSub.mutate(row)}>
+                              Elimina attività
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      {editable && (
-                        <button className={buttonClass} onClick={() => removeSub.mutate(row)}>
-                          Elimina
-                        </button>
+                      {timesheetActivity === row.id && (
+                        <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-4">
+                          <input
+                            className={fieldClass}
+                            aria-label="Data consuntivo"
+                            type="date"
+                            value={timesheetForm.data}
+                            onChange={(e) =>
+                              setTimesheetForm({ ...timesheetForm, data: e.target.value })
+                            }
+                          />
+                          <input
+                            className={fieldClass}
+                            aria-label="Giornate consuntivo"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            placeholder="Giornate"
+                            value={timesheetForm.giornate}
+                            onChange={(e) =>
+                              setTimesheetForm({ ...timesheetForm, giornate: e.target.value })
+                            }
+                          />
+                          <input
+                            className={fieldClass}
+                            aria-label="Descrizione consuntivo"
+                            placeholder="Descrizione"
+                            value={timesheetForm.descrizione}
+                            onChange={(e) =>
+                              setTimesheetForm({ ...timesheetForm, descrizione: e.target.value })
+                            }
+                          />
+                          <button className={buttonClass} onClick={() => saveTimesheet.mutate()}>
+                            {editingTimesheet ? "Salva rettifica" : "Registra"}
+                          </button>
+                        </div>
+                      )}
+                      {row.consuntivi.length > 0 && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-left">
+                                <th>Data</th>
+                                <th>Utente</th>
+                                <th>Giornate</th>
+                                <th>Descrizione</th>
+                                {isAdmin && <th>Azioni</th>}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {row.consuntivi.map((entry) => (
+                                <tr key={entry.id} className="border-t">
+                                  <td>{entry.data}</td>
+                                  <td>{entry.utente}</td>
+                                  <td>
+                                    <DaysValue value={entry.giornate} />
+                                  </td>
+                                  <td>{entry.descrizione}</td>
+                                  {isAdmin && (
+                                    <td className="flex gap-2 py-1">
+                                      <button
+                                        className={buttonClass}
+                                        onClick={() => {
+                                          setTimesheetActivity(row.id);
+                                          setEditingTimesheet(entry);
+                                          setTimesheetForm({
+                                            data: entry.data,
+                                            giornate: entry.giornate,
+                                            descrizione: entry.descrizione,
+                                          });
+                                        }}
+                                      >
+                                        Modifica
+                                      </button>
+                                      <button
+                                        className={buttonClass}
+                                        onClick={() =>
+                                          removeTimesheet.mutate({
+                                            activityId: row.id,
+                                            entryId: entry.id,
+                                          })
+                                        }
+                                      >
+                                        Elimina
+                                      </button>
+                                    </td>
+                                  )}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       )}
                     </div>
                   ))}
                   {editable && (
-                    <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-4">
+                    <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-3">
                       <input
                         className={fieldClass}
                         aria-label="Titolo attività"
@@ -546,6 +681,20 @@ export function CanonePage() {
                         placeholder="Giornate da riservare"
                         value={subForm.reserved_days}
                         onChange={(e) => setSubForm({ ...subForm, reserved_days: e.target.value })}
+                      />
+                      <input
+                        className={fieldClass}
+                        aria-label="Data inizio attività"
+                        type="date"
+                        value={subForm.start_date}
+                        onChange={(e) => setSubForm({ ...subForm, start_date: e.target.value })}
+                      />
+                      <input
+                        className={fieldClass}
+                        aria-label="Data fine attività"
+                        type="date"
+                        value={subForm.end_date}
+                        onChange={(e) => setSubForm({ ...subForm, end_date: e.target.value })}
                       />
                       <button className={buttonClass} onClick={() => addSub.mutate()}>
                         Aggiungi attività

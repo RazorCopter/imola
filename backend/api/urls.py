@@ -211,6 +211,16 @@ urlpatterns = [
         domain_views.CanoneSubactivityDetailView.as_view(),
         name="canone-subactivity-detail",
     ),
+    path(
+        "canoni/<uuid:pk>/subactivities/<uuid:subactivity_pk>/timesheets",
+        domain_views.CanoneSubactivityTimesheetListView.as_view(),
+        name="canone-subactivity-timesheet-list",
+    ),
+    path(
+        "canoni/<uuid:pk>/subactivities/<uuid:subactivity_pk>/timesheets/<uuid:entry_pk>",
+        domain_views.CanoneSubactivityTimesheetDetailView.as_view(),
+        name="canone-subactivity-timesheet-detail",
+    ),
     path("canoni/<uuid:pk>/status", domain_views.CanoneStatusView.as_view(), name="canone-status"),
     path(
         "reconciliation/latest",

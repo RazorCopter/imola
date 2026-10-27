@@ -988,12 +988,7 @@ def _canone_row(row) -> dict:
         "version": row.version,
         "semestre": row.semester,
         "periodicita": row.periodicity,
-        "progetto_id": row.project_id,
-        "progetto_codice": row.project.code,
-        "progetto_titolo": row.project.title,
-        "fornitore": (
-            row.project.supplier_owner.organization.name if row.project.supplier_owner_id else None
-        ),
+        "nome": row.name,
         "pianificato": row.total_days,
         "riservato": row.reserved_days,
         "disponibile": row.total_days - row.reserved_days,
@@ -1014,7 +1009,7 @@ def _canone_queryset():
         .values("total")[:1]
     )
     return (
-        Canone.objects.select_related("project__supplier_owner__organization")
+        Canone.objects.select_related("project")
         .annotate(
             consumed_days=Coalesce(
                 Sum("subactivities__timesheet_entries__days"),
@@ -1027,7 +1022,7 @@ def _canone_queryset():
             subactivity_count=Count("subactivities", distinct=True),
             last_movement=Max("subactivities__timesheet_entries__period"),
         )
-        .order_by("-semester", "project__code")
+        .order_by("-semester", "name")
     )
 
 
@@ -1050,8 +1045,6 @@ class CanoneListView(DocumentedAPIView):
 
     @extend_schema(responses={200: dict})
     def get(self, request):
-        from projects.models import Project
-
         rows = list(_canone_queryset())
         if request.query_params.get("management") != "1":
             last_moved = max(
@@ -1066,8 +1059,7 @@ class CanoneListView(DocumentedAPIView):
                         {
                             "id": row.id,
                             "semestre": row.semester,
-                            "progetto_codice": row.project.code,
-                            "progetto_titolo": row.project.title,
+                            "nome": row.name,
                             "ultimo_movimento": row.last_movement,
                         }
                         for row in rows
@@ -1088,8 +1080,7 @@ class CanoneListView(DocumentedAPIView):
             rows = [
                 row
                 for row in rows
-                if needle in row.project.code.casefold()
-                or needle in row.project.title.casefold()
+                if needle in row.name.casefold()
                 or needle in row.semester.casefold()
             ]
         if state:
@@ -1120,10 +1111,6 @@ class CanoneListView(DocumentedAPIView):
                     "semestri": sorted({row.semester for row in all_rows}, reverse=True),
                     "stati": ["NON_AVVIATO", "IN_CORSO", "COMPLETATO", "SUPERATO"],
                 },
-                "project_options": [
-                    {"id": project.id, "code": project.code, "title": project.title}
-                    for project in Project.objects.order_by("code")
-                ],
             }
         )
 
@@ -1166,7 +1153,7 @@ class CanoneDetailView(DocumentedAPIView):
             ).exists()
         ):
             raise CanoneDeleteBlocked()
-        snapshot = {"semester": canone.semester, "project_id": str(canone.project.pk)}
+        snapshot = {"semester": canone.semester, "name": canone.name}
         _audit_canone(request, "canone.delete", canone, snapshot)
         canone.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -1186,6 +1173,8 @@ def _canone_detail(canone) -> dict:
                 "office": row.office,
                 "title": row.title,
                 "reserved_days": row.reserved_days,
+                "start_date": row.start_date,
+                "end_date": row.end_date,
                 "remaining_reserved_days": row.reserved_days - row.consumed_days,
                 "redmine_ref": row.redmine_ref,
                 "quarter_estimate_days": row.quarter_estimate_days,
@@ -1194,14 +1183,28 @@ def _canone_detail(canone) -> dict:
                 "needs_review": row.needs_review,
                 "consuntivato": row.consumed_days,
                 "timesheet_count": row.timesheet_count,
+                "consuntivi": [
+                    {
+                        "id": entry.id,
+                        "data": entry.period,
+                        "giornate": entry.days,
+                        "descrizione": entry.note,
+                        "utente": (
+                            (entry.created_by.get_full_name() or entry.created_by.username)
+                            if entry.created_by else "Importazione"
+                        ),
+                        "origine": entry.source,
+                    }
+                    for entry in row.timesheet_entries.filter(reversals__isnull=True)
+                    .exclude(source="STORNO").select_related("created_by")
+                    .order_by("-period", "-created_at")
+                ],
             }
         )
     return {
         "id": canone.id,
         "version": canone.version,
-        "project_id": canone.project_id,
-        "progetto_codice": canone.project.code,
-        "progetto_titolo": canone.project.title,
+        "name": canone.name,
         "semester": canone.semester,
         "periodicity": canone.periodicity,
         "total_days": canone.total_days,
@@ -1264,6 +1267,108 @@ class CanoneSubactivityDetailView(DocumentedAPIView):
         _audit_canone(request, "canone.subactivity.delete", row, {"canone_id": str(pk)})
         row.delete()
         return Response(_canone_detail(canone))
+
+
+class CanoneSubactivityTimesheetListView(DocumentedAPIView):
+    """Inserimento dei consuntivi su un'attività del canone."""
+
+    permission_classes = [CanCreateTimesheets]
+
+    @transaction.atomic
+    def post(self, request, pk, subactivity_pk):
+        from decimal import Decimal, InvalidOperation
+        from timesheets.models import TimesheetEntry, TimesheetSource
+
+        row = get_object_or_404(
+            CanoneSubactivity.objects.select_for_update(), pk=subactivity_pk, canone_id=pk
+        )
+        try:
+            days = Decimal(str(request.data.get("giornate", "")))
+        except InvalidOperation:
+            return Response({"giornate": ["Inserire un numero valido."]}, status=400)
+        description = str(request.data.get("descrizione", "")).strip()
+        try:
+            entry_date = date.fromisoformat(str(request.data.get("data", "")))
+        except ValueError:
+            return Response({"data": ["Inserire una data valida."]}, status=400)
+        if days <= 0:
+            return Response({"giornate": ["Le giornate devono essere maggiori di zero."]}, status=400)
+        if not description:
+            return Response({"descrizione": ["La descrizione è obbligatoria."]}, status=400)
+        if row.start_date and entry_date < row.start_date or row.end_date and entry_date > row.end_date:
+            return Response({"data": ["La data deve rientrare nel periodo dell'attività."]}, status=400)
+        consumed = row.timesheet_entries.aggregate(total=Sum("days"))["total"] or 0
+        if consumed + days > row.reserved_days:
+            return Response({"giornate": ["Il consuntivo supera le giornate riservate all'attività."]}, status=400)
+        entry = TimesheetEntry(
+            canone_subactivity=row, period=entry_date, days=days,
+            source=TimesheetSource.MANUALE, note=description,
+            created_by=request.user, updated_by=request.user,
+        )
+        try:
+            entry.full_clean()
+            entry.save()
+        except DjangoValidationError as exc:
+            return Response(getattr(exc, "message_dict", {"detail": exc.messages}), status=400)
+        return Response(_canone_detail(row.canone), status=status.HTTP_201_CREATED)
+
+
+class CanoneSubactivityTimesheetDetailView(DocumentedAPIView):
+    """Rettifica append-only di un consuntivo; riservata agli amministratori."""
+
+    permission_classes = [IsAdmin]
+
+    def get_entry(self, pk, subactivity_pk, entry_pk):
+        from timesheets.models import TimesheetEntry, TimesheetSource
+        return get_object_or_404(
+            TimesheetEntry, pk=entry_pk, canone_subactivity_id=subactivity_pk,
+            canone_subactivity__canone_id=pk, source=TimesheetSource.MANUALE,
+            reversals__isnull=True,
+        )
+
+    @transaction.atomic
+    def patch(self, request, pk, subactivity_pk, entry_pk):
+        from decimal import Decimal, InvalidOperation
+        from timesheets.models import TimesheetEntry, TimesheetSource
+
+        entry = self.get_entry(pk, subactivity_pk, entry_pk)
+        row = entry.canone_subactivity
+        try:
+            days = Decimal(str(request.data.get("giornate", entry.days)))
+            entry_date = date.fromisoformat(str(request.data.get("data", entry.period)))
+        except (InvalidOperation, ValueError):
+            return Response({"detail": "Data o giornate non valide."}, status=400)
+        description = str(request.data.get("descrizione", entry.note)).strip()
+        if days <= 0 or not description:
+            return Response({"detail": "Giornate positive e descrizione sono obbligatorie."}, status=400)
+        if row.start_date and entry_date < row.start_date or row.end_date and entry_date > row.end_date:
+            return Response({"data": ["La data deve rientrare nel periodo dell'attività."]}, status=400)
+        consumed_without_entry = (row.timesheet_entries.aggregate(total=Sum("days"))["total"] or 0) - entry.days
+        if consumed_without_entry + days > row.reserved_days:
+            return Response({"giornate": ["Il consuntivo supera le giornate riservate all'attività."]}, status=400)
+        reversal = entry.build_reversal(note=f"Rettifica amministrativa del consuntivo {entry.id}")
+        reversal.created_by = request.user
+        reversal.updated_by = request.user
+        reversal.full_clean()
+        reversal.save()
+        replacement = TimesheetEntry(
+            canone_subactivity=row, period=entry_date, days=days,
+            source=TimesheetSource.MANUALE, note=description,
+            created_by=entry.created_by, updated_by=request.user,
+        )
+        replacement.full_clean()
+        replacement.save()
+        return Response(_canone_detail(row.canone))
+
+    @transaction.atomic
+    def delete(self, request, pk, subactivity_pk, entry_pk):
+        entry = self.get_entry(pk, subactivity_pk, entry_pk)
+        reversal = entry.build_reversal(note=f"Eliminazione amministrativa del consuntivo {entry.id}")
+        reversal.created_by = request.user
+        reversal.updated_by = request.user
+        reversal.full_clean()
+        reversal.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CommandSearchView(DocumentedAPIView):
