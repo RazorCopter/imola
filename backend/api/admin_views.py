@@ -485,7 +485,13 @@ class AdminDataResetView(APIView):
         from ppm.models import PpmSnapshot, PpmSnapshotRow
         from projects.models import BillingMilestone, Project
         from timesheets.models import TimesheetEntry
-        from wallet.models import WalletActivity, WalletAllocation, WalletYear
+        from wallet.models import (
+            WalletActivity,
+            WalletAllocation,
+            WalletFundingTranche,
+            WalletSourceLot,
+            WalletYear,
+        )
 
         signer = TimestampSigner()
         token = signer.sign(f"{request.user.id}:data.reset")
@@ -495,6 +501,8 @@ class AdminDataResetView(APIView):
             "milestone": BillingMilestone.objects.count(),
             "consuntivi": TimesheetEntry.objects.count(),
             "allocazioni_wallet": WalletAllocation.objects.count(),
+            "tranche_wallet": WalletFundingTranche.objects.count(),
+            "lotti_wallet": WalletSourceLot.objects.count(),
             "attivita_wallet": WalletActivity.objects.count(),
             "anni_wallet": WalletYear.objects.count(),
             "canoni": Canone.objects.count(),
@@ -530,7 +538,13 @@ class AdminDataResetView(APIView):
         from projects.models import BillingMilestone, Project
         from timesheets.models import TimesheetEntry
         from timesheets.mutations import allow_ledger_mutation
-        from wallet.models import WalletActivity, WalletAllocation, WalletYear
+        from wallet.models import (
+            WalletActivity,
+            WalletAllocation,
+            WalletFundingTranche,
+            WalletSourceLot,
+            WalletYear,
+        )
 
         confirmation = str(request.data.get("confirmation", "")).strip()
         if confirmation != "ELIMINA":
@@ -579,8 +593,12 @@ class AdminDataResetView(APIView):
                 deleted_counts["anomalie"] = Anomaly.objects.all().delete()[0]
                 deleted_counts["righe_snapshot_ppm"] = PpmSnapshotRow.objects.all().delete()[0]
                 deleted_counts["snapshot_ppm"] = PpmSnapshot.objects.all().delete()[0]
-                deleted_counts["consuntivi"] = TimesheetEntry.objects.all().delete()[0]
+                reversed_count = TimesheetEntry.objects.filter(reverses__isnull=False).delete()[0]
+                direct_count = TimesheetEntry.objects.all().delete()[0]
+                deleted_counts["consuntivi"] = reversed_count + direct_count
+                deleted_counts["tranche_wallet"] = WalletFundingTranche.objects.all().delete()[0]
                 deleted_counts["allocazioni_wallet"] = WalletAllocation.objects.all().delete()[0]
+                deleted_counts["lotti_wallet"] = WalletSourceLot.objects.all().delete()[0]
                 deleted_counts["attivita_wallet"] = WalletActivity.objects.all().delete()[0]
                 deleted_counts["anni_wallet"] = WalletYear.objects.all().delete()[0]
                 deleted_counts["sottoattivita_canone"] = CanoneSubactivity.objects.all().delete()[0]
