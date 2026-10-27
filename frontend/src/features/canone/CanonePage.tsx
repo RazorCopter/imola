@@ -164,13 +164,20 @@ export function CanonePage() {
     if (id) setSelected(id);
   }
   const save = useMutation({
-    mutationFn: () =>
-      creating
-        ? api.post<Detail>("/canoni", form)
+    mutationFn: () => {
+      const payload = {
+        name: form.name,
+        semester: form.semester,
+        periodicity: form.periodicity,
+        total_days: form.total_days,
+      };
+      return creating
+        ? api.post<Detail>("/canoni", payload)
         : api.patch<Detail>(`/canoni/${canoneId}`, {
-            ...form,
+            ...payload,
             expected_version: detail.data?.version,
-          }),
+          });
+    },
     onSuccess: async (data) => {
       setCreating(false);
       setEditing(false);

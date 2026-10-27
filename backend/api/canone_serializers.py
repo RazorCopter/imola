@@ -22,6 +22,7 @@ class CanoneWriteSerializer(serializers.ModelSerializer):
             "target_base_days", "target_days_per_week", "weeks_elapsed_at_import",
             "cap_at_total", "start_date", "end_date", "extracted_at",
         )
+        read_only_fields = ("start_date", "end_date")
 
     def create(self, validated_data):
         validated_data.setdefault("target_base_days", Decimal("0"))
