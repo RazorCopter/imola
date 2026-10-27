@@ -81,13 +81,11 @@ describe("DashboardPage", () => {
                 id: "milestone-1",
                 progetto_id: "project-1",
                 progetto_codice: "PRJ-01",
-                progetto_titolo: "Progetto uno",
                 data_pianificata: "2026-10-10",
                 data_fatturazione: "2026-10-31",
                 data_effettiva: null,
                 classificazione: "MESE_CORRENTE",
                 stato: "PIANIFICATA",
-                giornate: "2.5000",
                 numero_spostamenti: 0,
                 spostamenti: [],
               },
@@ -111,7 +109,6 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Scaduta")).not.toBeInTheDocument();
     expect(screen.getByText("10/10/2026")).toBeInTheDocument();
     expect(screen.getByText("31/10/2026")).toBeInTheDocument();
-    expect(screen.getByText("2,50 gg")).toBeInTheDocument();
     expect(getMock).toHaveBeenCalledWith("/dashboard");
   });
 

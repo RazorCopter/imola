@@ -54,13 +54,11 @@ interface DashboardSummary {
       id: string;
       progetto_id: string;
       progetto_codice: string;
-      progetto_titolo: string;
       data_pianificata: string;
       data_fatturazione: string;
       data_effettiva: string | null;
       classificazione: "MESE_CORRENTE";
       stato: string;
-      giornate: string | null;
       numero_spostamenti: number;
       spostamenti: unknown[];
     }[];
@@ -288,14 +286,12 @@ export function DashboardPage() {
           <p className="mt-4 text-sm text-danger">{t("dashboard.dataError")}</p>
         ) : dashboard.data?.prossime_fatturazioni.results.length ? (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[42rem] text-left text-sm">
+            <table className="w-full min-w-[32rem] text-left text-sm">
               <thead className="border-b border-border text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="px-2 py-2">Data prevista</th>
                   <th className="px-2 py-2">{t("dashboard.billingDate")}</th>
                   <th className="px-2 py-2">{t("project.code")}</th>
-                  <th className="px-2 py-2">{t("project.title")}</th>
-                  <th className="px-2 py-2 text-right">{t("dashboard.days")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -320,10 +316,6 @@ export function DashboardPage() {
                       )}
                     </td>
                     <td className="px-2 py-3 font-medium">{item.progetto_codice}</td>
-                    <td className="px-2 py-3">{item.progetto_titolo}</td>
-                    <td className="px-2 py-3 text-right font-mono">
-                      {item.giornate === null ? "—" : formatDays(item.giornate)}
-                    </td>
                   </tr>
                 ))}
               </tbody>

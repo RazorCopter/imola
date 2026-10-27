@@ -73,7 +73,6 @@ def dashboard_summary(
                 "id": str(milestone.id),
                 "progetto_id": str(milestone.project_id),
                 "progetto_codice": milestone.project.code,
-                "progetto_titolo": milestone.project.title,
                 "data_pianificata": planned_date.isoformat(),
                 "data_fatturazione": current_month_end.isoformat(),
                 "data_effettiva": (
@@ -81,7 +80,6 @@ def dashboard_summary(
                 ),
                 "classificazione": "MESE_CORRENTE",
                 "stato": milestone.status,
-                "giornate": _decimal_string(milestone.amount_days),
                 "numero_spostamenti": milestone.move_count,
                 "spostamenti": milestone.moves,
             }

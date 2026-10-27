@@ -75,13 +75,11 @@ def test_dashboard_include_solo_fatturazioni_aperte_del_mese_corrente_senza_muta
             "id": str(current.id),
             "progetto_id": str(current_project.id),
             "progetto_codice": "A-CURRENT",
-            "progetto_titolo": current_project.title,
             "data_pianificata": "2026-10-31",
             "data_fatturazione": "2026-10-31",
             "data_effettiva": None,
             "classificazione": "MESE_CORRENTE",
             "stato": "SPOSTATA",
-            "giornate": "3.0000",
             "numero_spostamenti": 0,
             "spostamenti": [],
         }

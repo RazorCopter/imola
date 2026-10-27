@@ -50,13 +50,11 @@ def test_dashboard_espone_solo_il_mese_corrente_con_un_contratto_stabile():
         "id": str(current.id),
         "progetto_id": str(project.id),
         "progetto_codice": "DASH-API",
-        "progetto_titolo": "Dashboard API",
         "data_pianificata": "2026-10-10",
         "data_fatturazione": "2026-10-31",
         "data_effettiva": None,
         "classificazione": "MESE_CORRENTE",
         "stato": "PIANIFICATA",
-        "giornate": "4.2500",
         "numero_spostamenti": 0,
         "spostamenti": [],
     }
