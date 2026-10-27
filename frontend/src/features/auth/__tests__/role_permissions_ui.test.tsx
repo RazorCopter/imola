@@ -17,7 +17,7 @@ import "@/i18n";
 import { api } from "@/lib/api";
 
 vi.mock("@/lib/api", () => ({
-  api: { get: vi.fn(), post: vi.fn(), patch: vi.fn() },
+  api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }));
 
 const getMock = vi.mocked(api.get);

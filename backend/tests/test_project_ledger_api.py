@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -26,7 +27,7 @@ def test_fornitore_consuntiva_progetto_e_vede_utente_descrizione_e_saldo():
         f"/api/v1/projects/{project.id}/ledger",
         {
             "giornate": "2.5000",
-            "periodo": "2026-10-15",
+            "data": "2026-10-15",
             "descrizione": "Analisi architetturale",
         },
         format="json",
@@ -35,7 +36,7 @@ def test_fornitore_consuntiva_progetto_e_vede_utente_descrizione_e_saldo():
     assert response.status_code == 201, response.data
     entry = TimesheetEntry.objects.get(project=project)
     assert entry.days == Decimal("2.5000")
-    assert entry.period.isoformat() == "2026-10-01"
+    assert entry.period.isoformat() == "2026-10-15"
     assert entry.note == "Analisi architetturale"
     assert entry.source == TimesheetSource.MANUALE
     assert entry.created_by == user
@@ -44,7 +45,7 @@ def test_fornitore_consuntiva_progetto_e_vede_utente_descrizione_e_saldo():
     assert ledger.status_code == 200
     assert ledger.json()["consuntivi"][0] == {
         "id": str(entry.id),
-        "periodo": "2026-10-01",
+        "data": "2026-10-15",
         "giornate": "2.5000",
         "descrizione": "Analisi architetturale",
         "utente": user.username,
@@ -55,6 +56,50 @@ def test_fornitore_consuntiva_progetto_e_vede_utente_descrizione_e_saldo():
     assert row["consuntivi_diretti"] == "2.5000"
     assert row["consumato_totale"] == "2.5000"
     assert row["residuo"] == "7.5000"
+
+
+def test_admin_modifica_consuntivo_con_storno_e_nuova_riga():
+    admin_client, _admin = make_client_for_role(roles.ADMIN)
+    project = ProjectFactory(code="PRJ-EDIT", budget_days=Decimal("10.0000"))
+    entry = TimesheetEntryFactory(
+        project=project,
+        period=date(2026, 10, 27),
+        days=Decimal("2.0000"),
+        source=TimesheetSource.MANUALE,
+        note="Voce errata",
+    )
+
+    response = admin_client.patch(
+        f"/api/v1/projects/{project.id}/ledger/{entry.id}",
+        {"data": "2026-10-28", "giornate": "1.5000", "descrizione": "Voce corretta"},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.data
+    assert TimesheetEntry.objects.filter(reverses=entry, days=Decimal("-2.0000")).exists()
+    replacement = TimesheetEntry.objects.get(pk=response.json()["id"])
+    assert replacement.period.isoformat() == "2026-10-28"
+    assert replacement.days == Decimal("1.5000")
+    ledger = admin_client.get(f"/api/v1/projects/{project.id}/ledger").json()
+    assert [row["descrizione"] for row in ledger["consuntivi"]] == ["Voce corretta"]
+
+
+def test_admin_elimina_consuntivo_tramite_storno_e_non_admin_riceve_403():
+    admin_client, _admin = make_client_for_role(roles.ADMIN)
+    manager_client, _manager = make_client_for_role(roles.MANAGER)
+    project = ProjectFactory(code="PRJ-DELETE", budget_days=Decimal("10.0000"))
+    entry = TimesheetEntryFactory(
+        project=project,
+        days=Decimal("2.0000"),
+        source=TimesheetSource.MANUALE,
+    )
+
+    forbidden = manager_client.delete(f"/api/v1/projects/{project.id}/ledger/{entry.id}")
+    assert forbidden.status_code == 403
+    response = admin_client.delete(f"/api/v1/projects/{project.id}/ledger/{entry.id}")
+    assert response.status_code == 204
+    assert TimesheetEntry.objects.filter(reverses=entry, days=Decimal("-2.0000")).exists()
+    assert admin_client.get(f"/api/v1/projects/{project.id}/ledger").json()["consuntivi"] == []
 
 
 def test_ledger_progetto_espone_attivita_wallet_figlie_e_rimanente_allocato():

@@ -81,6 +81,11 @@ urlpatterns = [
         name="project-ledger",
     ),
     path(
+        "projects/<uuid:pk>/ledger/<uuid:entry_pk>",
+        domain_views.ProjectTimesheetDetailView.as_view(),
+        name="project-timesheet-detail",
+    ),
+    path(
         "projects/<uuid:pk>",
         domain_views.ProjectDetailUpdateView.as_view(),
         name="project-detail-update",

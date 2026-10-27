@@ -205,11 +205,11 @@ class TestConsuntiviAppendOnly:
                 source=TimesheetSource.MANUALE,
             )
 
-    def test_il_periodo_e_normalizzato_al_primo_del_mese(self):
+    def test_la_data_del_consuntivo_viene_preservata(self):
         entry = TimesheetEntryFactory(
             project=ProjectFactory(code="IM26-PERIODO"), period=date(2026, 10, 16)
         )
-        assert entry.period == date(2026, 10, 1)
+        assert entry.period == date(2026, 10, 16)
 
     def test_una_riga_non_si_modifica(self):
         entry = TimesheetEntryFactory(project=ProjectFactory(code="IM26-IMMUTABILE"))

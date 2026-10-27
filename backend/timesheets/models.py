@@ -58,8 +58,8 @@ class TimesheetEntry(TrackedModel, ImportedRecordMixin):
     )
 
     period = models.DateField(
-        verbose_name="periodo",
-        help_text="Primo giorno del mese di competenza.",
+        verbose_name="data",
+        help_text="Data di competenza del consuntivo.",
     )
     days = DaysField(verbose_name="giornate")
     source = models.CharField(
@@ -142,12 +142,8 @@ class TimesheetEntry(TrackedModel, ImportedRecordMixin):
             )
         if self.days is not None and Decimal(self.days) == 0:
             raise ValidationError({"days": "Le giornate non possono essere zero."})
-        if self.period and self.period.day != 1:
-            raise ValidationError({"period": "Il periodo deve essere il primo giorno del mese."})
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        if self.period:
-            self.period = month_start(self.period)
         if not self._state.adding:
             raise ValidationError(
                 "I consuntivi sono append-only: per correggere, registrare uno storno."

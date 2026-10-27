@@ -341,12 +341,16 @@ class ProjectLedgerView(DocumentedAPIView):
         return get_object_or_404(Project, pk=pk)
 
     def get(self, request, pk):
-        from timesheets.models import TimesheetEntry
+        from timesheets.models import TimesheetEntry, TimesheetSource
         from wallet.models import WalletAllocation
 
         project = self.get_project(pk)
         timesheets = (
-            TimesheetEntry.objects.filter(project=project)
+            TimesheetEntry.objects.filter(
+                project=project,
+                reversals__isnull=True,
+            )
+            .exclude(source=TimesheetSource.STORNO)
             .select_related("created_by")
             .order_by("-period", "-created_at", "-id")
         )
@@ -361,7 +365,7 @@ class ProjectLedgerView(DocumentedAPIView):
                 "consuntivi": [
                     {
                         "id": entry.id,
-                        "periodo": entry.period,
+                        "data": entry.period,
                         "giornate": entry.days,
                         "descrizione": entry.note,
                         "utente": (
@@ -396,7 +400,7 @@ class ProjectLedgerView(DocumentedAPIView):
         from decimal import Decimal, InvalidOperation
 
         from projects.models import TimesheetStatus
-        from timesheets.models import TimesheetEntry, TimesheetSource, month_start
+        from timesheets.models import TimesheetEntry, TimesheetSource
 
         project = self.get_project(pk)
         if project.timesheet_status == TimesheetStatus.CHIUSO:
@@ -429,15 +433,11 @@ class ProjectLedgerView(DocumentedAPIView):
                 {"giornate": ["Le giornate superano il residuo diretto del progetto."]},
                 status=400,
             )
-        raw_period = request.data.get("periodo")
+        raw_period = request.data.get("data") or request.data.get("periodo")
         try:
-            period = (
-                month_start(date.fromisoformat(str(raw_period)))
-                if raw_period
-                else month_start(timezone.localdate())
-            )
+            period = date.fromisoformat(str(raw_period)) if raw_period else timezone.localdate()
         except ValueError:
-            return Response({"periodo": ["Inserire una data valida."]}, status=400)
+            return Response({"data": ["Inserire una data valida."]}, status=400)
         entry = TimesheetEntry(
             project=project,
             period=period,
@@ -453,6 +453,95 @@ class ProjectLedgerView(DocumentedAPIView):
         except DjangoValidationError as exc:
             return Response(getattr(exc, "message_dict", {"detail": exc.messages}), status=400)
         return Response({"id": entry.id}, status=status.HTTP_201_CREATED)
+
+
+class ProjectTimesheetDetailView(DocumentedAPIView):
+    """Rettifica o annulla un consuntivo manuale diretto; operazione riservata agli admin."""
+
+    permission_classes = [IsAdmin]
+
+    @staticmethod
+    def get_entry(project_pk, entry_pk):
+        from timesheets.models import TimesheetEntry, TimesheetSource
+
+        return get_object_or_404(
+            TimesheetEntry,
+            pk=entry_pk,
+            project_id=project_pk,
+            source=TimesheetSource.MANUALE,
+            reversals__isnull=True,
+        )
+
+    @staticmethod
+    def parse_payload(request, entry):
+        from decimal import Decimal, InvalidOperation
+
+        raw_date = request.data.get("data", entry.period.isoformat())
+        try:
+            days = Decimal(str(request.data.get("giornate", entry.days)))
+        except InvalidOperation as exc:
+            raise DjangoValidationError({"giornate": "Inserire un numero valido."}) from exc
+        try:
+            entry_date = date.fromisoformat(str(raw_date))
+        except ValueError as exc:
+            raise DjangoValidationError({"data": "Inserire una data valida."}) from exc
+        description = str(request.data.get("descrizione", entry.note)).strip()
+        if days <= 0:
+            raise DjangoValidationError({"giornate": "Le giornate devono essere maggiori di zero."})
+        if not description:
+            raise DjangoValidationError({"descrizione": "La descrizione è obbligatoria."})
+        if len(description) > 300:
+            raise DjangoValidationError({"descrizione": "Massimo 300 caratteri."})
+        return days, entry_date, description
+
+    @transaction.atomic
+    def patch(self, request, pk, entry_pk):
+        from timesheets.models import TimesheetEntry, TimesheetSource
+
+        entry = self.get_entry(pk, entry_pk)
+        try:
+            days, entry_date, description = self.parse_payload(request, entry)
+        except DjangoValidationError as exc:
+            return Response(getattr(exc, "message_dict", {"detail": exc.messages}), status=400)
+        direct_without_entry = (
+            TimesheetEntry.objects.filter(project_id=pk).aggregate(total=Sum("days"))["total"] or 0
+        ) - entry.days
+        allocated_to_wallet = (
+            entry.project.wallet_allocations.aggregate(total=Sum("allocated_days"))["total"] or 0
+        )
+        if days > entry.project.budget_days - direct_without_entry - allocated_to_wallet:
+            return Response(
+                {"giornate": ["Le giornate superano il residuo diretto del progetto."]}, status=400
+            )
+        reversal = entry.build_reversal(note=f"Rettifica amministrativa del consuntivo {entry.id}")
+        reversal.created_by = request.user
+        reversal.updated_by = request.user
+        reversal.full_clean()
+        reversal.save()
+        replacement = TimesheetEntry(
+            project=entry.project,
+            period=entry_date,
+            days=days,
+            source=TimesheetSource.MANUALE,
+            note=description,
+            created_by=entry.created_by,
+            updated_by=request.user,
+        )
+        replacement.full_clean()
+        replacement.save()
+        return Response({"id": replacement.id})
+
+    @transaction.atomic
+    def delete(self, request, pk, entry_pk):
+        entry = self.get_entry(pk, entry_pk)
+        reversal = entry.build_reversal(
+            note=f"Eliminazione amministrativa del consuntivo {entry.id}"
+        )
+        reversal.created_by = request.user
+        reversal.updated_by = request.user
+        reversal.full_clean()
+        reversal.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProjectReviewQueueView(DocumentedAPIView):

@@ -16,7 +16,7 @@ import type { ProjectBalance } from "./ProjectsPage";
 interface ProjectLedger {
   consuntivi: {
     id: string;
-    periodo: string;
+    data: string;
     giornate: string;
     descrizione: string;
     utente: string;
@@ -39,9 +39,10 @@ export function ProjectDetailPage() {
   const { session } = useSession();
   const [editOpen, setEditOpen] = useState(false);
   const [timesheetOpen, setTimesheetOpen] = useState(false);
+  const [editingTimesheetId, setEditingTimesheetId] = useState<string | null>(null);
   const [days, setDays] = useState("");
   const [description, setDescription] = useState("");
-  const [period, setPeriod] = useState(new Date().toISOString().slice(0, 10));
+  const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
 
   const query = useQuery({
     queryKey: ["projects", "balances"],
@@ -79,7 +80,7 @@ export function ProjectDetailPage() {
       api.post(`/projects/${projectId}/ledger`, {
         giornate: days,
         descrizione: description,
-        periodo: period,
+        data: entryDate,
       }),
     onSuccess: async () => {
       setDays("");
@@ -90,6 +91,31 @@ export function ProjectDetailPage() {
         client.invalidateQueries({ queryKey: ["projects", "balances"] }),
       ]);
     },
+  });
+  const refreshTimesheets = async () => {
+    await Promise.all([
+      client.invalidateQueries({ queryKey: ["projects", projectId, "ledger"] }),
+      client.invalidateQueries({ queryKey: ["projects", "balances"] }),
+    ]);
+  };
+  const updateTimesheet = useMutation({
+    mutationFn: () =>
+      api.patch(`/projects/${projectId}/ledger/${editingTimesheetId}`, {
+        giornate: days,
+        descrizione: description,
+        data: entryDate,
+      }),
+    onSuccess: async () => {
+      setDays("");
+      setDescription("");
+      setEditingTimesheetId(null);
+      setTimesheetOpen(false);
+      await refreshTimesheets();
+    },
+  });
+  const deleteTimesheet = useMutation({
+    mutationFn: (entryId: string) => api.delete(`/projects/${projectId}/ledger/${entryId}`),
+    onSuccess: refreshTimesheets,
   });
 
   if (query.isLoading) return <LoadingState />;
@@ -214,7 +240,13 @@ export function ProjectDetailPage() {
           {canCreateTimesheets(session) && (
             <button
               type="button"
-              onClick={() => setTimesheetOpen((value) => !value)}
+              onClick={() => {
+                setEditingTimesheetId(null);
+                setDays("");
+                setDescription("");
+                setEntryDate(new Date().toISOString().slice(0, 10));
+                setTimesheetOpen((value) => !value);
+              }}
               className="rounded bg-accent px-4 py-2 text-sm font-medium text-accent-foreground"
             >
               Consuntiva
@@ -225,7 +257,8 @@ export function ProjectDetailPage() {
               className="grid gap-3 rounded-lg border border-border bg-card p-4 md:grid-cols-[10rem_12rem_1fr_auto] md:items-end"
               onSubmit={(event) => {
                 event.preventDefault();
-                createTimesheet.mutate();
+                if (editingTimesheetId) updateTimesheet.mutate();
+                else createTimesheet.mutate();
               }}
             >
               <label className="text-sm">
@@ -242,13 +275,13 @@ export function ProjectDetailPage() {
                 />
               </label>
               <label className="text-sm">
-                Periodo
+                Data
                 <input
-                  aria-label="Periodo"
+                  aria-label="Data"
                   type="date"
                   required
-                  value={period}
-                  onChange={(event) => setPeriod(event.target.value)}
+                  value={entryDate}
+                  onChange={(event) => setEntryDate(event.target.value)}
                   className="mt-1 w-full rounded border border-input bg-background px-3 py-2"
                 />
               </label>
@@ -266,14 +299,30 @@ export function ProjectDetailPage() {
               </label>
               <button
                 type="submit"
-                disabled={createTimesheet.isPending}
+                disabled={createTimesheet.isPending || updateTimesheet.isPending}
                 className="bg-primary text-primary-foreground rounded px-4 py-2 text-sm disabled:opacity-50"
               >
-                {createTimesheet.isPending ? "Salvataggio…" : "Salva"}
+                {createTimesheet.isPending || updateTimesheet.isPending
+                  ? "Salvataggio…"
+                  : editingTimesheetId
+                    ? "Aggiorna"
+                    : "Salva"}
               </button>
+              {editingTimesheetId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingTimesheetId(null);
+                    setTimesheetOpen(false);
+                  }}
+                  className="rounded border border-border px-4 py-2 text-sm"
+                >
+                  Annulla
+                </button>
+              )}
             </form>
           )}
-          {createTimesheet.isError && (
+          {(createTimesheet.isError || updateTimesheet.isError || deleteTimesheet.isError) && (
             <p role="alert" className="text-destructive text-sm">
               Impossibile registrare il consuntivo. Verifica giornate e descrizione.
             </p>
@@ -285,21 +334,53 @@ export function ProjectDetailPage() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-left">
                   <tr>
-                    <th className="p-3">Periodo</th>
+                    <th className="p-3">Data</th>
                     <th className="p-3">Utente</th>
                     <th className="p-3 text-right">Giornate</th>
                     <th className="p-3">Descrizione</th>
+                    {session?.is_admin && <th className="p-3 text-right">Azioni</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {timesheets.map((entry) => (
                     <tr key={entry.id} className="border-t border-border">
-                      <td className="p-3">{entry.periodo}</td>
+                      <td className="p-3">{entry.data}</td>
                       <td className="p-3">{entry.utente}</td>
                       <td className="p-3 text-right">
                         <DaysValue value={entry.giornate} />
                       </td>
                       <td className="p-3">{entry.descrizione || "—"}</td>
+                      {session?.is_admin && (
+                        <td className="p-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingTimesheetId(entry.id);
+                                setDays(entry.giornate);
+                                setDescription(entry.descrizione);
+                                setEntryDate(entry.data);
+                                setTimesheetOpen(true);
+                              }}
+                              className="rounded border border-border px-2 py-1 text-xs hover:bg-muted"
+                            >
+                              Modifica
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (window.confirm("Eliminare questo consuntivo?")) {
+                                  deleteTimesheet.mutate(entry.id);
+                                }
+                              }}
+                              disabled={deleteTimesheet.isPending}
+                              className="border-destructive text-destructive hover:bg-destructive/10 rounded border px-2 py-1 text-xs disabled:opacity-50"
+                            >
+                              Elimina
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
