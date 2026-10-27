@@ -59,7 +59,9 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: nginx:1.27-alpine
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.nginx
     restart: unless-stopped
     depends_on:
       - backend
@@ -67,7 +69,6 @@ services:
     ports:
       - "${SL_HTTP_PORT:-8080}:8080"
     volumes:
-      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ${SL_DATA_DIR:-./.docker-data}/static:/srv/static:ro
       - ${SL_DATA_DIR:-./.docker-data}/media:/srv/media:ro
     healthcheck:
