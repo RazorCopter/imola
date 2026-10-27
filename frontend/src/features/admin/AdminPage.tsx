@@ -70,7 +70,16 @@ interface AppSettingsPayload {
   politica_costo: string;
   version: number;
 }
-type Tab = "imports" | "users" | "roles" | "configuration";
+interface ReferentRow {
+  id: string;
+  full_name: string;
+  email: string | null;
+  is_active: boolean;
+  organization_kind: "CLIENT" | "SUPPLIER";
+  organization_label: string;
+  project_count: number;
+}
+type Tab = "imports" | "users" | "referents" | "roles" | "configuration";
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -712,6 +721,170 @@ function WorkbookExplorer({ batch, onClose }: { batch: ImportRow; onClose: () =>
   );
 }
 
+function ReferentsPanel() {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState<ReferentRow | null>(null);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [organizationKind, setOrganizationKind] = useState<"CLIENT" | "SUPPLIER">("CLIENT");
+  const referents = useQuery({
+    queryKey: ["admin", "referents"],
+    queryFn: () => api.get<{ results: ReferentRow[] }>("/admin/referents"),
+  });
+  const save = useMutation({
+    mutationFn: () => {
+      const payload = {
+        full_name: fullName,
+        email,
+        organization_kind: organizationKind,
+      };
+      return editing
+        ? api.patch(`/admin/referents/${editing.id}`, payload)
+        : api.post("/admin/referents", payload);
+    },
+    onSuccess: async () => {
+      setEditing(null);
+      setFullName("");
+      setEmail("");
+      setOrganizationKind("CLIENT");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin", "referents"] }),
+        queryClient.invalidateQueries({ queryKey: ["project-options"] }),
+      ]);
+    },
+  });
+  const setActive = useMutation({
+    mutationFn: ({ row, active }: { row: ReferentRow; active: boolean }) =>
+      active
+        ? api.patch(`/admin/referents/${row.id}`, { is_active: true })
+        : api.delete(`/admin/referents/${row.id}`),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin", "referents"] }),
+        queryClient.invalidateQueries({ queryKey: ["project-options"] }),
+      ]);
+    },
+  });
+
+  if (referents.isLoading) return <LoadingState />;
+  if (referents.isError || !referents.data)
+    return <ErrorState title="Impossibile caricare i referenti" />;
+
+  return (
+    <div className="space-y-4">
+      <form
+        className="grid gap-3 rounded-lg border border-border bg-card p-4 md:grid-cols-[1fr_1fr_14rem_auto] md:items-end"
+        onSubmit={(event: FormEvent) => {
+          event.preventDefault();
+          save.mutate();
+        }}
+      >
+        <label className="text-sm">
+          Nome e cognome
+          <input
+            required
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+            className="mt-1 w-full rounded border border-input bg-background px-3 py-2"
+          />
+        </label>
+        <label className="text-sm">
+          Email
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="mt-1 w-full rounded border border-input bg-background px-3 py-2"
+          />
+        </label>
+        <label className="text-sm">
+          Tipologia
+          <select
+            value={organizationKind}
+            onChange={(event) => setOrganizationKind(event.target.value as "CLIENT" | "SUPPLIER")}
+            className="mt-1 w-full rounded border border-input bg-background px-3 py-2"
+          >
+            <option value="CLIENT">Collega BMED</option>
+            <option value="SUPPLIER">Consulente Imola</option>
+          </select>
+        </label>
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={save.isPending}
+            className="bg-primary text-primary-foreground rounded px-4 py-2 text-sm disabled:opacity-50"
+          >
+            {editing ? "Aggiorna" : "Aggiungi"}
+          </button>
+          {editing && (
+            <button
+              type="button"
+              className="rounded border px-3 py-2 text-sm"
+              onClick={() => {
+                setEditing(null);
+                setFullName("");
+                setEmail("");
+              }}
+            >
+              Annulla
+            </button>
+          )}
+        </div>
+      </form>
+      {save.isError && <p className="text-destructive text-sm">{errorMessage(save.error)}</p>}
+      <div className="overflow-x-auto rounded-lg border border-border bg-card">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 text-left">
+            <tr>
+              <th className="p-3">Nome</th>
+              <th className="p-3">Tipologia</th>
+              <th className="p-3">Email</th>
+              <th className="p-3 text-right">Progetti</th>
+              <th className="p-3">Stato</th>
+              <th className="p-3 text-right">Azioni</th>
+            </tr>
+          </thead>
+          <tbody>
+            {referents.data.results.map((row) => (
+              <tr key={row.id} className="border-t border-border">
+                <td className="p-3 font-medium">{row.full_name}</td>
+                <td className="p-3">{row.organization_label}</td>
+                <td className="p-3">{row.email || "—"}</td>
+                <td className="p-3 text-right">{row.project_count}</td>
+                <td className="p-3">{row.is_active ? "Attivo" : "Disattivato"}</td>
+                <td className="p-3">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      className="rounded border px-2 py-1 text-xs"
+                      onClick={() => {
+                        setEditing(row);
+                        setFullName(row.full_name);
+                        setEmail(row.email ?? "");
+                        setOrganizationKind(row.organization_kind);
+                      }}
+                    >
+                      Modifica
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded border px-2 py-1 text-xs"
+                      disabled={setActive.isPending}
+                      onClick={() => setActive.mutate({ row, active: !row.is_active })}
+                    >
+                      {row.is_active ? "Disattiva" : "Riattiva"}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function AdminPage() {
   const [tab, setTab] = useState<Tab>("imports");
   const [showDeleteDbDialog, setShowDeleteDbDialog] = useState(false);
@@ -743,13 +916,16 @@ export function AdminPage() {
     <section className="space-y-5">
       <header>
         <h1 className="text-xl font-semibold">Amministrazione</h1>
-        <p className="text-sm text-muted-foreground">Import, utenti, ruoli e privilegi.</p>
+        <p className="text-sm text-muted-foreground">
+          Import, utenti, referenti, ruoli e configurazione.
+        </p>
       </header>
       <nav aria-label="Sezioni amministrazione" className="flex gap-2 border-b">
         {(
           [
             ["imports", "Import ed export"],
             ["users", "Utenti"],
+            ["referents", "Referenti"],
             ["roles", "Ruoli e privilegi"],
             ["configuration", "Configurazione"],
           ] as [Tab, string][]
@@ -817,6 +993,7 @@ export function AdminPage() {
         </div>
       )}
       {tab === "users" && <UsersPanel data={users.data} />}
+      {tab === "referents" && <ReferentsPanel />}
       {tab === "roles" && <RolesPanel data={roleCapabilities.data} />}
       {tab === "configuration" && <ConfigurationPanel />}
 

@@ -21,6 +21,8 @@ from rest_framework.views import APIView
 from core import capabilities, roles
 from core.models import AdminAuditEvent, RoleCapabilityOverride
 from core.permissions import CanManagePrivileges, CanManageUsers, CanResetData, IsAdmin
+from directory.models import Organization, OrganizationKind, Person
+from directory.normalization import comparison_key
 from importers.batch import apply_seed, dry_run_seed, schema_paths
 from importers.ppm import apply_ppm, dry_run_ppm
 from importers.schema import validate_seed_auto
@@ -408,6 +410,127 @@ class UserPasswordView(APIView):
         user.save(update_fields=["password"])
         _audit(request, "user.password_set", "user", user)
         return Response({"detail": "Password aggiornata."})
+
+
+class ReferentWriteSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=200)
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
+    organization_kind = serializers.ChoiceField(choices=OrganizationKind.choices)
+    is_active = serializers.BooleanField(required=False)
+
+
+def _referent_organization(kind: str) -> Organization:
+    code = "BMED" if kind == OrganizationKind.CLIENT else "IMOLA"
+    name = "BMED" if kind == OrganizationKind.CLIENT else "Imola"
+    organization = Organization.objects.filter(kind=kind, code__iexact=code).first()
+    if organization is None:
+        organization = Organization.objects.filter(kind=kind).order_by("code").first()
+    if organization is None:
+        organization = Organization.objects.create(code=code, name=name, kind=kind)
+    return organization
+
+
+def _referent_payload(person: Person) -> dict:
+    return {
+        "id": person.id,
+        "full_name": person.full_name,
+        "email": person.email,
+        "is_active": person.is_active,
+        "organization_kind": person.organization.kind,
+        "organization_label": (
+            "Cliente (BMED)"
+            if person.organization.kind == OrganizationKind.CLIENT
+            else "Fornitore (Imola)"
+        ),
+        "project_count": person.owned_projects.count() + person.supplied_projects.count(),
+    }
+
+
+class ReferentListCreateView(APIView):
+    permission_classes = [CanManageUsers]
+
+    def get(self, request):
+        people = Person.objects.select_related("organization").order_by(
+            "organization__kind", "full_name"
+        )
+        return Response({"results": [_referent_payload(person) for person in people]})
+
+    @transaction.atomic
+    def post(self, request):
+        serializer = ReferentWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        organization = _referent_organization(data["organization_kind"])
+        if Person.objects.filter(
+            organization=organization, name_key=comparison_key(data["full_name"])
+        ).exists():
+            raise serializers.ValidationError(
+                {"full_name": "Referente già presente per questa organizzazione."}
+            )
+        person = Person.objects.create(
+            full_name=data["full_name"],
+            email=data.get("email") or None,
+            is_active=data.get("is_active", True),
+            organization=organization,
+            created_by=request.user,
+            updated_by=request.user,
+        )
+        _audit(request, "referent.created", "referent", person)
+        return Response(_referent_payload(person), status=status.HTTP_201_CREATED)
+
+
+class ReferentDetailView(APIView):
+    permission_classes = [CanManageUsers]
+
+    @staticmethod
+    def get_person(pk):
+        return Person.objects.select_related("organization").filter(pk=pk).first()
+
+    @transaction.atomic
+    def patch(self, request, pk):
+        person = self.get_person(pk)
+        if person is None:
+            return Response({"detail": "Referente inesistente."}, status=404)
+        serializer = ReferentWriteSerializer(
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        organization = (
+            _referent_organization(data["organization_kind"])
+            if "organization_kind" in data
+            else person.organization
+        )
+        full_name = data.get("full_name", person.full_name)
+        duplicate = Person.objects.filter(
+            organization=organization, name_key=comparison_key(full_name)
+        ).exclude(pk=person.pk)
+        if duplicate.exists():
+            raise serializers.ValidationError(
+                {"full_name": "Referente già presente per questa organizzazione."}
+            )
+        person.full_name = full_name
+        person.organization = organization
+        if "email" in data:
+            person.email = data["email"] or None
+        if "is_active" in data:
+            person.is_active = data["is_active"]
+        person.updated_by = request.user
+        person.save()
+        _audit(request, "referent.updated", "referent", person)
+        return Response(_referent_payload(person))
+
+    @transaction.atomic
+    def delete(self, request, pk):
+        person = self.get_person(pk)
+        if person is None:
+            return Response({"detail": "Referente inesistente."}, status=404)
+        person.is_active = False
+        person.updated_by = request.user
+        person.save(update_fields=["is_active", "updated_by", "updated_at", "version"])
+        _audit(request, "referent.deactivated", "referent", person)
+        return Response(_referent_payload(person))
 
 
 class RoleCapabilitiesView(APIView):

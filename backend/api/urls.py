@@ -45,6 +45,16 @@ urlpatterns = [
         name="admin-user-password",
     ),
     path(
+        "admin/referents",
+        admin_views.ReferentListCreateView.as_view(),
+        name="admin-referents",
+    ),
+    path(
+        "admin/referents/<uuid:pk>",
+        admin_views.ReferentDetailView.as_view(),
+        name="admin-referent-detail",
+    ),
+    path(
         "admin/roles/capabilities",
         admin_views.RoleCapabilitiesView.as_view(),
         name="admin-role-capabilities",

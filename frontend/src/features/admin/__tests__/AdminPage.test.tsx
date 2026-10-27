@@ -74,6 +74,19 @@ const roleCapabilities = {
     { key: "fornitore", label: "Fornitore", capabilities: ["projects.create"] },
   ],
 };
+const referents = {
+  results: [
+    {
+      id: "ref-1",
+      full_name: "Mario Bianchi",
+      email: "mario@example.test",
+      is_active: true,
+      organization_kind: "CLIENT",
+      organization_label: "Cliente (BMED)",
+      project_count: 2,
+    },
+  ],
+};
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -93,9 +106,11 @@ describe("AdminPage", () => {
           ? { results: [] }
           : url === "/admin/users"
             ? users
-            : url === "/settings"
-              ? settings
-              : roleCapabilities,
+            : url === "/admin/referents"
+              ? referents
+              : url === "/settings"
+                ? settings
+                : roleCapabilities,
       ),
     );
   });
@@ -119,7 +134,7 @@ describe("AdminPage", () => {
     expect(await screen.findByText("Configurazione salvata.")).toBeVisible();
   });
 
-  it("mostra i quattro tab e abilita apply solo dopo dry-run", async () => {
+  it("mostra i tab amministrativi e abilita apply solo dopo dry-run", async () => {
     postMock.mockResolvedValue({
       mode: "dry-run",
       confirmation_hash: "hash-valido",
@@ -128,6 +143,7 @@ describe("AdminPage", () => {
     const user = userEvent.setup();
     const { container } = renderPage();
     expect(await screen.findByRole("tab", { name: "Utenti" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Referenti" })).toBeVisible();
     expect(screen.getByRole("tab", { name: "Ruoli e privilegi" })).toBeVisible();
     const applyButtons = screen.getAllByRole("button", { name: "Conferma e applica" });
     expect(applyButtons[0]).toBeDisabled();
@@ -135,6 +151,25 @@ describe("AdminPage", () => {
     await user.upload(input, new File(["{}"], "seed.json", { type: "application/json" }));
     await user.click(screen.getAllByRole("button", { name: "Valida e simula" })[0]!);
     await waitFor(() => expect(applyButtons[0]).toBeEnabled());
+  });
+
+  it("gestisce i referenti BMED e Imola dal tab dedicato", async () => {
+    postMock.mockResolvedValue({});
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole("tab", { name: "Referenti" }));
+    expect(await screen.findByText("Mario Bianchi")).toBeVisible();
+    expect(screen.getByText("Cliente (BMED)")).toBeVisible();
+    await user.type(screen.getByLabelText("Nome e cognome"), "Giulia Verdi");
+    await user.selectOptions(screen.getByLabelText("Tipologia"), "SUPPLIER");
+    await user.click(screen.getByRole("button", { name: "Aggiungi" }));
+    await waitFor(() =>
+      expect(postMock).toHaveBeenCalledWith("/admin/referents", {
+        full_name: "Giulia Verdi",
+        email: "",
+        organization_kind: "SUPPLIER",
+      }),
+    );
   });
 
   it("apre il modale di creazione e invia il CRUD", async () => {
