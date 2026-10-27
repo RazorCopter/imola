@@ -201,11 +201,10 @@ class Project(TrackedModel, VerifiableMixin, ImportedRecordMixin):
             is_seed = False
             if self.import_batch_id:
                 try:
-                    is_seed = (
-                        self.import_batch is not None
-                        and self.import_batch.kind
-                        in {ImportKind.SEED_JSON, ImportKind.WORKBOOK_JSON}
-                    )
+                    is_seed = self.import_batch is not None and self.import_batch.kind in {
+                        ImportKind.SEED_JSON,
+                        ImportKind.WORKBOOK_JSON,
+                    }
                 except Exception:
                     is_seed = False
             if not is_seed:

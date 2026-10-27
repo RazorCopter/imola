@@ -162,6 +162,7 @@ class WalletSourceLot(TrackedModel, ImportedRecordMixin):
 
 class WalletAllocation(TrackedModel, VerifiableMixin, ImportedRecordMixin):
     """Utilizzo del wallet; le fonti sono nelle relative tranche FIFO."""
+
     wallet_year = models.ForeignKey(
         WalletYear,
         on_delete=models.PROTECT,
@@ -192,9 +193,7 @@ class WalletAllocation(TrackedModel, VerifiableMixin, ImportedRecordMixin):
         help_text="Obbligatorio per le nuove allocazioni create dall'interfaccia.",
     )
     allocated_days = DaysField(verbose_name="giornate allocate")
-    initial_allocated_days = DaysField(
-        default=0, verbose_name="giornate originariamente riservate"
-    )
+    initial_allocated_days = DaysField(default=0, verbose_name="giornate originariamente riservate")
     status = models.CharField(
         max_length=10,
         choices=AllocationStatus.choices,

@@ -40,7 +40,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="WorkbookSheetSnapshot",
             fields=[
-                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
                 ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("version", models.PositiveIntegerField(default=1, editable=False)),
@@ -49,16 +54,48 @@ class Migration(migrations.Migration):
                 ("state", models.CharField(blank=True, max_length=20)),
                 ("dimensions", models.CharField(blank=True, max_length=50)),
                 ("payload", models.JSONField(default=dict)),
-                ("created_by", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="+", to="auth.user", verbose_name="creato da")),
-                ("updated_by", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="+", to="auth.user", verbose_name="modificato da")),
-                ("batch", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="workbook_sheets", to="imports.importbatch")),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to="auth.user",
+                        verbose_name="creato da",
+                    ),
+                ),
+                (
+                    "updated_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to="auth.user",
+                        verbose_name="modificato da",
+                    ),
+                ),
+                (
+                    "batch",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="workbook_sheets",
+                        to="imports.importbatch",
+                    ),
+                ),
             ],
             options={"ordering": ("position",)},
         ),
         migrations.CreateModel(
             name="WorkbookDatasetSnapshot",
             fields=[
-                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
                 ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("version", models.PositiveIntegerField(default=1, editable=False)),
@@ -69,18 +106,49 @@ class Migration(migrations.Migration):
                 ("column_count", models.PositiveIntegerField()),
                 ("columns", models.JSONField(default=list)),
                 ("rows", models.JSONField(default=list)),
-                ("created_by", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="+", to="auth.user", verbose_name="creato da")),
-                ("updated_by", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="+", to="auth.user", verbose_name="modificato da")),
-                ("batch", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="workbook_datasets", to="imports.importbatch")),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to="auth.user",
+                        verbose_name="creato da",
+                    ),
+                ),
+                (
+                    "updated_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to="auth.user",
+                        verbose_name="modificato da",
+                    ),
+                ),
+                (
+                    "batch",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="workbook_datasets",
+                        to="imports.importbatch",
+                    ),
+                ),
             ],
             options={"ordering": ("dataset_id",)},
         ),
         migrations.AddConstraint(
             model_name="workbooksheetsnapshot",
-            constraint=models.UniqueConstraint(fields=("batch", "name"), name="uniq_workbook_sheet_batch"),
+            constraint=models.UniqueConstraint(
+                fields=("batch", "name"), name="uniq_workbook_sheet_batch"
+            ),
         ),
         migrations.AddConstraint(
             model_name="workbookdatasetsnapshot",
-            constraint=models.UniqueConstraint(fields=("batch", "dataset_id"), name="uniq_workbook_dataset_batch"),
+            constraint=models.UniqueConstraint(
+                fields=("batch", "dataset_id"), name="uniq_workbook_dataset_batch"
+            ),
         ),
     ]

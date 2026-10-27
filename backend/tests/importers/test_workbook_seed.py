@@ -150,9 +150,7 @@ def test_api_espone_elenco_e_contenuto_dataset(workbook_payload):
     project_dataset = next(
         dataset for dataset in body["results"] if dataset["dataset_id"] == "Progetti::Tabella3967"
     )
-    detail = client.get(
-        f"/api/v1/admin/imports/{batch.id}/datasets/{project_dataset['id']}"
-    )
+    detail = client.get(f"/api/v1/admin/imports/{batch.id}/datasets/{project_dataset['id']}")
     assert detail.status_code == 200
     assert detail.json()["row_count"] == 144
     assert len(detail.json()["rows"]) == 144
@@ -185,9 +183,7 @@ def test_rebuild_v2_rende_disponibili_le_api_operative(workbook_payload):
 @pytest.mark.django_db(transaction=True)
 def test_rollback_v2_rimuove_staging_e_dati_operativi(workbook_payload):
     payload, _text = workbook_payload
-    batch = apply_seed(
-        payload, source_filename="workbook.json", content_hash="d" * 64
-    ).batch
+    batch = apply_seed(payload, source_filename="workbook.json", content_hash="d" * 64).batch
     assert batch is not None
 
     result = rollback_seed_batch(str(batch.id))

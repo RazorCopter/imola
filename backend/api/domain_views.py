@@ -505,9 +505,8 @@ class WalletAllocationCreateView(DocumentedAPIView):
             raise serializers.ValidationError(dict.fromkeys(missing, "Campo obbligatorio."))
 
         activity_id = request.data.get("activity")
-        new_activity_title = (
-            request.data.get("new_activity_title")
-            or request.data.get("activity_title")
+        new_activity_title = request.data.get("new_activity_title") or request.data.get(
+            "activity_title"
         )
         if not activity_id and not new_activity_title:
             raise serializers.ValidationError({"activity": "Attività obbligatoria."})
@@ -1399,9 +1398,9 @@ class ProjectValidateClosureView(DocumentedAPIView):
         project.actual_closure_date = timezone.localdate()
         project.full_clean()
         project.save()
-        project.wallet_source_lots.filter(
-            status=SourceLotStatus.CHIUSURA_DA_VALIDARE
-        ).update(status=SourceLotStatus.CHIUSO)
+        project.wallet_source_lots.filter(status=SourceLotStatus.CHIUSURA_DA_VALIDARE).update(
+            status=SourceLotStatus.CHIUSO
+        )
         _audit_mutation(
             request,
             "project.closure.validate",

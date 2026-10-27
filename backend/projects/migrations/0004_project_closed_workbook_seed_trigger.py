@@ -1,6 +1,5 @@
 from django.db import migrations
 
-
 CREATE_FUNCTION = """
 CREATE OR REPLACE FUNCTION check_project_closed_requires_seed_batch()
 RETURNS trigger

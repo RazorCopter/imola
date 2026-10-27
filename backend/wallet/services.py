@@ -57,7 +57,7 @@ def reserve_fifo(
     available = [(lot, source_lot_totals(lot)[2]) for lot in lots]
     if sum((days for _, days in available), ZERO) < remaining:
         raise ValueError("Capienza wallet insufficiente per la riserva richiesta.")
-    created = []
+    created: list[WalletFundingTranche] = []
     start_sequence = (
         allocation.funding_tranches.order_by("-sequence").values_list("sequence", flat=True).first()
         or 0
@@ -83,9 +83,7 @@ def reserve_fifo(
         refresh_source_lot_status(lot)
     if created and allocation.requires_source_attribution:
         allocation.requires_source_attribution = False
-        allocation.save(
-            update_fields=["requires_source_attribution", "updated_at", "version"]
-        )
+        allocation.save(update_fields=["requires_source_attribution", "updated_at", "version"])
     return created
 
 

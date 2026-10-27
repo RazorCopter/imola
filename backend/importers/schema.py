@@ -11,6 +11,7 @@ Due letture dello stesso testo, deliberatamente:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import json
 from pathlib import Path
 from typing import Any
@@ -93,7 +94,7 @@ def validate_seed_file(path: str | Path, schema_path: str | Path) -> dict[str, A
     )
 
 
-def validate_seed_auto(text: str, schema_paths: dict[str, str | Path]) -> dict[str, Any]:
+def validate_seed_auto(text: str, schema_paths: Mapping[str, str | Path]) -> dict[str, Any]:
     version = detect_schema_version(text)
     schema = load_schema(schema_paths[version])
     try:

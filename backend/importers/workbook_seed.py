@@ -31,12 +31,8 @@ def validate_workbook_integrity(payload: dict[str, Any]) -> None:
 
     table_count = sum(len(sheet["tables"]) for sheet in sheets)
     cell_count = sum(len(sheet["cells"]) for sheet in sheets)
-    formula_count = sum(
-        1 for sheet in sheets for cell in sheet["cells"] if "formula" in cell
-    )
-    table_row_count = sum(
-        len(table["rows"]) for sheet in sheets for table in sheet["tables"]
-    )
+    formula_count = sum(1 for sheet in sheets for cell in sheet["cells"] if "formula" in cell)
+    table_row_count = sum(len(table["rows"]) for sheet in sheets for table in sheet["tables"])
     expected = {
         "sheet_count": len(sheets),
         "table_count": table_count,

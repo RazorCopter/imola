@@ -113,9 +113,7 @@ class ImportedRecordMixin(models.Model):
 class WorkbookSheetSnapshot(TrackedModel):
     """Copia lossless di un foglio contenuto in un seed workbook v2."""
 
-    batch = models.ForeignKey(
-        ImportBatch, on_delete=models.CASCADE, related_name="workbook_sheets"
-    )
+    batch = models.ForeignKey(ImportBatch, on_delete=models.CASCADE, related_name="workbook_sheets")
     name = models.CharField(max_length=255)
     position = models.PositiveSmallIntegerField()
     state = models.CharField(max_length=20, blank=True)

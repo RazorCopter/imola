@@ -77,7 +77,7 @@ class SeedImportView(APIView):
             else:
                 result = dry_run_seed(payload, source_filename=source_filename)
         except (UnicodeDecodeError, ValueError) as exc:
-            raise serializers.ValidationError(str(exc))
+            raise serializers.ValidationError(str(exc)) from exc
         return Response(
             {
                 "mode": "apply" if request.data.get("apply") == "true" else "dry-run",
@@ -118,7 +118,7 @@ class PpmImportView(APIView):
                     else dry_run_ppm(temporary.name)
                 )
         except ValueError as exc:
-            raise serializers.ValidationError(str(exc))
+            raise serializers.ValidationError(str(exc)) from exc
         return Response(
             {
                 "mode": "apply" if request.data.get("apply") == "true" else "dry-run",
@@ -183,9 +183,7 @@ class WorkbookDatasetDetailView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request, batch_id, dataset_pk):
-        dataset = WorkbookDatasetSnapshot.objects.filter(
-            pk=dataset_pk, batch_id=batch_id
-        ).first()
+        dataset = WorkbookDatasetSnapshot.objects.filter(pk=dataset_pk, batch_id=batch_id).first()
         if dataset is None:
             return Response({"detail": "Dataset inesistente."}, status=status.HTTP_404_NOT_FOUND)
         return Response(
@@ -589,9 +587,9 @@ class AdminDataResetView(APIView):
                 deleted_counts["canoni"] = Canone.objects.all().delete()[0]
                 deleted_counts["milestone"] = BillingMilestone.objects.all().delete()[0]
                 deleted_counts["progetti"] = Project.objects.all().delete()[0]
-                deleted_counts["dataset_workbook"] = (
-                    WorkbookDatasetSnapshot.objects.all().delete()[0]
-                )
+                deleted_counts["dataset_workbook"] = WorkbookDatasetSnapshot.objects.all().delete()[
+                    0
+                ]
                 deleted_counts["fogli_workbook"] = WorkbookSheetSnapshot.objects.all().delete()[0]
                 deleted_counts["issues_import"] = ImportIssue.objects.all().delete()[0]
                 deleted_counts["batch_import"] = ImportBatch.objects.all().delete()[0]

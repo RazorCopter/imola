@@ -196,13 +196,9 @@ def project_closure_ready(project) -> bool:
         return False
     lots = list(project.wallet_source_lots.all())
     if lots:
-        return all(
-            lot.status == SourceLotStatus.CHIUSURA_DA_VALIDARE for lot in lots
-        )
+        return all(lot.status == SourceLotStatus.CHIUSURA_DA_VALIDARE for lot in lots)
     allocations = list(project.wallet_allocations.all())
-    return bool(allocations) and all(
-        allocation.status == "CHIUSA" for allocation in allocations
-    )
+    return bool(allocations) and all(allocation.status == "CHIUSA" for allocation in allocations)
 
 
 def project_operational_status(project) -> str:

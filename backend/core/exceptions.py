@@ -33,7 +33,7 @@ TITLES: dict[int, str] = {
 class DomainError(APIException):
     """Errore di dominio con un codice stabile usato anche dal frontend."""
 
-    status_code = status.HTTP_400_BAD_REQUEST
+    status_code: int = status.HTTP_400_BAD_REQUEST
     error_code = "errore-di-dominio"
     default_detail = "Operazione non valida."
 

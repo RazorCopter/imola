@@ -21,9 +21,7 @@ def distribute_wallet_consumption(
     if allocation.funding_tranches.exists():
         sync_allocation_funding(allocation)
 
-    total = (
-        allocation.timesheet_entries.aggregate(total=Sum("days"))["total"] or ZERO
-    )
+    total = allocation.timesheet_entries.aggregate(total=Sum("days"))["total"] or ZERO
     if total >= allocation.allocated_days and allocation.allocated_days > ZERO:
         if allocation.status != AllocationStatus.CHIUSA:
             allocation.status = AllocationStatus.CHIUSA

@@ -92,9 +92,7 @@ def _kind(payload: dict[str, Any]) -> str:
     )
 
 
-def _run_import(
-    payload: dict[str, Any], *, batch: ImportBatch, report: ImportReport
-) -> None:
+def _run_import(payload: dict[str, Any], *, batch: ImportBatch, report: ImportReport) -> None:
     if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0"}:
         persist_workbook(payload, batch=batch)
         import_foundation(payload["application"]["seed_v1"], batch=batch, report=report)
