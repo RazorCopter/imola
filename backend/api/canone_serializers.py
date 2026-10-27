@@ -92,8 +92,10 @@ class CanoneSubactivityWriteSerializer(serializers.ModelSerializer):
                 {"reserved_days": "Indicare un numero di giornate riservate maggiore di zero."}
             )
         office = attrs.get("office", getattr(self.instance, "office", ""))
-        if office not in {Office.EA, Office.TA, Office.SA}:
-            raise serializers.ValidationError({"office": "Selezionare il dominio EA, TA oppure SA."})
+        if office not in {Office.EA, Office.TA, Office.SA, Office.CROSS}:
+            raise serializers.ValidationError(
+                {"office": "Selezionare il dominio EA, TA, SA oppure CROSS."}
+            )
         start_date = attrs.get("start_date", getattr(self.instance, "start_date", None))
         end_date = attrs.get("end_date", getattr(self.instance, "end_date", None))
         if self.instance is None:

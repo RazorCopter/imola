@@ -726,7 +726,7 @@ export function CanonePage() {
                         onChange={(e) => setSubForm({ ...subForm, office: e.target.value })}
                       >
                         <option value="">Gruppo</option>
-                        {["EA", "TA", "SA"].map((office) => (
+                        {["EA", "TA", "SA", "CROSS"].map((office) => (
                           <option key={office}>{office}</option>
                         ))}
                       </select>
