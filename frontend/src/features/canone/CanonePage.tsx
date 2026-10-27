@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AccessibleBarChart, CHART_PALETTE } from "@/components/AccessibleBarChart";
 import { DaysValue } from "@/components/DaysValue";
@@ -109,6 +109,7 @@ export function CanonePage() {
     state: "",
     office: "",
   });
+  const [filterRevision, setFilterRevision] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -144,16 +145,52 @@ export function CanonePage() {
   if (appliedFilters.state) params.set("state", appliedFilters.state);
   if (appliedFilters.office) params.set("office", appliedFilters.office);
   const index = useQuery({
-    queryKey: ["canoni", appliedFilters],
+    queryKey: ["canoni", appliedFilters, filterRevision],
     queryFn: () => api.get<CanoneList>(`/canoni${params.size ? `?${params}` : ""}`),
     placeholderData: keepPreviousData,
   });
-  const canoneId = selected ?? index.data?.default_canone_id ?? "";
+  const activeResults = index.data?.results ?? [];
+  const selectedCanoneExists = activeResults.some((row) => row.id === selected);
+  const defaultCanoneExists = activeResults.some((row) => row.id === index.data?.default_canone_id);
+  const canoneId =
+    (selected && selectedCanoneExists ? selected : null) ??
+    (defaultCanoneExists ? index.data?.default_canone_id : null) ??
+    activeResults[0]?.id ??
+    "";
+
+  const detailParams = new URLSearchParams();
+  if (appliedFilters.office) detailParams.set("office", appliedFilters.office);
+  if (appliedFilters.search) detailParams.set("search", appliedFilters.search);
+  const detailQuery = detailParams.size ? `?${detailParams}` : "";
+
   const detail = useQuery({
-    queryKey: ["canone", canoneId],
-    queryFn: () => api.get<Detail>(`/canoni/${canoneId}`),
+    queryKey: ["canone", canoneId, appliedFilters.office, appliedFilters.search, filterRevision],
+    queryFn: () => api.get<Detail>(`/canoni/${canoneId}${detailQuery}`),
     enabled: Boolean(canoneId),
   });
+
+  const filteredSubactivities = useMemo(() => {
+    if (!detail.data?.subactivities) return [];
+    return detail.data.subactivities.filter((row) => {
+      if (
+        appliedFilters.office &&
+        row.office.trim().toUpperCase() !== appliedFilters.office.trim().toUpperCase()
+      ) {
+        return false;
+      }
+      if (appliedFilters.search) {
+        const needle = appliedFilters.search.toLowerCase();
+        const matchTitle = (row.title || "").toLowerCase().includes(needle);
+        const matchOffice = (row.office || "").toLowerCase().includes(needle);
+        const matchNotes = (row.notes || "").toLowerCase().includes(needle);
+        const matchRedmine = (row.redmine_ref || "").toLowerCase().includes(needle);
+        if (!matchTitle && !matchOffice && !matchNotes && !matchRedmine) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [detail.data?.subactivities, appliedFilters.office, appliedFilters.search]);
 
   useEffect(() => {
     if (!detail.data || editing) return;
@@ -407,6 +444,7 @@ export function CanonePage() {
             setCreating(false);
             setEditing(false);
             setAppliedFilters({ semester, search: search.trim(), state, office });
+            setFilterRevision((value) => value + 1);
           }}
         >
           Applica filtri
@@ -422,6 +460,7 @@ export function CanonePage() {
             setCreating(false);
             setEditing(false);
             setAppliedFilters({ semester: "", search: "", state: "", office: "" });
+            setFilterRevision((value) => value + 1);
           }}
         >
           Azzera
@@ -585,227 +624,242 @@ export function CanonePage() {
                     <p className="text-sm text-muted-foreground">
                       Riservato <DaysValue value={detail.data.reserved_days} /> · disponibile da
                       assegnare <DaysValue value={detail.data.available_days} />
+                      {appliedFilters.office && (
+                        <span>
+                          {" "}
+                          · Filtro dominio: <strong>{appliedFilters.office}</strong> (
+                          {filteredSubactivities.length} attività)
+                        </span>
+                      )}
                     </p>
                   </div>
-                  {detail.data.subactivities.map((row) => (
-                    <div key={row.id} className="space-y-3 rounded border p-3">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <strong>{row.title}</strong>
-                          <p className="text-sm text-muted-foreground">
-                            Dominio {row.office} · {row.start_date} → {row.end_date} · riservato{" "}
-                            <DaysValue value={row.reserved_days} /> · consuntivato{" "}
-                            <DaysValue value={row.consuntivato} /> · residuo{" "}
-                            <DaysValue value={row.remaining_reserved_days} />
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          {canConsuntiva && (
-                            <button
-                              className={buttonClass}
-                              onClick={() => {
-                                setTimesheetActivity(row.id);
-                                setEditingTimesheet(null);
-                                setTimesheetForm({ data: "", giornate: "", descrizione: "" });
-                              }}
-                            >
-                              Consuntiva
-                            </button>
-                          )}
-                          {editable && (
-                            <>
+                  {filteredSubactivities.length === 0 ? (
+                    <p className="rounded border border-dashed p-4 text-center text-sm text-muted-foreground">
+                      Nessuna attività trovata per i filtri selezionati.
+                    </p>
+                  ) : (
+                    filteredSubactivities.map((row) => (
+                      <div key={row.id} className="space-y-3 rounded border p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <strong>{row.title}</strong>
+                            <p className="text-sm text-muted-foreground">
+                              Dominio {row.office} · {row.start_date} → {row.end_date} · riservato{" "}
+                              <DaysValue value={row.reserved_days} /> · consuntivato{" "}
+                              <DaysValue value={row.consuntivato} /> · residuo{" "}
+                              <DaysValue value={row.remaining_reserved_days} />
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            {canConsuntiva && (
                               <button
                                 className={buttonClass}
                                 onClick={() => {
-                                  setEditingSubactivity(row);
+                                  setTimesheetActivity(row.id);
+                                  setEditingTimesheet(null);
+                                  setTimesheetForm({ data: "", giornate: "", descrizione: "" });
+                                }}
+                              >
+                                Consuntiva
+                              </button>
+                            )}
+                            {editable && (
+                              <>
+                                <button
+                                  className={buttonClass}
+                                  onClick={() => {
+                                    setEditingSubactivity(row);
+                                    setSubForm({
+                                      office: row.office,
+                                      title: row.title,
+                                      reserved_days: row.reserved_days,
+                                      start_date: row.start_date ?? "",
+                                      end_date: row.end_date ?? "",
+                                      quarter_estimate_days: row.quarter_estimate_days ?? "",
+                                      forecast_remaining_days: row.forecast_remaining_days ?? "",
+                                      notes: row.notes,
+                                    });
+                                  }}
+                                >
+                                  Modifica attività
+                                </button>
+                                <button
+                                  className={dangerButtonClass}
+                                  onClick={() => removeSub.mutate(row)}
+                                >
+                                  ELIMINA
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {editingSubactivity?.id === row.id && (
+                          <div className="border-primary/50 grid gap-2 rounded border bg-muted/30 p-3 sm:grid-cols-3">
+                            <div className="flex items-center justify-between sm:col-span-3">
+                              <strong>Modifica attività</strong>
+                              <button
+                                className={buttonClass}
+                                onClick={() => {
+                                  setEditingSubactivity(null);
                                   setSubForm({
-                                    office: row.office,
-                                    title: row.title,
-                                    reserved_days: row.reserved_days,
-                                    start_date: row.start_date ?? "",
-                                    end_date: row.end_date ?? "",
-                                    quarter_estimate_days: row.quarter_estimate_days ?? "",
-                                    forecast_remaining_days: row.forecast_remaining_days ?? "",
-                                    notes: row.notes,
+                                    office: "",
+                                    title: "",
+                                    reserved_days: "",
+                                    start_date: "",
+                                    end_date: "",
+                                    quarter_estimate_days: "",
+                                    forecast_remaining_days: "",
+                                    notes: "",
                                   });
                                 }}
                               >
-                                Modifica attività
+                                Annulla
                               </button>
-                              <button
-                                className={dangerButtonClass}
-                                onClick={() => removeSub.mutate(row)}
-                              >
-                                ELIMINA
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      {editingSubactivity?.id === row.id && (
-                        <div className="border-primary/50 grid gap-2 rounded border bg-muted/30 p-3 sm:grid-cols-3">
-                          <div className="flex items-center justify-between sm:col-span-3">
-                            <strong>Modifica attività</strong>
-                            <button
-                              className={buttonClass}
-                              onClick={() => {
-                                setEditingSubactivity(null);
-                                setSubForm({
-                                  office: "",
-                                  title: "",
-                                  reserved_days: "",
-                                  start_date: "",
-                                  end_date: "",
-                                  quarter_estimate_days: "",
-                                  forecast_remaining_days: "",
-                                  notes: "",
-                                });
-                              }}
+                            </div>
+                            <input
+                              className={fieldClass}
+                              aria-label="Titolo attività in modifica"
+                              value={subForm.title}
+                              onChange={(e) => setSubForm({ ...subForm, title: e.target.value })}
+                            />
+                            <select
+                              className={fieldClass}
+                              aria-label="Dominio attività in modifica"
+                              value={subForm.office}
+                              onChange={(e) => setSubForm({ ...subForm, office: e.target.value })}
                             >
-                              Annulla
+                              {["EA", "TA", "SA", "CROSS"].map((office) => (
+                                <option key={office}>{office}</option>
+                              ))}
+                            </select>
+                            <input
+                              className={fieldClass}
+                              aria-label="Giornate riservate in modifica"
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={subForm.reserved_days}
+                              onChange={(e) =>
+                                setSubForm({ ...subForm, reserved_days: e.target.value })
+                              }
+                            />
+                            <input
+                              className={fieldClass}
+                              aria-label="Data inizio attività in modifica"
+                              type="date"
+                              value={subForm.start_date}
+                              onChange={(e) =>
+                                setSubForm({ ...subForm, start_date: e.target.value })
+                              }
+                            />
+                            <input
+                              className={fieldClass}
+                              aria-label="Data fine attività in modifica"
+                              type="date"
+                              value={subForm.end_date}
+                              onChange={(e) => setSubForm({ ...subForm, end_date: e.target.value })}
+                            />
+                            <button className={buttonClass} onClick={() => addSub.mutate()}>
+                              Salva modifiche
                             </button>
                           </div>
-                          <input
-                            className={fieldClass}
-                            aria-label="Titolo attività in modifica"
-                            value={subForm.title}
-                            onChange={(e) => setSubForm({ ...subForm, title: e.target.value })}
-                          />
-                          <select
-                            className={fieldClass}
-                            aria-label="Dominio attività in modifica"
-                            value={subForm.office}
-                            onChange={(e) => setSubForm({ ...subForm, office: e.target.value })}
-                          >
-                            {["EA", "TA", "SA", "CROSS"].map((office) => (
-                              <option key={office}>{office}</option>
-                            ))}
-                          </select>
-                          <input
-                            className={fieldClass}
-                            aria-label="Giornate riservate in modifica"
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            value={subForm.reserved_days}
-                            onChange={(e) =>
-                              setSubForm({ ...subForm, reserved_days: e.target.value })
-                            }
-                          />
-                          <input
-                            className={fieldClass}
-                            aria-label="Data inizio attività in modifica"
-                            type="date"
-                            value={subForm.start_date}
-                            onChange={(e) => setSubForm({ ...subForm, start_date: e.target.value })}
-                          />
-                          <input
-                            className={fieldClass}
-                            aria-label="Data fine attività in modifica"
-                            type="date"
-                            value={subForm.end_date}
-                            onChange={(e) => setSubForm({ ...subForm, end_date: e.target.value })}
-                          />
-                          <button className={buttonClass} onClick={() => addSub.mutate()}>
-                            Salva modifiche
-                          </button>
-                        </div>
-                      )}
-                      {timesheetActivity === row.id && (
-                        <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-4">
-                          <input
-                            className={fieldClass}
-                            aria-label="Data consuntivo"
-                            type="date"
-                            value={timesheetForm.data}
-                            onChange={(e) =>
-                              setTimesheetForm({ ...timesheetForm, data: e.target.value })
-                            }
-                          />
-                          <input
-                            className={fieldClass}
-                            aria-label="Giornate consuntivo"
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            placeholder="Giornate"
-                            value={timesheetForm.giornate}
-                            onChange={(e) =>
-                              setTimesheetForm({ ...timesheetForm, giornate: e.target.value })
-                            }
-                          />
-                          <input
-                            className={fieldClass}
-                            aria-label="Descrizione consuntivo"
-                            placeholder="Descrizione"
-                            value={timesheetForm.descrizione}
-                            onChange={(e) =>
-                              setTimesheetForm({ ...timesheetForm, descrizione: e.target.value })
-                            }
-                          />
-                          <button className={buttonClass} onClick={() => saveTimesheet.mutate()}>
-                            {editingTimesheet ? "Salva rettifica" : "Registra"}
-                          </button>
-                        </div>
-                      )}
-                      {row.consuntivi.length > 0 && (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="text-left">
-                                <th>Data</th>
-                                <th>Utente</th>
-                                <th>Giornate</th>
-                                <th>Descrizione</th>
-                                {isAdmin && <th>Azioni</th>}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {row.consuntivi.map((entry) => (
-                                <tr key={entry.id} className="border-t">
-                                  <td>{entry.data}</td>
-                                  <td>{entry.utente}</td>
-                                  <td>
-                                    <DaysValue value={entry.giornate} />
-                                  </td>
-                                  <td>{entry.descrizione}</td>
-                                  {isAdmin && (
-                                    <td className="flex gap-2 py-1">
-                                      <button
-                                        className={buttonClass}
-                                        onClick={() => {
-                                          setTimesheetActivity(row.id);
-                                          setEditingTimesheet(entry);
-                                          setTimesheetForm({
-                                            data: entry.data,
-                                            giornate: entry.giornate,
-                                            descrizione: entry.descrizione,
-                                          });
-                                        }}
-                                      >
-                                        Modifica
-                                      </button>
-                                      <button
-                                        className={buttonClass}
-                                        onClick={() =>
-                                          removeTimesheet.mutate({
-                                            activityId: row.id,
-                                            entryId: entry.id,
-                                          })
-                                        }
-                                      >
-                                        Elimina
-                                      </button>
-                                    </td>
-                                  )}
+                        )}
+                        {timesheetActivity === row.id && (
+                          <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-4">
+                            <input
+                              className={fieldClass}
+                              aria-label="Data consuntivo"
+                              type="date"
+                              value={timesheetForm.data}
+                              onChange={(e) =>
+                                setTimesheetForm({ ...timesheetForm, data: e.target.value })
+                              }
+                            />
+                            <input
+                              className={fieldClass}
+                              aria-label="Giornate consuntivo"
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              placeholder="Giornate"
+                              value={timesheetForm.giornate}
+                              onChange={(e) =>
+                                setTimesheetForm({ ...timesheetForm, giornate: e.target.value })
+                              }
+                            />
+                            <input
+                              className={fieldClass}
+                              aria-label="Descrizione consuntivo"
+                              placeholder="Descrizione"
+                              value={timesheetForm.descrizione}
+                              onChange={(e) =>
+                                setTimesheetForm({ ...timesheetForm, descrizione: e.target.value })
+                              }
+                            />
+                            <button className={buttonClass} onClick={() => saveTimesheet.mutate()}>
+                              {editingTimesheet ? "Salva rettifica" : "Registra"}
+                            </button>
+                          </div>
+                        )}
+                        {row.consuntivi.length > 0 && (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="text-left">
+                                  <th>Data</th>
+                                  <th>Utente</th>
+                                  <th>Giornate</th>
+                                  <th>Descrizione</th>
+                                  {isAdmin && <th>Azioni</th>}
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                              </thead>
+                              <tbody>
+                                {row.consuntivi.map((entry) => (
+                                  <tr key={entry.id} className="border-t">
+                                    <td>{entry.data}</td>
+                                    <td>{entry.utente}</td>
+                                    <td>
+                                      <DaysValue value={entry.giornate} />
+                                    </td>
+                                    <td>{entry.descrizione}</td>
+                                    {isAdmin && (
+                                      <td className="flex gap-2 py-1">
+                                        <button
+                                          className={buttonClass}
+                                          onClick={() => {
+                                            setTimesheetActivity(row.id);
+                                            setEditingTimesheet(entry);
+                                            setTimesheetForm({
+                                              data: entry.data,
+                                              giornate: entry.giornate,
+                                              descrizione: entry.descrizione,
+                                            });
+                                          }}
+                                        >
+                                          Modifica
+                                        </button>
+                                        <button
+                                          className={buttonClass}
+                                          onClick={() =>
+                                            removeTimesheet.mutate({
+                                              activityId: row.id,
+                                              entryId: entry.id,
+                                            })
+                                          }
+                                        >
+                                          Elimina
+                                        </button>
+                                      </td>
+                                    )}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                   {editable && !editingSubactivity && (
                     <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-3">
                       <input

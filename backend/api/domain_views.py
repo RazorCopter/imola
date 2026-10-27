@@ -1090,13 +1090,16 @@ class CanoneListView(DocumentedAPIView):
             ]
         if office:
             rows = [row for row in rows if row.subactivities.filter(office=office).exists()]
+            for row in rows:
+                row.subactivity_count = row.subactivities.filter(office=office).count()
         all_rows = list(_canone_queryset())
+        target_rows = rows if rows else all_rows
         last_moved = max(
-            (row for row in all_rows if row.last_movement is not None),
+            (row for row in target_rows if row.last_movement is not None),
             key=lambda row: (row.last_movement, row.semester),
             default=None,
         )
-        default_canone = last_moved or (all_rows[0] if all_rows else None)
+        default_canone = last_moved or (target_rows[0] if target_rows else None)
         return Response(
             {
                 "results": [_canone_row(row) for row in rows],
@@ -1134,7 +1137,9 @@ class CanoneDetailView(DocumentedAPIView):
         return get_object_or_404(Canone.objects.select_related("project"), pk=pk)
 
     def get(self, request, pk):
-        return Response(_canone_detail(self.get_object(pk)))
+        office = (request.query_params.get("office") or request.query_params.get("dominio") or "").upper()
+        search = (request.query_params.get("search") or "").strip()
+        return Response(_canone_detail(self.get_object(pk), office=office, search=search))
 
     @transaction.atomic
     def patch(self, request, pk):
@@ -1163,13 +1168,29 @@ class CanoneDetailView(DocumentedAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-def _canone_detail(canone) -> dict:
+def _canone_detail(canone, office: str = "", search: str = "") -> dict:
     balance = canone_status(canone).as_dict()
+    all_subactivities = list(
+        canone.subactivities.annotate(
+            consumed_days=Coalesce(Sum("timesheet_entries__days"), Value(0, output_field=CANONE_DAYS)),
+            timesheet_count=Count("timesheet_entries"),
+        ).order_by("office", "title")
+    )
+    filtered_subactivities = all_subactivities
+    if office:
+        filtered_subactivities = [s for s in filtered_subactivities if s.office.upper() == office.upper()]
+    if search:
+        needle = search.casefold()
+        filtered_subactivities = [
+            s
+            for s in filtered_subactivities
+            if needle in s.title.casefold()
+            or needle in (s.office or "").casefold()
+            or needle in (s.notes or "").casefold()
+            or needle in (s.redmine_ref or "").casefold()
+        ]
     subactivities = []
-    for row in canone.subactivities.annotate(
-        consumed_days=Coalesce(Sum("timesheet_entries__days"), Value(0, output_field=CANONE_DAYS)),
-        timesheet_count=Count("timesheet_entries"),
-    ).order_by("office", "title"):
+    for row in filtered_subactivities:
         subactivities.append(
             {
                 "id": row.id,
@@ -1212,9 +1233,9 @@ def _canone_detail(canone) -> dict:
         "semester": canone.semester,
         "periodicity": canone.periodicity,
         "total_days": canone.total_days,
-        "reserved_days": sum((row["reserved_days"] for row in subactivities), 0),
+        "reserved_days": sum((row.reserved_days for row in all_subactivities), 0),
         "available_days": canone.total_days
-        - sum((row["reserved_days"] for row in subactivities), 0),
+        - sum((row.reserved_days for row in all_subactivities), 0),
         "target_base_days": canone.target_base_days,
         "target_days_per_week": canone.target_days_per_week,
         "weeks_elapsed_at_import": canone.weeks_elapsed_at_import,

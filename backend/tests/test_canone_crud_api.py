@@ -53,6 +53,9 @@ def test_lista_aggregata_filtri_e_dettaglio():
         canone=canone, title="Analisi", office="EA", reserved_days=Decimal("5")
     )
     TimesheetEntryFactory(canone_subactivity=sub, days=Decimal("3"))
+    CanoneSubactivity.objects.create(
+        canone=canone, title="Disegno", office="SA", reserved_days=Decimal("2")
+    )
 
     response = client_for().get(
         "/api/v1/canoni?management=1&semester=2026-S2&state=IN_CORSO&search=Analisi"
@@ -64,14 +67,32 @@ def test_lista_aggregata_filtri_e_dettaglio():
     assert response.status_code == 200
     body = response.json()
     assert body["status"]["consuntivato"] == "3.0000"
-    assert body["subactivities"][0]["consuntivato"] == "3.0000"
-    assert body["reserved_days"] == "5.0000"
-    assert body["available_days"] == "5.0000"
+    assert len(body["subactivities"]) == 2
+    assert body["reserved_days"] == "7.0000"
+    assert body["available_days"] == "3.0000"
+
+    # Dettaglio filtrato per dominio EA
+    detail_ea = client_for().get(f"/api/v1/canoni/{canone.id}?office=EA")
+    assert detail_ea.status_code == 200
+    body_ea = detail_ea.json()
+    assert len(body_ea["subactivities"]) == 1
+    assert body_ea["subactivities"][0]["office"] == "EA"
+    assert body_ea["subactivities"][0]["title"] == "Analisi"
+
+    # Dettaglio filtrato per dominio SA
+    detail_sa = client_for().get(f"/api/v1/canoni/{canone.id}?office=SA")
+    assert detail_sa.status_code == 200
+    body_sa = detail_sa.json()
+    assert len(body_sa["subactivities"]) == 1
+    assert body_sa["subactivities"][0]["office"] == "SA"
+    assert body_sa["subactivities"][0]["title"] == "Disegno"
 
     filtered = client_for().get("/api/v1/canoni?management=1&office=EA")
     assert filtered.status_code == 200
     assert filtered.json()["count"] == 1
     assert filtered.json()["results"][0]["id"] == str(canone.id)
+    assert filtered.json()["results"][0]["sottoattivita_count"] == 1
+    assert filtered.json()["summary"]["sottoattivita"] == 1
 
     excluded = client_for().get("/api/v1/canoni?management=1&office=CROSS")
     assert excluded.status_code == 200

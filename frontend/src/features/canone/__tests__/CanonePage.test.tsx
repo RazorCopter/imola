@@ -100,6 +100,24 @@ const detail = {
       timesheet_count: 2,
       consuntivi: [],
     },
+    {
+      id: "s2",
+      version: 1,
+      office: "SA",
+      title: "Disegno Solution",
+      reserved_days: "20.0000",
+      start_date: "2026-01-01",
+      end_date: "2026-06-30",
+      remaining_reserved_days: "20.0000",
+      redmine_ref: "",
+      quarter_estimate_days: null,
+      forecast_remaining_days: "20.0000",
+      notes: "",
+      needs_review: false,
+      consuntivato: "0.0000",
+      timesheet_count: 0,
+      consuntivi: [],
+    },
   ],
 };
 
@@ -157,10 +175,52 @@ describe("CanonePage", () => {
   it("modifica l'attività inline ed evidenzia l'eliminazione", async () => {
     const user = userEvent.setup();
     renderPage(["canone.manage"]);
-    await user.click(await screen.findByRole("button", { name: "Modifica attività" }));
+    const editButtons = await screen.findAllByRole("button", { name: "Modifica attività" });
+    expect(editButtons.length).toBeGreaterThan(0);
+    await user.click(editButtons[0]!);
     expect(screen.getByLabelText("Titolo attività in modifica")).toHaveValue("Analisi");
     expect(screen.getByLabelText("Giornate riservate in modifica")).toHaveValue(50);
     expect(screen.queryByRole("button", { name: "Aggiungi attività" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ELIMINA" })).toHaveClass("bg-red-700");
+    expect(screen.getAllByRole("button", { name: "ELIMINA" })[0]!).toHaveClass("bg-red-700");
+  });
+
+  it("filtra l'elenco delle attività per dominio al click su Applica filtri", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText("Canone Organico");
+
+    // Inizialmente entrambe le attività sono visibili
+    expect(await screen.findByText("Analisi")).toBeInTheDocument();
+    expect(screen.getByText("Disegno Solution")).toBeInTheDocument();
+
+    // Seleziona dominio EA e applica i filtri
+    await user.selectOptions(screen.getByLabelText("Dominio"), "EA");
+    await user.click(screen.getByRole("button", { name: "Applica filtri" }));
+
+    // Solo l'attività EA deve essere visibile nell'elenco
+    await waitFor(() => {
+      expect(screen.getByText("Analisi")).toBeInTheDocument();
+      expect(screen.queryByText("Disegno Solution")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText(/Filtro dominio:/)).toBeInTheDocument();
+
+    // Seleziona un dominio senza attività (es. CROSS)
+    await user.selectOptions(screen.getByLabelText("Dominio"), "CROSS");
+    await user.click(screen.getByRole("button", { name: "Applica filtri" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Analisi")).not.toBeInTheDocument();
+      expect(screen.queryByText("Disegno Solution")).not.toBeInTheDocument();
+      expect(
+        screen.getByText("Nessuna attività trovata per i filtri selezionati."),
+      ).toBeInTheDocument();
+    });
+
+    // Clicca Azzera: tornano visibili entrambe le attività
+    await user.click(screen.getByRole("button", { name: "Azzera" }));
+    await waitFor(() => {
+      expect(screen.getByText("Analisi")).toBeInTheDocument();
+      expect(screen.getByText("Disegno Solution")).toBeInTheDocument();
+    });
   });
 });
