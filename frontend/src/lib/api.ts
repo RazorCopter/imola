@@ -112,15 +112,33 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     return payload as T;
   }
 
+  const fallbackDetail =
+    typeof payload === "string"
+      ? payload
+      : typeof payload === "object" && payload !== null
+        ? typeof (payload as Record<string, unknown>).detail === "string"
+          ? ((payload as Record<string, unknown>).detail as string)
+          : typeof (payload as Record<string, unknown>).message === "string"
+            ? ((payload as Record<string, unknown>).message as string)
+            : null
+        : null;
+
+  const fallbackTitle =
+    typeof payload === "object" &&
+    payload !== null &&
+    typeof (payload as Record<string, unknown>).title === "string"
+      ? ((payload as Record<string, unknown>).title as string)
+      : (fallbackDetail ?? "Errore inatteso");
+
   const problem: ProblemDetail =
     typeof payload === "object" && payload !== null && "status" in payload
       ? (payload as ProblemDetail)
       : {
           type: "about:blank",
-          title: "Errore inatteso",
+          title: fallbackTitle,
           status: response.status,
           code: `http-${response.status}`,
-          detail: typeof payload === "string" ? payload : null,
+          detail: fallbackDetail,
         };
 
   if (response.status === 401 && !expectUnauthorized) {

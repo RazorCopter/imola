@@ -78,6 +78,7 @@ class WalletYearBalance:
     unverified_potential_days: Decimal = ZERO
     ongoing_project_residual_days: Decimal = ZERO
     ongoing_project_overrun_days: Decimal = ZERO
+    total_source_capacity: Decimal = ZERO
     buckets: dict[str, ResidualBucket] = field(default_factory=dict)
     allocations: list[dict] = field(default_factory=list)
 
@@ -101,22 +102,44 @@ class WalletYearBalance:
 
     @property
     def potential_wallet_capacity(self) -> Decimal:
-        """Capienza wallet: saldo aperto più residui esplicitamente utilizzabili."""
+        """Capienza totale wallet: somma spendibile da progetti validi/in scadenza."""
+        if self.total_source_capacity > ZERO:
+            return self.total_source_capacity
         return quantize_days(
             self.available_from_open_allocations
             + self.unallocated_valid_days
             + self.unallocated_expiring_days
         )
 
+    @property
+    def unallocated_capacity(self) -> Decimal:
+        """Residuo del monte wallet non allocato: max(0, capacita - allocato)."""
+        return quantize_days(max(ZERO, self.potential_wallet_capacity - self.allocated_days))
+
+    @property
+    def allocations_total(self) -> Decimal:
+        return self.allocated_days
+
     def as_dict(self) -> dict:
+        unallocated = self.unallocated_capacity
         return {
             "anno": self.year,
             "allocato": self.allocated_days,
+            "totale_allocato": self.allocated_days,
+            "allocations_total": self.allocated_days,
             "consumato": self.consumed_days,
+            "consumato_allocazioni": self.consumed_days,
+            "consumed_days": self.consumed_days,
             "disponibile": self.available_days,
+            "disponibile_su_allocazioni": self.available_days,
+            "available_days": self.available_days,
             "disponibile_da_allocazioni": self.available_from_allocations,
             "disponibile_da_allocazioni_aperte": self.available_from_open_allocations,
             "capienza_wallet_potenziale": self.potential_wallet_capacity,
+            "capacita_totale_origini": self.potential_wallet_capacity,
+            "potential_wallet_capacity": self.potential_wallet_capacity,
+            "residuo_wallet_non_allocato": unallocated,
+            "unallocated_capacity": unallocated,
             "residui_validi_non_allocati": self.unallocated_valid_days,
             "residui_in_scadenza": self.unallocated_expiring_days,
             "budget_residuo_progetti_in_corso": self.ongoing_project_residual_days,
@@ -141,10 +164,25 @@ def wallet_year_balance(
     """Calcola il bilancio di un anno di wallet."""
     from django.utils import timezone
 
-    from wallet.models import AllocationStatus, WalletAllocation
+    from wallet.models import AllocationStatus, WalletAllocation, WalletSourceLot, WalletYear
 
     today = today or timezone.localdate()
     balance = WalletYearBalance(year=year)
+    source_lots = list(
+        WalletSourceLot.objects.filter(wallet_year__year=year)
+        .select_related("source_project")
+        .prefetch_related("funding_tranches")
+        .order_by("source_year", "effective_date", "source_project__code")
+    )
+    if source_lots:
+        balance.total_source_capacity = quantize_days(
+            sum((lot.capacity_days for lot in source_lots), ZERO)
+        )
+        wallet_year = WalletYear.objects.filter(year=year).first()
+        if wallet_year is not None:
+            balance.total_source_capacity = quantize_days(
+                balance.total_source_capacity + wallet_year.reconciliation_adjustment_days
+            )
 
     allocations = allocation_balance_qs(
         WalletAllocation.objects.filter(wallet_year__year=year)
@@ -186,6 +224,13 @@ def wallet_year_balance(
 
     projects = project_balance_qs().exclude(contract_type=ContractType.CANONE)
     for project in projects:
+        explicit_capacity = quantize_days(project.released_to_wallet_days)
+        explicit_capacity_applies = project.declared_residual_year in {None, year}
+        if not source_lots and explicit_capacity > ZERO and explicit_capacity_applies:
+            balance.total_source_capacity = quantize_days(
+                balance.total_source_capacity + explicit_capacity
+            )
+
         if project.timesheet_status in {
             TimesheetStatus.ATTIVO,
             TimesheetStatus.NON_AVVIATO,
@@ -204,6 +249,8 @@ def wallet_year_balance(
             continue
 
         if project.timesheet_status == TimesheetStatus.CHIUSO and project.actual_closure_date:
+            if project.actual_closure_date.year > year:
+                continue
             validity = residual_validity(
                 timesheet_status=project.timesheet_status,
                 closure_date=project.actual_closure_date,
@@ -214,6 +261,13 @@ def wallet_year_balance(
             balance.buckets[validity.state].add(
                 project.code, project.residual_days, validity.expires_on, validity.reason
             )
+            if not source_lots and validity.usable and explicit_capacity <= ZERO:
+                project_capacity = quantize_days(
+                    max(ZERO, project.residual_days + project.allocated_to_wallet_days)
+                )
+                balance.total_source_capacity = quantize_days(
+                    balance.total_source_capacity + project_capacity
+                )
             continue
 
         validity = residual_validity(
@@ -235,38 +289,113 @@ def wallet_year_balance(
     return balance
 
 
-def wallet_flow(year: int) -> list[dict]:
-    """Dati per il diagramma di flusso progetto di origine -> attività."""
-    from wallet.models import WalletAllocation
+def wallet_flow(year: int, *, today: date | None = None) -> list[dict]:
+    """Contratto tabellare completo, senza N+1, per le allocazioni dell'anno.
 
+    ``residuo_allocazione`` è ``allocato - consumato``. Il distinto
+    ``residuo_spendibile_origine`` è invece il budget del progetto sorgente meno
+    consuntivi diretti e tutte le sue allocazioni. Lo stato operativo deriva dal
+    campo contabile esplicito ``WalletAllocation.status``.
+    """
+    from django.utils import timezone
+
+    from core.models import AppSettings
+    from timesheets.models import TimesheetEntry
+    from wallet.models import AllocationStatus, WalletAllocation
+
+    today = today or timezone.localdate()
+    settings_obj = AppSettings.get_solo()
+    zero = Value(ZERO, output_field=DAYS_OUTPUT)
+    source_consumed = (
+        TimesheetEntry.objects.filter(project_id=OuterRef("source_project_id"))
+        .order_by()
+        .values("project_id")
+        .annotate(total=Sum("days", output_field=DAYS_OUTPUT))
+        .values("total")[:1]
+    )
+    source_allocated = (
+        WalletAllocation.objects.filter(source_project_id=OuterRef("source_project_id"))
+        .order_by()
+        .values("source_project_id")
+        .annotate(total=Sum("allocated_days", output_field=DAYS_OUTPUT))
+        .values("total")[:1]
+    )
     rows = (
         allocation_balance_qs(WalletAllocation.objects.filter(wallet_year__year=year))
         .select_related("source_project", "activity", "assignee")
+        .prefetch_related("funding_tranches__source_lot__source_project")
+        .annotate(
+            source_consumed_days=Coalesce(Subquery(source_consumed), zero),
+            source_allocated_days=Coalesce(Subquery(source_allocated), zero),
+        )
         .order_by("-allocated_days")
     )
-    return [
-        {
-            "id": row.id,
-            "version": row.version,
-            "notes": row.notes,
-            "riferimento": row.external_ref,
-            "origine": row.source_project.code if row.source_project_id else "WALLET-GENERALE",
-            "origine_id": row.source_project_id,
-            "origine_titolo": (
-                row.source_project.title if row.source_project_id else "Wallet senza origine"
-            ),
-            "destinazione": row.activity.code,
-            "destinazione_id": row.activity_id,
-            "destinazione_titolo": row.activity.title,
-            "architetto_id": row.assignee_id,
-            "architetto": row.assignee.full_name if row.assignee_id else None,
-            "allocato": row.allocated_days,
-            "consumato": row.consumed_days,
-            "disponibile": row.available_days,
-            "stato": row.status,
-        }
-        for row in rows
-    ]
+    result = []
+    for row in rows:
+        validity_state = None
+        validity_expires_on = None
+        source_remaining = None
+        if row.source_project_id:
+            project = row.source_project
+            source_remaining = quantize_days(
+                project.budget_days - row.source_consumed_days - row.source_allocated_days
+            )
+            validity = residual_validity(
+                timesheet_status=project.timesheet_status,
+                closure_date=project.actual_closure_date,
+                today=today,
+                years_valid_after_closure=settings_obj.residual_years_after_closure,
+                expiring_window_days=settings_obj.residual_expiring_window_days,
+            )
+            validity_state = validity.state
+            validity_expires_on = validity.expires_on
+        funding = [
+            {
+                "ordine": tranche.sequence,
+                "lotto": tranche.source_lot.external_ref,
+                "progetto_origine": tranche.source_lot.source_project.code,
+                "anno_provenienza": tranche.source_lot.source_year,
+                "riservato_iniziale": tranche.initial_reserved_days,
+                "impegnato": tranche.committed_days,
+                "consumato": tranche.consumed_days,
+            }
+            for tranche in row.funding_tranches.all()
+        ]
+        result.append(
+            {
+                "id": row.id,
+                "version": row.version,
+                "notes": row.notes,
+                "riferimento": row.external_ref,
+                "origine": row.source_project.code if row.source_project_id else "WALLET-GENERALE",
+                "origine_id": row.source_project_id,
+                "origine_titolo": (
+                    row.source_project.title
+                    if row.source_project_id
+                    else "Monte Wallet (pool generico)"
+                ),
+                "fonti_fifo": funding,
+                "destinazione": row.activity.code,
+                "destinazione_id": row.activity_id,
+                "destinazione_titolo": row.activity.title,
+                "tipo_attivita": row.activity.kind,
+                "architetto_id": row.assignee_id,
+                "architetto": row.assignee.full_name if row.assignee_id else None,
+                "allocato": row.allocated_days,
+                "consumato": row.consumed_days,
+                "disponibile": row.available_days,
+                "residuo_allocazione": row.available_days,
+                "residuo_spendibile_origine": source_remaining,
+                "validita_origine": validity_state,
+                "scadenza_origine": validity_expires_on,
+                "stato": row.status,
+                "motivo_chiusura": row.closure_reason,
+                "stato_operativo": (
+                    "CHIUSA" if row.status == AllocationStatus.CHIUSA else "IN_CORSO"
+                ),
+            }
+        )
+    return result
 
 
 def wallet_by_assignee(year: int) -> list[dict]:
@@ -307,6 +436,19 @@ def available_residual_for_allocation(project_id, *, exclude_allocation_id=None)
     from wallet.models import WalletAllocation
 
     project = Project.objects.get(pk=project_id)
+    allocations = WalletAllocation.objects.filter(source_project=project)
+    if exclude_allocation_id is not None:
+        allocations = allocations.exclude(pk=exclude_allocation_id)
+    allocated = allocations.aggregate(
+        total=Coalesce(
+            Sum("allocated_days", output_field=DAYS_OUTPUT),
+            Value(ZERO, output_field=DAYS_OUTPUT),
+        )
+    )["total"]
+
+    if project.released_to_wallet_days > ZERO:
+        return quantize_days(project.released_to_wallet_days - allocated)
+
     if project.timesheet_status != TimesheetStatus.CHIUSO or project.actual_closure_date is None:
         return ZERO
 
@@ -323,15 +465,6 @@ def available_residual_for_allocation(project_id, *, exclude_allocation_id=None)
 
     direct = TimesheetEntry.objects.filter(project=project).aggregate(
         total=Coalesce(Sum("days", output_field=DAYS_OUTPUT), Value(ZERO, output_field=DAYS_OUTPUT))
-    )["total"]
-    allocations = WalletAllocation.objects.filter(source_project=project)
-    if exclude_allocation_id is not None:
-        allocations = allocations.exclude(pk=exclude_allocation_id)
-    allocated = allocations.aggregate(
-        total=Coalesce(
-            Sum("allocated_days", output_field=DAYS_OUTPUT),
-            Value(ZERO, output_field=DAYS_OUTPUT),
-        )
     )["total"]
     return quantize_days(project.budget_days - direct - allocated)
 

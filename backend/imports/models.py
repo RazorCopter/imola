@@ -10,6 +10,7 @@ from core.models import TrackedModel
 
 class ImportKind(models.TextChoices):
     SEED_JSON = "SEED_JSON", "Seed JSON"
+    WORKBOOK_JSON = "WORKBOOK_JSON", "Workbook JSON completo"
     PPM_XLSX = "PPM_XLSX", "Estratto PPM (Excel)"
     PPM_PDF = "PPM_PDF", "Estratto PPM (PDF)"
     EXCEL_LEGACY = "EXCEL_LEGACY", "Excel storico"
@@ -107,3 +108,45 @@ class ImportedRecordMixin(models.Model):
 
     class Meta:
         abstract = True
+
+
+class WorkbookSheetSnapshot(TrackedModel):
+    """Copia lossless di un foglio contenuto in un seed workbook v2."""
+
+    batch = models.ForeignKey(
+        ImportBatch, on_delete=models.CASCADE, related_name="workbook_sheets"
+    )
+    name = models.CharField(max_length=255)
+    position = models.PositiveSmallIntegerField()
+    state = models.CharField(max_length=20, blank=True)
+    dimensions = models.CharField(max_length=50, blank=True)
+    payload = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ("position",)
+        constraints = [
+            models.UniqueConstraint(fields=("batch", "name"), name="uniq_workbook_sheet_batch")
+        ]
+
+
+class WorkbookDatasetSnapshot(TrackedModel):
+    """Dataset tabellare v2, interrogabile senza perdere righe o formule."""
+
+    batch = models.ForeignKey(
+        ImportBatch, on_delete=models.CASCADE, related_name="workbook_datasets"
+    )
+    dataset_id = models.CharField(max_length=255)
+    sheet_name = models.CharField(max_length=255)
+    source_range = models.CharField(max_length=50)
+    row_count = models.PositiveIntegerField()
+    column_count = models.PositiveIntegerField()
+    columns = models.JSONField(default=list)
+    rows = models.JSONField(default=list)
+
+    class Meta:
+        ordering = ("dataset_id",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("batch", "dataset_id"), name="uniq_workbook_dataset_batch"
+            )
+        ]

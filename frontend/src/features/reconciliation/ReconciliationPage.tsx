@@ -4,8 +4,10 @@ import { DaysValue } from "@/components/DaysValue";
 import { KpiCard } from "@/components/KpiCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState } from "@/components/UiState";
+import { getReconciliationOutcomePresentation } from "@/features/reconciliation/reconciliationOutcome";
 import { api } from "@/lib/api";
 import { formatPercent } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 interface Row {
   codice_progetto: string;
@@ -34,6 +36,26 @@ interface Response {
   tolleranza: string;
   results?: Row[];
   risultati?: Row[];
+}
+
+function OutcomeBadge({ outcome }: { outcome: string }) {
+  const presentation = getReconciliationOutcomePresentation(outcome);
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold",
+        presentation.tone === "ok" && "border-ok/40 bg-ok-subtle text-ok",
+        presentation.tone === "warn" && "border-warn/40 bg-warn-subtle text-warn",
+        presentation.tone === "danger" && "border-danger/40 bg-danger-subtle text-danger",
+        presentation.tone === "neutral" && "border-border bg-muted text-foreground",
+      )}
+      data-outcome={outcome || "UNKNOWN"}
+      data-tone={presentation.tone}
+      title={presentation.known ? `Esito: ${presentation.label}` : presentation.label}
+    >
+      {presentation.label}
+    </span>
+  );
 }
 
 export function ReconciliationPage() {
@@ -100,7 +122,7 @@ export function ReconciliationPage() {
               <th className="p-3">Interno</th>
               <th className="p-3">PPM</th>
               <th className="p-3">Delta</th>
-              <th className="p-3">Esito</th>
+              <th className="p-3 text-center">Esito</th>
               <th className="p-3">Azione</th>
             </tr>
           </thead>
@@ -118,8 +140,8 @@ export function ReconciliationPage() {
                 <td className="p-3">
                   <DaysValue value={row.delta} />
                 </td>
-                <td className="p-3">
-                  <StatusBadge status={row.esito} />
+                <td className="p-3 text-center">
+                  <OutcomeBadge outcome={row.esito} />
                 </td>
                 <td className="max-w-sm p-3 text-xs text-muted-foreground">
                   {row.azione_suggerita}

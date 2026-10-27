@@ -11,6 +11,7 @@ import { DeleteDatabaseDialog } from "./DeleteDatabaseDialog";
 interface Preview {
   mode: string;
   confirmation_hash: string;
+  batch_id?: string | null;
   report: Record<string, unknown>;
 }
 interface RoleOption {
@@ -50,8 +51,26 @@ interface ImportRow {
   status: string;
   source_filename: string;
   created_at: string;
+  report?: Record<string, unknown>;
 }
-type Tab = "imports" | "users" | "roles";
+interface WorkbookDatasetSummary {
+  id: string;
+  dataset_id: string;
+  sheet: string;
+  range: string;
+  row_count: number;
+  column_count: number;
+  columns: { key: string; label: string | number | null }[];
+}
+interface WorkbookDatasetDetail extends WorkbookDatasetSummary {
+  rows: { source_row: number; values: Record<string, unknown> }[];
+}
+interface AppSettingsPayload {
+  costo_giornata_uomo: string;
+  politica_costo: string;
+  version: number;
+}
+type Tab = "imports" | "users" | "roles" | "configuration";
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -74,6 +93,14 @@ function ImportPanel({
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const hasValidPreview = preview?.mode === "dry-run" && Boolean(preview.confirmation_hash);
+  const report = preview?.report as
+    | {
+        schema_version?: string;
+        esito?: string;
+        riepilogo?: Record<string, number>;
+        totali_calcolati?: Record<string, unknown>;
+      }
+    | undefined;
   const upload = useMutation({
     mutationFn: async (apply: boolean) => {
       if (!file) throw new Error("File mancante");
@@ -122,9 +149,33 @@ function ImportPanel({
         </p>
       )}
       {preview && (
-        <pre className="mt-3 max-h-64 overflow-auto rounded bg-muted p-2 text-xs">
-          {JSON.stringify(preview.report, null, 2)}
-        </pre>
+        <div className="mt-3 space-y-2 rounded bg-muted p-3 text-xs">
+          <p role="status" className="font-medium">
+            Schema {report?.schema_version ?? "non indicato"} · {report?.esito ?? "elaborato"}
+          </p>
+          {report?.riepilogo && (
+            <p>
+              Creati {report.riepilogo.creati ?? 0} · aggiornati {report.riepilogo.aggiornati ?? 0}{" "}
+              · scartati {report.riepilogo.scartati ?? 0} · errori {report.riepilogo.errori ?? 0}
+            </p>
+          )}
+          {report?.totali_calcolati && (
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
+              {Object.entries(report.totali_calcolati).map(([key, value]) => (
+                <div key={key} className="contents">
+                  <dt className="text-muted-foreground">{key.replaceAll("_", " ")}</dt>
+                  <dd className="text-right font-medium">{String(value)}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          <details>
+            <summary className="cursor-pointer">Report tecnico completo</summary>
+            <pre className="mt-2 max-h-64 overflow-auto">
+              {JSON.stringify(preview.report, null, 2)}
+            </pre>
+          </details>
+        </div>
       )}
     </section>
   );
@@ -404,6 +455,78 @@ function UsersPanel({ data }: { data: UsersPayload }) {
   );
 }
 
+function ConfigurationPanel() {
+  const queryClient = useQueryClient();
+  const [cost, setCost] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const settings = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => api.get<AppSettingsPayload>("/settings"),
+  });
+  const save = useMutation({
+    mutationFn: () =>
+      api.patch<AppSettingsPayload>("/settings", {
+        costo_giornata_uomo: cost ?? settings.data?.costo_giornata_uomo,
+        expected_version: settings.data?.version,
+      }),
+    onSuccess: async (result) => {
+      setCost(result.costo_giornata_uomo);
+      setMessage("Configurazione salvata.");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["settings"] }),
+        queryClient.invalidateQueries({ queryKey: ["cost-analysis"] }),
+      ]);
+    },
+  });
+  const shownCost = cost ?? settings.data?.costo_giornata_uomo ?? "";
+  const valid = shownCost !== "" && Number.isFinite(Number(shownCost)) && Number(shownCost) >= 0;
+  if (settings.isLoading) return <LoadingState />;
+  if (settings.isError)
+    return (
+      <ErrorState title="Configurazione non disponibile" detail={errorMessage(settings.error)} />
+    );
+  return (
+    <section className="max-w-xl space-y-4 rounded-lg border border-border bg-card p-4">
+      <h2 className="text-lg font-medium">Configurazione costi</h2>
+      <p className="text-sm text-muted-foreground">{settings.data?.politica_costo}</p>
+      <label className="block text-sm font-medium" htmlFor="daily-person-cost">
+        Costo giornata uomo (€)
+      </label>
+      <input
+        id="daily-person-cost"
+        type="number"
+        min="0"
+        step="0.01"
+        value={shownCost}
+        onChange={(event) => {
+          setCost(event.target.value);
+          setMessage("");
+        }}
+        className="w-full rounded-md border border-input bg-background px-3 py-2"
+      />
+      {!valid && <p className="text-destructive text-sm">Inserire un importo non negativo.</p>}
+      {message && (
+        <p role="status" className="text-sm text-emerald-700">
+          {message}
+        </p>
+      )}
+      {save.isError && (
+        <p role="alert" className="text-destructive text-sm">
+          {errorMessage(save.error)}
+        </p>
+      )}
+      <button
+        type="button"
+        disabled={!valid || save.isPending}
+        onClick={() => save.mutate()}
+        className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm disabled:opacity-50"
+      >
+        {save.isPending ? "Salvataggio…" : "Salva"}
+      </button>
+    </section>
+  );
+}
+
 function RolesPanel({ data }: { data: RolesPayload }) {
   const queryClient = useQueryClient();
   const [matrix, setMatrix] = useState<Record<string, Set<string>>>(() =>
@@ -498,9 +621,101 @@ function RolesPanel({ data }: { data: RolesPayload }) {
   );
 }
 
+function WorkbookExplorer({ batch, onClose }: { batch: ImportRow; onClose: () => void }) {
+  const [datasetId, setDatasetId] = useState("");
+  const datasets = useQuery({
+    queryKey: ["admin", "workbook-datasets", batch.id],
+    queryFn: () =>
+      api.get<{ results: WorkbookDatasetSummary[] }>(`/admin/imports/${batch.id}/datasets`),
+  });
+  const selected = datasets.data?.results.find((dataset) => dataset.id === datasetId);
+  const detail = useQuery({
+    queryKey: ["admin", "workbook-dataset", batch.id, datasetId],
+    queryFn: () =>
+      api.get<WorkbookDatasetDetail>(`/admin/imports/${batch.id}/datasets/${datasetId}`),
+    enabled: Boolean(datasetId),
+  });
+  return (
+    <section className="border-primary/30 space-y-3 rounded-lg border bg-card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-medium">Dataset di {batch.source_filename}</h3>
+          <p className="text-xs text-muted-foreground">Batch {batch.id}</p>
+        </div>
+        <button className="rounded border px-2 py-1 text-sm" onClick={onClose}>
+          Chiudi
+        </button>
+      </div>
+      {datasets.isLoading && <LoadingState />}
+      {datasets.isError && <ErrorState title="Dataset non disponibili" />}
+      {datasets.data && (
+        <select
+          aria-label="Dataset workbook"
+          className="w-full rounded border bg-background p-2 text-sm"
+          value={datasetId}
+          onChange={(event) => setDatasetId(event.target.value)}
+        >
+          <option value="">Seleziona un dataset</option>
+          {datasets.data.results.map((dataset) => (
+            <option key={dataset.id} value={dataset.id}>
+              {dataset.dataset_id} ({dataset.row_count} righe)
+            </option>
+          ))}
+        </select>
+      )}
+      {selected && detail.data && (
+        <div className="max-h-[32rem] overflow-auto rounded border">
+          <table className="min-w-full whitespace-nowrap text-left text-xs">
+            <thead className="sticky top-0 bg-muted">
+              <tr>
+                <th className="p-2">Riga</th>
+                {selected.columns.map((column) => (
+                  <th key={column.key} className="p-2">
+                    {String(column.label ?? column.key)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {detail.data.rows.map((row) => (
+                <tr key={row.source_row} className="border-t">
+                  <td className="p-2 font-mono">{row.source_row}</td>
+                  {selected.columns.map((column) => {
+                    const rawValue = row.values[column.key];
+                    let value = "";
+                    if (rawValue !== null && rawValue !== undefined) {
+                      if (typeof rawValue === "string") {
+                        value = rawValue;
+                      } else if (typeof rawValue === "number" || typeof rawValue === "boolean") {
+                        value = String(rawValue);
+                      } else {
+                        value = JSON.stringify(rawValue);
+                      }
+                    }
+                    return (
+                      <td
+                        key={column.key}
+                        className="max-w-72 overflow-hidden text-ellipsis p-2"
+                        title={value}
+                      >
+                        {value}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function AdminPage() {
   const [tab, setTab] = useState<Tab>("imports");
   const [showDeleteDbDialog, setShowDeleteDbDialog] = useState(false);
+  const [workbookBatch, setWorkbookBatch] = useState<ImportRow | null>(null);
   const { session } = useSession();
   const imports = useQuery({
     queryKey: ["admin", "imports"],
@@ -536,6 +751,7 @@ export function AdminPage() {
             ["imports", "Import ed export"],
             ["users", "Utenti"],
             ["roles", "Ruoli e privilegi"],
+            ["configuration", "Configurazione"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
           <button
@@ -552,7 +768,11 @@ export function AdminPage() {
       {tab === "imports" && (
         <div className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-2">
-            <ImportPanel kind="seed" title="Import seed JSON" accept="application/json,.json" />
+            <ImportPanel
+              kind="seed"
+              title="Import JSON (seed v1 o workbook v2)"
+              accept="application/json,.json"
+            />
             <ImportPanel kind="ppm" title="Import PPM" accept=".xlsx,.pdf" />
           </div>
           <section className="rounded-lg border p-4">
@@ -569,8 +789,21 @@ export function AdminPage() {
             {imports.data.results.length ? (
               <ul>
                 {imports.data.results.map((row) => (
-                  <li key={row.id}>
-                    {row.kind} · {row.status} · {row.source_filename}
+                  <li
+                    key={row.id}
+                    className="flex items-center justify-between gap-3 border-t py-2 first:border-0"
+                  >
+                    <span>
+                      {row.kind} · {row.status} · {row.source_filename}
+                    </span>
+                    {row.kind === "WORKBOOK_JSON" && row.status === "APPLIED" && (
+                      <button
+                        className="rounded border px-2 py-1 text-xs"
+                        onClick={() => setWorkbookBatch(row)}
+                      >
+                        Esplora dataset
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -578,17 +811,21 @@ export function AdminPage() {
               <p className="text-sm text-muted-foreground">Nessun import registrato.</p>
             )}
           </section>
+          {workbookBatch && (
+            <WorkbookExplorer batch={workbookBatch} onClose={() => setWorkbookBatch(null)} />
+          )}
         </div>
       )}
       {tab === "users" && <UsersPanel data={users.data} />}
       {tab === "roles" && <RolesPanel data={roleCapabilities.data} />}
+      {tab === "configuration" && <ConfigurationPanel />}
 
-      {canResetData(session) && (
+      {tab === "configuration" && canResetData(session) && (
         <section className="mt-8 rounded-lg border-2 border-danger/40 bg-danger/5 p-4">
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <h2 className="flex items-center gap-2 text-sm font-bold text-danger">
-                <AlertTriangle className="h-5 w-5" /> Zona Pericolosa — Reset Completo DB
+                <AlertTriangle className="h-5 w-5" /> Attenzione - Reset Completo DB
               </h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Cancellazione irreversibile di tutti i dati operativi (progetti, consuntivi, wallet,

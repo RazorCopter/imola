@@ -6,6 +6,12 @@ salvate. Ogni risposta porta con sé la spiegazione del calcolo, che la UI mostr
 
 from __future__ import annotations
 
+from datetime import date
+
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
+from django.db.models import Count, DecimalField, Max, Q, Sum, Value
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -15,6 +21,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from api.canone_serializers import CanoneSubactivityWriteSerializer, CanoneWriteSerializer
 from api.concurrency import etag_matches, make_etag
 from api.project_serializers import (
     PROJECT_ANNOTATION_FIELDS,
@@ -22,21 +29,26 @@ from api.project_serializers import (
     PROJECT_EDITABLE_FIELDS,
     ProjectUpdateSerializer,
 )
-from canone.models import Canone
+from canone.models import Canone, CanoneSubactivity
 from core import capabilities
-from core.exceptions import PreconditionRequired, StaleResource
-from core.models import AppSettings
+from core.exceptions import DomainError, PreconditionRequired, StaleResource
+from core.models import AdminAuditEvent, AppSettings
 from core.permissions import (
+    CanEditProjects,
     CanEditWallet,
     CanExport,
     CanResolveAnomalies,
     CanUploadImports,
+    CanValidateProjectClosure,
     IsAdmin,
     ReadOnlyOrCanCreateProjects,
+    ReadOnlyOrCanManageCanone,
     ReadOnlyOrLedgerWriter,
     ReferentCanAnnotate,
 )
 from domain.canone_status import canone_burndown, canone_status
+from domain.cost_analysis import build_cost_analysis
+from domain.dashboard import dashboard_summary
 from domain.reconciliation import reconcile, reconciliation_summary
 from domain.residuals import residual_explanation, residual_validity
 from domain.wallet_balance import wallet_by_assignee, wallet_flow, wallet_year_balance
@@ -90,6 +102,10 @@ class SettingsView(DocumentedAPIView):
         return Response(
             {
                 "ore_per_giornata": settings_obj.hours_per_day,
+                "costo_giornata_uomo": settings_obj.daily_person_cost,
+                "politica_costo": (
+                    "Valore globale corrente, non storicizzato e non differenziato per fornitore."
+                ),
                 "granularita_ppm_gg": settings_obj.ppm_granularity_days,
                 "tolleranza_riconciliazione_gg": settings_obj.reconciliation_tolerance_days,
                 "anni_validita_dopo_chiusura": settings_obj.residual_years_after_closure,
@@ -98,21 +114,83 @@ class SettingsView(DocumentedAPIView):
             }
         )
 
+    @transaction.atomic
     def patch(self, request):
-        settings_obj = current_settings()
+        existing = current_settings()
+        settings_obj = AppSettings.objects.select_for_update().get(pk=existing.pk)
+        header = request.headers.get("If-Match")
+        version = request.data.get("expected_version")
+        if header or version not in (None, ""):
+            check_expected_version(request, settings_obj)
         mapping = {
             "ore_per_giornata": "hours_per_day",
+            "costo_giornata_uomo": "daily_person_cost",
             "granularita_ppm_gg": "ppm_granularity_days",
             "tolleranza_riconciliazione_gg": "reconciliation_tolerance_days",
             "anni_validita_dopo_chiusura": "residual_years_after_closure",
             "finestra_scadenza_giorni": "residual_expiring_window_days",
         }
+        old_cost = settings_obj.daily_person_cost
         for key, attr in mapping.items():
             if key in request.data:
                 setattr(settings_obj, attr, request.data[key])
-        settings_obj.full_clean()
+        try:
+            settings_obj.full_clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict) from exc
         settings_obj.save()
+        if old_cost != settings_obj.daily_person_cost:
+            AdminAuditEvent.objects.create(
+                actor=request.user,
+                actor_username=request.user.get_username(),
+                action="settings.daily_person_cost.update",
+                target_type="app_settings",
+                target_id=str(settings_obj.id),
+                target_label="Impostazioni globali",
+                details={"old": str(old_cost), "new": str(settings_obj.daily_person_cost)},
+            )
         return self.get(request)
+
+
+class CostAnalysisView(DocumentedAPIView):
+    """Costi dei consuntivi: costo globale corrente moltiplicato per giornate nette."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        parsed: dict[str, date | None] = {"from": None, "to": None}
+        errors = {}
+        for name in parsed:
+            raw = request.query_params.get(name)
+            if raw:
+                try:
+                    parsed[name] = date.fromisoformat(raw)
+                except ValueError:
+                    errors[name] = "Usare una data ISO nel formato YYYY-MM-DD."
+        if errors:
+            raise serializers.ValidationError(errors)
+        if parsed["from"] and parsed["to"] and parsed["from"] > parsed["to"]:
+            raise serializers.ValidationError({"from": "Deve essere precedente o uguale a to."})
+        settings_obj = current_settings()
+        return Response(
+            build_cost_analysis(
+                daily_cost=settings_obj.daily_person_cost,
+                date_from=parsed["from"],
+                date_to=parsed["to"],
+            )
+        )
+
+
+class DashboardView(DocumentedAPIView):
+    """Aggregazioni read-only per grafici e prossime fatturazioni."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(operation_id="dashboard_summary", responses={200: DomainResponseSerializer})
+    def get(self, request):
+        return Response(
+            dashboard_summary(today=timezone.localdate(), settings_obj=current_settings())
+        )
 
 
 class ProjectListCreateView(DocumentedAPIView):
@@ -177,12 +255,20 @@ class ProjectBalancesView(DocumentedAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from domain.residuals import project_balance_qs
+        from domain.residuals import (
+            project_balance_qs,
+            project_closure_ready,
+            project_operational_status,
+        )
 
         settings_obj = current_settings()
         today = timezone.localdate()
         rows = []
-        queryset = project_balance_qs().select_related("client_owner", "supplier_owner")
+        queryset = (
+            project_balance_qs()
+            .select_related("client_owner", "supplier_owner")
+            .prefetch_related("wallet_allocations")
+        )
         for project in queryset.order_by("code"):
             validity = residual_validity(
                 timesheet_status=project.timesheet_status,
@@ -196,6 +282,7 @@ class ProjectBalancesView(DocumentedAPIView):
             rows.append(
                 {
                     "id": project.id,
+                    "version": project.version,
                     "codice": project.code,
                     "titolo": project.title,
                     "tipo_contratto": project.contract_type,
@@ -206,6 +293,7 @@ class ProjectBalancesView(DocumentedAPIView):
                     "consumato_totale": project.total_consumed_days,
                     "residuo": project.residual_days,
                     "stato_consuntivazione": project.timesheet_status,
+                    "stato_operativo": project_operational_status(project),
                     "stato_fatturazione": project.billing_status,
                     "stato_offerta": project.offer_status,
                     "stato_residuo": validity.state,
@@ -220,6 +308,12 @@ class ProjectBalancesView(DocumentedAPIView):
                     "permissions": {
                         "edit": can_edit,
                         "annotate": can_annotate,
+                        "validate_closure": (
+                            capabilities.has_capability(
+                                request.user, capabilities.VALIDATE_PROJECT_CLOSURE
+                            )
+                            and project_closure_ready(project)
+                        ),
                     },
                 }
             )
@@ -394,70 +488,151 @@ class WalletAllocationCreateView(DocumentedAPIView):
     permission_classes = [CanEditWallet]
 
     @extend_schema(request=dict, responses={201: dict})
+    @transaction.atomic
     def post(self, request):
-        from django.core.exceptions import ValidationError as DjangoValidationError
-        from django.db import transaction
+        import re
+        import uuid
 
         from directory.models import Person
-        from domain.money import to_days
-        from domain.wallet_balance import available_residual_for_allocation
-        from projects.models import Project
-        from wallet.models import WalletActivity, WalletAllocation, WalletYear
+        from domain.money import ZERO, to_days
+        from domain.wallet_balance import wallet_year_balance
+        from wallet.models import ActivityKind, WalletActivity, WalletAllocation, WalletYear
+        from wallet.services import reserve_fifo
 
-        required = ("year", "source_project", "activity", "assignee", "allocated_days")
-        missing = [field for field in required if not request.data.get(field)]
+        required = ("year", "assignee", "allocated_days")
+        missing = [field for field in required if request.data.get(field) in (None, "")]
         if missing:
-            return Response(
-                {field: ["Campo obbligatorio."] for field in missing},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            raise serializers.ValidationError(dict.fromkeys(missing, "Campo obbligatorio."))
+
+        activity_id = request.data.get("activity")
+        new_activity_title = (
+            request.data.get("new_activity_title")
+            or request.data.get("activity_title")
+        )
+        if not activity_id and not new_activity_title:
+            raise serializers.ValidationError({"activity": "Attività obbligatoria."})
+
         try:
-            source = Project.objects.get(pk=request.data["source_project"])
-            activity = WalletActivity.objects.get(pk=request.data["activity"])
-            assignee = Person.objects.get(pk=request.data["assignee"])
+            requested_year = int(request.data["year"])
+            assignee = Person.objects.get(pk=request.data["assignee"], is_active=True)
             allocated_days = to_days(request.data["allocated_days"])
-            if allocated_days <= 0:
-                raise DjangoValidationError({"allocated_days": "Deve essere maggiore di zero."})
-            available = available_residual_for_allocation(source.id)
-            if allocated_days > available:
-                raise DjangoValidationError(
-                    {
-                        "allocated_days": (
-                            f"Giornate richieste {allocated_days} superiori al disponibile "
-                            f"{available} del progetto di origine."
-                        )
-                    }
+        except Person.DoesNotExist as exc:
+            raise serializers.ValidationError({"assignee": "Assegnatario non valido."}) from exc
+        except (ValueError, TypeError) as exc:
+            raise serializers.ValidationError({"detail": str(exc)}) from exc
+
+        if allocated_days <= 0:
+            raise serializers.ValidationError({"allocated_days": "Deve essere maggiore di zero."})
+
+        activity = None
+        if activity_id:
+            activity = WalletActivity.objects.filter(pk=activity_id).first()
+
+        if activity is None:
+            title = (new_activity_title or str(activity_id)).strip()
+            if not title:
+                raise serializers.ValidationError({"activity": "Titolo attività non valido."})
+            activity = WalletActivity.objects.filter(title__iexact=title).first()
+            if activity is None:
+                clean_title = re.sub(r"[^A-Za-z0-9]+", "-", title).strip("-").upper()
+                base_code = (
+                    f"ACT-{clean_title}"[:50]
+                    if clean_title
+                    else f"ACT-{uuid.uuid4().hex[:8].upper()}"
                 )
-            with transaction.atomic():
-                wallet_year, _ = WalletYear.objects.get_or_create(year=int(request.data["year"]))
-                allocation = WalletAllocation(
-                    wallet_year=wallet_year,
-                    source_project=source,
-                    activity=activity,
-                    assignee=assignee,
-                    allocated_days=allocated_days,
-                    notes=str(request.data.get("notes", "")),
-                    external_ref=str(request.data.get("external_ref", "")),
+                code = base_code
+                while WalletActivity.objects.filter(code=code).exists():
+                    code = f"{base_code[:40]}-{uuid.uuid4().hex[:6].upper()}"
+                activity = WalletActivity.objects.create(
+                    code=code,
+                    title=title,
+                    kind=ActivityKind.ATTIVITA,
                 )
-                allocation.full_clean()
-                allocation.save()
-        except (Project.DoesNotExist, WalletActivity.DoesNotExist, Person.DoesNotExist):
-            return Response(
-                {"detail": "Origine, attività o architetto non valido."},
-                status=status.HTTP_400_BAD_REQUEST,
+
+        if request.data.get("source_project"):
+            raise serializers.ValidationError(
+                {
+                    "source_project": (
+                        "La fonte non è selezionabile manualmente: il prelievo segue sempre "
+                        "il FIFO dei lotti wallet."
+                    )
+                }
             )
-        except (ValueError, TypeError, DjangoValidationError) as exc:
-            detail = (
-                exc.message_dict if isinstance(exc, DjangoValidationError) else {"detail": str(exc)}
+        settings_obj = current_settings()
+        balance = wallet_year_balance(
+            requested_year,
+            years_valid_after_closure=settings_obj.residual_years_after_closure,
+            expiring_window_days=settings_obj.residual_expiring_window_days,
+        )
+        if allocated_days > balance.unallocated_capacity:
+            raise serializers.ValidationError(
+                {
+                    "allocated_days": (
+                        f"Giornate richieste {allocated_days} superiori al residuo non allocato "
+                        f"del monte wallet ({balance.unallocated_capacity} gg)."
+                    )
+                }
             )
-            return Response(detail, status=status.HTTP_400_BAD_REQUEST)
+        available_after = max(ZERO, balance.unallocated_capacity - allocated_days)
+
+        wallet_year, _ = WalletYear.objects.get_or_create(year=requested_year)
+        allocation = WalletAllocation(
+            wallet_year=wallet_year,
+            source_project=None,
+            activity=activity,
+            assignee=assignee,
+            allocated_days=allocated_days,
+            initial_allocated_days=allocated_days,
+            notes=str(request.data.get("notes", "")),
+            external_ref=str(request.data.get("external_ref", "")),
+        )
+        allocation.full_clean()
+        allocation.save()
+        try:
+            funding = reserve_fifo(allocation, allocated_days)
+        except ValueError as exc:
+            raise serializers.ValidationError({"allocated_days": str(exc)}) from exc
+
+        origin_label = "Monte Wallet FIFO"
+        _audit_mutation(
+            request,
+            "wallet_allocation.create",
+            "wallet_allocation",
+            allocation.id,
+            allocation.external_ref or f"{origin_label} → {activity.code}",
+            {
+                "year": requested_year,
+                "source_project": None,
+                "fonti_fifo": [tranche.source_lot.source_project.code for tranche in funding],
+                "activity": activity.code,
+                "allocated_days": str(allocated_days),
+                "version": allocation.version,
+            },
+        )
         return Response(
             {
-                "id": allocation.id,
+                "id": str(allocation.id),
+                "version": allocation.version,
+                "year": requested_year,
+                "source_project": None,
+                "source_project_code": "Monte Wallet FIFO",
+                "funding": [
+                    {
+                        "source_project_code": tranche.source_lot.source_project.code,
+                        "days": str(tranche.committed_days),
+                        "sequence": tranche.sequence,
+                    }
+                    for tranche in funding
+                ],
+                "activity": str(activity.id),
+                "activity_code": activity.code,
+                "assignee": str(assignee.id),
                 "architetto": assignee.full_name,
                 "allocated_days": str(allocation.allocated_days),
+                "available_source_after": str(available_after),
             },
             status=status.HTTP_201_CREATED,
+            headers={"ETag": make_etag(allocation)},
         )
 
 
@@ -465,19 +640,83 @@ class WalletAllocationOptionsView(DocumentedAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from directory.models import Person
-        from projects.models import Project, TimesheetStatus
-        from wallet.models import WalletActivity
+        from django.db.models import DecimalField, F, OuterRef, Subquery, Sum, Value
+        from django.db.models.functions import Coalesce
+        from django.utils import timezone
 
+        from directory.models import Person
+        from domain.money import ZERO
+        from projects.models import Project, TimesheetStatus
+        from timesheets.models import TimesheetEntry
+        from wallet.models import WalletActivity, WalletAllocation
+
+        days_field = DecimalField(max_digits=12, decimal_places=4)
+        direct = (
+            TimesheetEntry.objects.filter(project=OuterRef("pk"))
+            .order_by()
+            .values("project")
+            .annotate(total=Sum("days", output_field=days_field))
+            .values("total")[:1]
+        )
+        allocated = (
+            WalletAllocation.objects.filter(source_project=OuterRef("pk"))
+            .order_by()
+            .values("source_project")
+            .annotate(total=Sum("allocated_days", output_field=days_field))
+            .values("total")[:1]
+        )
+        zero = Value(ZERO, output_field=days_field)
+        settings_obj = current_settings()
+        today = timezone.localdate()
+        project_rows = list(
+            Project.objects.filter(
+                timesheet_status=TimesheetStatus.CHIUSO,
+                actual_closure_date__isnull=False,
+            )
+            .annotate(
+                direct_days=Coalesce(Subquery(direct, output_field=days_field), zero),
+                allocated_days=Coalesce(Subquery(allocated, output_field=days_field), zero),
+            )
+            .annotate(available_days=F("budget_days") - F("direct_days") - F("allocated_days"))
+            .order_by("code")
+        )
+        projects = []
+        for row in project_rows:
+            validity = residual_validity(
+                timesheet_status=row.timesheet_status,
+                closure_date=row.actual_closure_date,
+                today=today,
+                years_valid_after_closure=settings_obj.residual_years_after_closure,
+                expiring_window_days=settings_obj.residual_expiring_window_days,
+            )
+            projects.append(
+                {
+                    "id": row.id,
+                    "code": row.code,
+                    "title": row.title,
+                    "year": row.actual_closure_date.year if row.actual_closure_date else None,
+                    "available_days": str(row.available_days if validity.usable else ZERO),
+                    "validity": validity.state,
+                    "expires_on": validity.expires_on.isoformat() if validity.expires_on else None,
+                    "usable": validity.usable,
+                }
+            )
+
+        year_param = request.query_params.get("year")
+        try:
+            year_val = int(year_param) if year_param else today.year
+        except (ValueError, TypeError):
+            year_val = today.year
+        from domain.wallet_balance import wallet_year_balance
+
+        balance = wallet_year_balance(
+            year_val,
+            years_valid_after_closure=settings_obj.residual_years_after_closure,
+            expiring_window_days=settings_obj.residual_expiring_window_days,
+        )
         return Response(
             {
-                "projects": [
-                    {"id": row.id, "code": row.code, "title": row.title}
-                    for row in Project.objects.filter(
-                        timesheet_status=TimesheetStatus.CHIUSO,
-                        actual_closure_date__isnull=False,
-                    ).order_by("code")
-                ],
+                "projects": projects,
                 "activities": [
                     {"id": row.id, "code": row.code, "title": row.title}
                     for row in WalletActivity.objects.order_by("code")
@@ -490,48 +729,283 @@ class WalletAllocationOptionsView(DocumentedAPIView):
                     {"id": row.id, "name": row.full_name, "full_name": row.full_name}
                     for row in Person.objects.order_by("full_name")
                 ],
+                "unallocated_capacity": str(balance.unallocated_capacity),
+                "potential_wallet_capacity": str(balance.potential_wallet_capacity),
             }
         )
+
+
+CANONE_DAYS = DecimalField(max_digits=12, decimal_places=4)
+
+
+class CanoneDeleteBlocked(DomainError):
+    error_code = "canone-delete-bloccata"
+    default_detail = (
+        "Il canone non può essere eliminato perché conserva consuntivi o provenienza import."
+    )
+
+
+def _canone_state(total, consumed) -> str:
+    if consumed <= 0:
+        return "NON_AVVIATO"
+    if consumed > total:
+        return "SUPERATO"
+    if consumed == total:
+        return "COMPLETATO"
+    return "IN_CORSO"
+
+
+def _canone_row(row) -> dict:
+    consumed = row.consumed_days
+    return {
+        "id": row.id,
+        "version": row.version,
+        "semestre": row.semester,
+        "progetto_id": row.project_id,
+        "progetto_codice": row.project.code,
+        "progetto_titolo": row.project.title,
+        "fornitore": (
+            row.project.supplier_owner.organization.name if row.project.supplier_owner_id else None
+        ),
+        "pianificato": row.total_days,
+        "consuntivato": consumed,
+        "residuo": row.total_days - consumed,
+        "stato": _canone_state(row.total_days, consumed),
+        "sottoattivita_count": row.subactivity_count,
+        "ultimo_movimento": row.last_movement,
+    }
+
+
+def _canone_queryset():
+    return (
+        Canone.objects.select_related("project__supplier_owner__organization")
+        .annotate(
+            consumed_days=Coalesce(
+                Sum("subactivities__timesheet_entries__days"),
+                Value(0, output_field=CANONE_DAYS),
+            ),
+            subactivity_count=Count("subactivities", distinct=True),
+            last_movement=Max("subactivities__timesheet_entries__period"),
+        )
+        .order_by("-semester", "project__code")
+    )
+
+
+def _audit_canone(request, action: str, target, details=None) -> None:
+    AdminAuditEvent.objects.create(
+        actor=request.user,
+        actor_username=request.user.username,
+        action=action,
+        target_type=target.__class__.__name__.lower(),
+        target_id=str(target.pk),
+        target_label=str(target)[:150],
+        details=details or {},
+    )
 
 
 class CanoneListView(DocumentedAPIView):
-    """Indice minimo dei canoni per il selettore semestre della UI."""
+    """Lista aggregata e creazione dell'Organico Allargato."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ReadOnlyOrCanManageCanone]
 
     @extend_schema(responses={200: dict})
     def get(self, request):
-        from django.db.models import Max
-
-        rows = list(
-            Canone.objects.select_related("project")
-            .annotate(
-                ultimo_movimento=Max("subactivities__timesheet_entries__period"),
+        rows = list(_canone_queryset())
+        if request.query_params.get("management") != "1":
+            last_moved = max(
+                (row for row in rows if row.last_movement is not None),
+                key=lambda row: (row.last_movement, row.semester),
+                default=None,
             )
-            .order_by("-semester", "project__code")
-        )
+            default_canone = last_moved or (rows[0] if rows else None)
+            return Response(
+                {
+                    "results": [
+                        {
+                            "id": row.id,
+                            "semestre": row.semester,
+                            "progetto_codice": row.project.code,
+                            "progetto_titolo": row.project.title,
+                            "ultimo_movimento": row.last_movement,
+                        }
+                        for row in rows
+                    ],
+                    "count": len(rows),
+                    "default_canone_id": default_canone.id if default_canone else None,
+                }
+            )
+        semester = request.query_params.get("semester") or request.query_params.get("semestre")
+        search = (request.query_params.get("search") or "").strip()
+        state = (
+            request.query_params.get("state") or request.query_params.get("stato") or ""
+        ).upper()
+        if semester:
+            rows = [row for row in rows if row.semester == semester]
+        if search:
+            needle = search.casefold()
+            rows = [
+                row
+                for row in rows
+                if needle in row.project.code.casefold()
+                or needle in row.project.title.casefold()
+                or needle in row.semester.casefold()
+            ]
+        if state:
+            rows = [
+                row for row in rows if _canone_state(row.total_days, row.consumed_days) == state
+            ]
+        all_rows = list(_canone_queryset())
         last_moved = max(
-            (row for row in rows if row.ultimo_movimento is not None),
-            key=lambda row: (row.ultimo_movimento, row.semester),
+            (row for row in all_rows if row.last_movement is not None),
+            key=lambda row: (row.last_movement, row.semester),
             default=None,
         )
-        default_canone = last_moved or (rows[0] if rows else None)
+        default_canone = last_moved or (all_rows[0] if all_rows else None)
         return Response(
             {
-                "results": [
-                    {
-                        "id": row.id,
-                        "semestre": row.semester,
-                        "progetto_codice": row.project.code,
-                        "progetto_titolo": row.project.title,
-                        "ultimo_movimento": row.ultimo_movimento,
-                    }
-                    for row in rows
-                ],
+                "results": [_canone_row(row) for row in rows],
                 "count": len(rows),
                 "default_canone_id": default_canone.id if default_canone else None,
+                "summary": {
+                    "pianificato": sum((row.total_days for row in rows), 0),
+                    "consuntivato": sum((row.consumed_days for row in rows), 0),
+                    "residuo": sum((row.total_days - row.consumed_days for row in rows), 0),
+                    "sottoattivita": sum((row.subactivity_count for row in rows), 0),
+                },
+                "filters": {
+                    "semestri": sorted({row.semester for row in all_rows}, reverse=True),
+                    "stati": ["NON_AVVIATO", "IN_CORSO", "COMPLETATO", "SUPERATO"],
+                },
             }
         )
+
+    @transaction.atomic
+    def post(self, request):
+        serializer = CanoneWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        canone = serializer.save()
+        _audit_canone(request, "canone.create", canone, {"version": canone.version})
+        return Response(_canone_detail(canone), status=status.HTTP_201_CREATED)
+
+
+class CanoneDetailView(DocumentedAPIView):
+    permission_classes = [ReadOnlyOrCanManageCanone]
+
+    def get_object(self, pk):
+        return get_object_or_404(Canone.objects.select_related("project"), pk=pk)
+
+    def get(self, request, pk):
+        return Response(_canone_detail(self.get_object(pk)))
+
+    @transaction.atomic
+    def patch(self, request, pk):
+        canone = Canone.objects.select_for_update().get(pk=pk)
+        check_expected_version(request, canone)
+        serializer = CanoneWriteSerializer(canone, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        canone = serializer.save()
+        _audit_canone(request, "canone.update", canone, {"version": canone.version})
+        return Response(_canone_detail(canone))
+
+    @transaction.atomic
+    def delete(self, request, pk):
+        canone = Canone.objects.select_for_update().get(pk=pk)
+        check_expected_version(request, canone)
+        if (
+            canone.import_batch_id
+            or canone.subactivities.filter(
+                Q(import_batch__isnull=False) | Q(timesheet_entries__isnull=False)
+            ).exists()
+        ):
+            raise CanoneDeleteBlocked()
+        snapshot = {"semester": canone.semester, "project_id": str(canone.project.pk)}
+        _audit_canone(request, "canone.delete", canone, snapshot)
+        canone.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _canone_detail(canone) -> dict:
+    balance = canone_status(canone).as_dict()
+    subactivities = []
+    for row in canone.subactivities.annotate(
+        consumed_days=Coalesce(Sum("timesheet_entries__days"), Value(0, output_field=CANONE_DAYS)),
+        timesheet_count=Count("timesheet_entries"),
+    ).order_by("office", "title"):
+        subactivities.append(
+            {
+                "id": row.id,
+                "version": row.version,
+                "office": row.office,
+                "title": row.title,
+                "redmine_ref": row.redmine_ref,
+                "quarter_estimate_days": row.quarter_estimate_days,
+                "forecast_remaining_days": row.forecast_remaining_days,
+                "notes": row.notes,
+                "needs_review": row.needs_review,
+                "consuntivato": row.consumed_days,
+                "timesheet_count": row.timesheet_count,
+            }
+        )
+    return {
+        "id": canone.id,
+        "version": canone.version,
+        "project_id": canone.project_id,
+        "progetto_codice": canone.project.code,
+        "progetto_titolo": canone.project.title,
+        "semester": canone.semester,
+        "total_days": canone.total_days,
+        "target_base_days": canone.target_base_days,
+        "target_days_per_week": canone.target_days_per_week,
+        "weeks_elapsed_at_import": canone.weeks_elapsed_at_import,
+        "cap_at_total": canone.cap_at_total,
+        "start_date": canone.start_date,
+        "end_date": canone.end_date,
+        "extracted_at": canone.extracted_at,
+        "status": balance,
+        "subactivities": subactivities,
+    }
+
+
+class CanoneSubactivityListView(DocumentedAPIView):
+    permission_classes = [ReadOnlyOrCanManageCanone]
+
+    def post(self, request, pk):
+        canone = get_object_or_404(Canone, pk=pk)
+        serializer = CanoneSubactivityWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        row = serializer.save(canone=canone)
+        _audit_canone(request, "canone.subactivity.create", row, {"canone_id": str(pk)})
+        return Response(_canone_detail(canone), status=status.HTTP_201_CREATED)
+
+
+class CanoneSubactivityDetailView(DocumentedAPIView):
+    permission_classes = [ReadOnlyOrCanManageCanone]
+
+    @transaction.atomic
+    def patch(self, request, pk, subactivity_pk):
+        row = CanoneSubactivity.objects.select_for_update().get(pk=subactivity_pk, canone_id=pk)
+        check_expected_version(request, row)
+        serializer = CanoneSubactivityWriteSerializer(row, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        row = serializer.save()
+        _audit_canone(request, "canone.subactivity.update", row, {"version": row.version})
+        return Response(_canone_detail(row.canone))
+
+    @transaction.atomic
+    def delete(self, request, pk, subactivity_pk):
+        row = CanoneSubactivity.objects.select_for_update().get(pk=subactivity_pk, canone_id=pk)
+        check_expected_version(request, row)
+        from timesheets.models import TimesheetEntry
+
+        if row.import_batch_id or TimesheetEntry.objects.filter(canone_subactivity=row).exists():
+            raise CanoneDeleteBlocked(
+                "La sotto-attività non può essere eliminata perché conserva "
+                "consuntivi o provenienza import."
+            )
+        canone = row.canone
+        _audit_canone(request, "canone.subactivity.delete", row, {"canone_id": str(pk)})
+        row.delete()
+        return Response(_canone_detail(canone))
 
 
 class CommandSearchView(DocumentedAPIView):
@@ -664,6 +1138,41 @@ class ReconciliationView(DocumentedAPIView):
         )
 
 
+class ProjectDeleteBlocked(DomainError):
+    status_code = status.HTTP_409_CONFLICT
+    error_code = "project-delete-bloccata"
+    default_detail = "Il progetto non può essere eliminato perché conserva dipendenze operative."
+
+
+def _project_delete_dependencies(project) -> list[dict[str, object]]:
+    checks = (
+        ("milestone", "milestone di fatturazione", project.milestones),
+        ("consuntivi", "consuntivi progetto", project.timesheet_entries),
+        ("allocazioni_origine", "allocazioni wallet originate", project.wallet_allocations),
+        ("attivita_wallet", "attività wallet collegate", project.wallet_activities),
+        ("canoni", "canoni e sotto-attività", project.canoni),
+        ("ppm", "righe PPM associate", project.ppm_rows),
+        ("anomalie", "anomalie associate", project.anomalies),
+    )
+    return [
+        {"categoria": code, "descrizione": label, "conteggio": manager.count()}
+        for code, label, manager in checks
+        if manager.exists()
+    ]
+
+
+def _audit_mutation(request, action: str, target_type: str, target_id, label: str, details) -> None:
+    AdminAuditEvent.objects.create(
+        actor=request.user,
+        actor_username=request.user.get_username(),
+        action=action,
+        target_type=target_type,
+        target_id=str(target_id),
+        target_label=label[:150],
+        details=details,
+    )
+
+
 def project_detail_payload(project, user) -> dict:
     """Anagrafica persistita modificabile, senza campi tecnici, import o valori calcolati."""
     can_edit = capabilities.has_capability(user, capabilities.EDIT_PROJECTS)
@@ -693,6 +1202,7 @@ def project_detail_payload(project, user) -> dict:
         "version": project.version,
         "permissions": {
             "edit": can_edit,
+            "delete": can_edit,
             "annotate": can_annotate,
             "editable_fields": sorted(
                 PROJECT_EDITABLE_FIELDS if can_edit else PROJECT_ANNOTATION_FIELDS
@@ -705,14 +1215,18 @@ def project_detail_payload(project, user) -> dict:
 
 
 class ProjectDetailUpdateView(DocumentedAPIView):
-    permission_classes = [ReferentCanAnnotate]
+    def get_permissions(self):
+        if self.request.method == "DELETE":
+            return [CanEditProjects()]
+        return [ReferentCanAnnotate()]
 
-    def get_object(self, pk):
+    def get_object(self, pk, *, for_update=False):
         from projects.models import Project
 
-        obj = get_object_or_404(
-            Project.objects.select_related("client_owner", "supplier_owner"), pk=pk
-        )
+        queryset = Project.objects.select_related("client_owner", "supplier_owner")
+        if for_update:
+            queryset = queryset.select_for_update(of=("self",))
+        obj = get_object_or_404(queryset, pk=pk)
         self.check_object_permissions(self.request, obj)
         return obj
 
@@ -744,6 +1258,42 @@ class ProjectDetailUpdateView(DocumentedAPIView):
         return Response(
             project_detail_payload(project, request.user), headers={"ETag": make_etag(project)}
         )
+
+    @transaction.atomic
+    def delete(self, request, pk):
+        project = self.get_object(pk, for_update=True)
+        check_expected_version(request, project)
+        dependencies = _project_delete_dependencies(project)
+        if project.import_batch_id:
+            dependencies.insert(
+                0,
+                {
+                    "categoria": "import",
+                    "descrizione": "progetto proveniente da import",
+                    "conteggio": 1,
+                },
+            )
+        if dependencies:
+            summary = "; ".join(
+                f"{item['descrizione']} ({item['conteggio']})" for item in dependencies
+            )
+            raise ProjectDeleteBlocked(
+                detail=f"Eliminazione bloccata: {summary}.", dipendenze=dependencies
+            )
+        snapshot = {
+            "code": project.code,
+            "title": project.title,
+            "contract_type": project.contract_type,
+            "budget_days": str(project.budget_days),
+            "version": project.version,
+        }
+        project_id = project.id
+        project_code = project.code
+        _audit_mutation(
+            request, "project.delete", "project", project_id, project_code, {"snapshot": snapshot}
+        )
+        project.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProjectFormOptionsView(DocumentedAPIView):
@@ -818,6 +1368,64 @@ class ProjectConfirmReviewView(DocumentedAPIView):
         )
 
 
+class ProjectValidateClosureView(DocumentedAPIView):
+    permission_classes = [CanValidateProjectClosure]
+
+    @transaction.atomic
+    @extend_schema(request=dict, responses={200: dict})
+    def post(self, request, pk):
+        from domain.residuals import project_closure_ready
+        from projects.models import Project, TimesheetStatus
+        from wallet.models import SourceLotStatus
+
+        project = get_object_or_404(
+            Project.objects.select_for_update().prefetch_related(
+                "wallet_allocations", "wallet_source_lots"
+            ),
+            pk=pk,
+        )
+        check_expected_version(request, project)
+        if not project_closure_ready(project):
+            raise serializers.ValidationError(
+                {
+                    "status": (
+                        "Il progetto non è in chiusura da validare: deve avere almeno una quota "
+                        "wallet e tutte le quote devono essere chiuse."
+                    )
+                }
+            )
+
+        project.timesheet_status = TimesheetStatus.CHIUSO
+        project.actual_closure_date = timezone.localdate()
+        project.full_clean()
+        project.save()
+        project.wallet_source_lots.filter(
+            status=SourceLotStatus.CHIUSURA_DA_VALIDARE
+        ).update(status=SourceLotStatus.CHIUSO)
+        _audit_mutation(
+            request,
+            "project.closure.validate",
+            "project",
+            project.id,
+            project.code,
+            {
+                "timesheet_status": project.timesheet_status,
+                "actual_closure_date": project.actual_closure_date.isoformat(),
+                "version": project.version,
+            },
+        )
+        return Response(
+            {
+                "id": str(project.id),
+                "version": project.version,
+                "stato_operativo": "CHIUSO",
+                "timesheet_status": project.timesheet_status,
+                "actual_closure_date": project.actual_closure_date.isoformat(),
+            },
+            headers={"ETag": make_etag(project)},
+        )
+
+
 def update_wallet_allocation(request, alloc, data: dict, *, enforce_version: bool = True):
     from django.core.exceptions import PermissionDenied
     from django.db import transaction
@@ -831,6 +1439,8 @@ def update_wallet_allocation(request, alloc, data: dict, *, enforce_version: boo
     from domain.money import ZERO, to_days
     from domain.wallet_balance import available_residual_for_allocation
     from timesheets.models import TimesheetEntry, TimesheetSource, month_start
+    from wallet.models import AllocationStatus
+    from wallet.services import close_allocation, resize_allocation, sync_allocation_funding
 
     if enforce_version:
         check_expected_version(request, alloc)
@@ -859,7 +1469,10 @@ def update_wallet_allocation(request, alloc, data: dict, *, enforce_version: boo
                 "La rettifica dei consuntivi contabili richiede la capability accounting.adjust."
             )
 
+    released_days = ZERO
+    funded_new_allocated = None
     with transaction.atomic():
+        previous_status = alloc.status
         # 1. Modifica giorni allocati
         allocated_key = None
         if "allocated_days" in data:
@@ -902,7 +1515,10 @@ def update_wallet_allocation(request, alloc, data: dict, *, enforce_version: boo
                     }
                 )
 
-            alloc.allocated_days = new_allocated
+            if alloc.funding_tranches.exists():
+                funded_new_allocated = new_allocated
+            else:
+                alloc.allocated_days = new_allocated
 
         # 2. Architetto assegnatario
         if "assignee" in data or "assignee_id" in data:
@@ -1001,6 +1617,24 @@ def update_wallet_allocation(request, alloc, data: dict, *, enforce_version: boo
                     break
 
             if synthetic_target is not None:
+                effective_allocated = (
+                    funded_new_allocated
+                    if funded_new_allocated is not None
+                    else alloc.allocated_days
+                )
+                if synthetic_target < ZERO:
+                    raise serializers.ValidationError(
+                        {"adjust_consumed_to": "Le giornate consumate non possono essere negative."}
+                    )
+                if synthetic_target > effective_allocated:
+                    raise serializers.ValidationError(
+                        {
+                            "adjust_consumed_to": (
+                                "Le giornate consumate non possono superare quelle allocate "
+                                f"({effective_allocated} gg)."
+                            )
+                        }
+                    )
                 active_entries = list(
                     alloc.timesheet_entries.filter(reversals__isnull=True).exclude(
                         source=TimesheetSource.STORNO
@@ -1018,8 +1652,32 @@ def update_wallet_allocation(request, alloc, data: dict, *, enforce_version: boo
                         note=f"Rettifica consuntivo allocazione: {synthetic_target} gg",
                     )
 
+        closing_now = (
+            previous_status == AllocationStatus.APERTA and alloc.status == AllocationStatus.CHIUSA
+        )
+        if closing_now and not alloc.funding_tranches.exists():
+            final_consumed = (
+                TimesheetEntry.objects.filter(wallet_allocation=alloc).aggregate(total=Sum("days"))[
+                    "total"
+                ]
+                or ZERO
+            )
+            if final_consumed < alloc.allocated_days:
+                released_days = alloc.allocated_days - final_consumed
+                alloc.allocated_days = max(final_consumed, ZERO)
+
         alloc.full_clean()
         alloc.save()
+        if alloc.funding_tranches.exists():
+            if funded_new_allocated is not None and not closing_now:
+                try:
+                    resize_allocation(alloc, funded_new_allocated)
+                except ValueError as exc:
+                    raise serializers.ValidationError({"allocated_days": str(exc)}) from exc
+            if closing_now:
+                released_days = close_allocation(alloc)
+            else:
+                sync_allocation_funding(alloc)
 
     final_consumed = (
         TimesheetEntry.objects.filter(wallet_allocation=alloc).aggregate(total=Sum("days"))["total"]
@@ -1035,6 +1693,7 @@ def update_wallet_allocation(request, alloc, data: dict, *, enforce_version: boo
         "days_allocated": str(alloc.allocated_days),
         "consumed_days": str(final_consumed),
         "available_days": str(final_available),
+        "released_days": str(released_days),
         "status": alloc.status,
         "notes": alloc.notes,
         "assignee": str(alloc.assignee_id) if alloc.assignee_id else None,
@@ -1050,17 +1709,22 @@ def update_wallet_allocation(request, alloc, data: dict, *, enforce_version: boo
 
 
 class WalletAllocationDetailUpdateView(DocumentedAPIView):
-    permission_classes = [CanEditWallet]
+    """Dettaglio leggibile dagli autenticati, mutazioni riservate a wallet.edit."""
 
-    def get_object(self, pk):
+    def get_permissions(self):
+        if self.request.method in ("GET", "HEAD", "OPTIONS"):
+            return [IsAuthenticated()]
+        return [CanEditWallet()]
+
+    def get_object(self, pk, *, for_update=False):
         from wallet.models import WalletAllocation
 
-        return get_object_or_404(
-            WalletAllocation.objects.select_related(
-                "source_project", "activity", "assignee", "wallet_year"
-            ),
-            pk=pk,
+        queryset = WalletAllocation.objects.select_related(
+            "source_project", "activity", "assignee", "wallet_year"
         )
+        if for_update:
+            queryset = queryset.select_for_update(of=("self",))
+        return get_object_or_404(queryset, pk=pk)
 
     @extend_schema(responses={200: dict})
     def get(self, request, pk):
@@ -1088,15 +1752,29 @@ class WalletAllocationDetailUpdateView(DocumentedAPIView):
             }
             for entry in alloc.timesheet_entries.order_by("-period", "-created_at")
         ]
+        flow_detail = next(
+            row for row in wallet_flow(alloc.wallet_year.year) if row["id"] == alloc.id
+        )
         payload = {
             "id": str(alloc.id),
             "version": alloc.version,
             "external_ref": alloc.external_ref,
             "allocated_days": str(alloc.allocated_days),
+            "initial_allocated_days": str(alloc.initial_allocated_days),
             "days_allocated": str(alloc.allocated_days),
             "consumed_days": str(consumed),
             "available_days": str(available),
+            "residuo_allocazione": str(available),
+            "residuo_spendibile_origine": (
+                str(flow_detail["residuo_spendibile_origine"])
+                if flow_detail["residuo_spendibile_origine"] is not None
+                else None
+            ),
+            "validita_origine": flow_detail["validita_origine"],
+            "scadenza_origine": flow_detail["scadenza_origine"],
             "status": alloc.status,
+            "closure_reason": alloc.closure_reason,
+            "stato_operativo": flow_detail["stato_operativo"],
             "notes": alloc.notes,
             "assignee": str(alloc.assignee_id) if alloc.assignee_id else None,
             "architetto": alloc.assignee.full_name if alloc.assignee else None,
@@ -1106,8 +1784,10 @@ class WalletAllocationDetailUpdateView(DocumentedAPIView):
             "activity": str(alloc.activity_id),
             "activity_code": alloc.activity.code,
             "activity_title": alloc.activity.title,
+            "activity_kind": alloc.activity.kind,
             "year": alloc.wallet_year.year,
             "timesheet_entries": entries,
+            "funding": flow_detail.get("fonti_fifo", []),
         }
         return Response(payload, headers={"ETag": make_etag(alloc)})
 
@@ -1116,6 +1796,48 @@ class WalletAllocationDetailUpdateView(DocumentedAPIView):
         alloc = self.get_object(pk)
         payload = update_wallet_allocation(request, alloc, request.data, enforce_version=True)
         return Response(payload, headers={"ETag": make_etag(alloc)})
+
+    @transaction.atomic
+    def delete(self, request, pk):
+        alloc = self.get_object(pk, for_update=True)
+        check_expected_version(request, alloc)
+        dependencies = []
+        if alloc.import_batch_id:
+            dependencies.append("allocazione proveniente da import")
+        entry_count = alloc.timesheet_entries.count()
+        if entry_count:
+            dependencies.append(f"consuntivi/rettifiche collegati ({entry_count})")
+        anomaly_count = alloc.anomalies.count()
+        if anomaly_count:
+            dependencies.append(f"anomalie collegate ({anomaly_count})")
+        if dependencies:
+            raise DomainError(
+                detail=(
+                    "Eliminazione bloccata: " + "; ".join(dependencies) + ". "
+                    "Chiudi o rettifica l'allocazione senza cancellare il ledger."
+                ),
+                dipendenze=dependencies,
+            )
+        snapshot = {
+            "year": alloc.wallet_year.year,
+            "source_project": alloc.source_project.code if alloc.source_project else None,
+            "activity": alloc.activity.code,
+            "allocated_days": str(alloc.allocated_days),
+            "status": alloc.status,
+            "version": alloc.version,
+        }
+        allocation_id = alloc.id
+        label = alloc.external_ref or f"{snapshot['source_project']} → {snapshot['activity']}"
+        _audit_mutation(
+            request,
+            "wallet_allocation.delete",
+            "wallet_allocation",
+            allocation_id,
+            label,
+            {"snapshot": snapshot},
+        )
+        alloc.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class WalletAllocationAdjustView(DocumentedAPIView):

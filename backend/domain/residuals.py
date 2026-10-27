@@ -186,6 +186,51 @@ def project_balance_qs(queryset: models.QuerySet | None = None) -> models.QueryS
     )
 
 
+def project_closure_ready(project) -> bool:
+    from projects.models import ContractType, TimesheetStatus
+    from wallet.models import SourceLotStatus
+
+    if project.contract_type == ContractType.CANONE:
+        return False
+    if project.timesheet_status == TimesheetStatus.CHIUSO:
+        return False
+    lots = list(project.wallet_source_lots.all())
+    if lots:
+        return all(
+            lot.status == SourceLotStatus.CHIUSURA_DA_VALIDARE for lot in lots
+        )
+    allocations = list(project.wallet_allocations.all())
+    return bool(allocations) and all(
+        allocation.status == "CHIUSA" for allocation in allocations
+    )
+
+
+def project_operational_status(project) -> str:
+    from projects.models import ContractType, OfferStatus, TimesheetStatus
+
+    if project.contract_type == ContractType.CANONE:
+        return "CANONE"
+    if project.timesheet_status == TimesheetStatus.CHIUSO:
+        return "CHIUSO"
+    if project_closure_ready(project):
+        return "CHIUSURA_DA_VALIDARE"
+
+    allocations = list(project.wallet_allocations.all())
+    if project.released_to_wallet_days > ZERO or allocations or project.wallet_source_lots.exists():
+        return "WALLET"
+
+    if project.offer_status == OfferStatus.INVIATA:
+        return "OFFERTA_INVIATA"
+    if (
+        project.offer_status == OfferStatus.ACCETTATA
+        and project.timesheet_status == TimesheetStatus.NON_AVVIATO
+    ):
+        return "OFFERTA_ACCETTATA"
+    if project.timesheet_status == TimesheetStatus.ATTIVO:
+        return "IN_CORSO"
+    return project.timesheet_status
+
+
 def unallocated_residual(
     budget_days: Decimal, direct_consumed: Decimal, allocated_out: Decimal
 ) -> Decimal:

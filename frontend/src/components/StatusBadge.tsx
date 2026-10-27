@@ -8,6 +8,12 @@ const LABELS: Record<string, string> = {
   NON_ALLINEATO: "Non allineato",
   NON_VERIFICABILE: "Non verificabile / dati assenti",
   NON_AVVIATO: "Non avviato",
+  CANONE: "Canone",
+  WALLET: "Wallet",
+  IN_CORSO: "In corso",
+  OFFERTA_ACCETTATA: "Offerta accettata",
+  OFFERTA_INVIATA: "Offerta inviata",
+  CHIUSURA_DA_VALIDARE: "Chiusura da validare",
   ATTIVO: "Attivo",
   CHIUSO: "Chiuso",
   DA_VERIFICARE: "Da verificare",
@@ -33,7 +39,18 @@ const DOMAIN_LABELS: Record<StatusDomain, string> = {
 
 function statusTone(status: string): Tone {
   if (["ALLINEATO", "CHIUSO", "TOTALE", "ACCETTATA", "RISOLTA"].includes(status)) return "ok";
-  if (["DA_VERIFICARE", "PARZIALE", "INVIATA", "APERTA"].includes(status)) return "warn";
+  if (
+    [
+      "DA_VERIFICARE",
+      "PARZIALE",
+      "INVIATA",
+      "APERTA",
+      "WALLET",
+      "IN_CORSO",
+      "CHIUSURA_DA_VALIDARE",
+    ].includes(status)
+  )
+    return "warn";
   if (["NON_ALLINEATO", "SCADUTA", "NON_ACCETTATA"].includes(status)) return "danger";
   return "neutral";
 }

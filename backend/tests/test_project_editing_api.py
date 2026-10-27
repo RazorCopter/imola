@@ -5,16 +5,27 @@ from decimal import Decimal
 import pytest
 
 from core import roles
+from core.models import AdminAuditEvent
+from imports.models import ImportKind
 from projects.models import (
     ContractType,
     OfferStatus,
+    Project,
     TimesheetStatus,
 )
 from tests.factories import (
+    AnomalyFactory,
+    CanoneFactory,
+    ImportBatchFactory,
+    MilestoneFactory,
     OrganizationFactory,
     PersonFactory,
+    PpmSnapshotRowFactory,
     ProjectFactory,
     SupplierOrganizationFactory,
+    TimesheetEntryFactory,
+    WalletActivityFactory,
+    WalletAllocationFactory,
 )
 from tests.test_roles_object_permissions import make_client_for_role
 
@@ -188,3 +199,71 @@ def test_endpoint_options_progetti():
     assert "billing_statuses" in data
     assert "organizations" in data
     assert "people" in data
+
+
+def test_delete_progetto_manual_empty_con_audit():
+    client, user = make_client_for_role(roles.ADMIN)
+    project = ProjectFactory(code="DELETE-MANUAL")
+
+    response = client.delete(
+        f"/api/v1/projects/{project.id}", HTTP_IF_MATCH=f'W/"{project.id}-{project.version}"'
+    )
+
+    assert response.status_code == 204, response.data
+    assert not Project.objects.filter(pk=project.id).exists()
+    audit = AdminAuditEvent.objects.get(action="project.delete", target_id=str(project.id))
+    assert audit.actor == user
+    assert audit.details["snapshot"]["code"] == "DELETE-MANUAL"
+
+
+def test_delete_progetto_richiede_permission_e_versione_e_rifiuta_stale():
+    project = ProjectFactory(code="DELETE-PRECONDITION")
+    read_only, _ = make_client_for_role(roles.REFERENT)
+    assert read_only.delete(f"/api/v1/projects/{project.id}").status_code == 403
+
+    admin, _ = make_client_for_role(roles.ADMIN)
+    assert admin.delete(f"/api/v1/projects/{project.id}").status_code == 428
+    stale = admin.delete(f"/api/v1/projects/{project.id}", HTTP_IF_MATCH='W/"stale-0"')
+    assert stale.status_code == 409
+    assert Project.objects.filter(pk=project.id).exists()
+
+
+def test_delete_progetto_importato_bloccato():
+    admin, _ = make_client_for_role(roles.ADMIN)
+    batch = ImportBatchFactory(kind=ImportKind.SEED_JSON)
+    project = ProjectFactory(code="DELETE-IMPORTED", import_batch=batch)
+    response = admin.delete(
+        f"/api/v1/projects/{project.id}", HTTP_IF_MATCH=f'W/"{project.id}-{project.version}"'
+    )
+    assert response.status_code == 409
+    assert "import" in response.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "dependency",
+    ("milestone", "timesheet", "source_allocation", "activity", "canone", "ppm", "anomaly"),
+)
+def test_delete_progetto_bloccato_per_dipendenze_primarie(dependency):
+    admin, _ = make_client_for_role(roles.ADMIN)
+    project = ProjectFactory(code=f"DELETE-{dependency}")
+    if dependency == "milestone":
+        MilestoneFactory(project=project)
+    elif dependency == "timesheet":
+        TimesheetEntryFactory(project=project)
+    elif dependency == "source_allocation":
+        WalletAllocationFactory(source_project=project)
+    elif dependency == "activity":
+        WalletActivityFactory(project=project)
+    elif dependency == "canone":
+        CanoneFactory(project=project)
+    elif dependency == "ppm":
+        PpmSnapshotRowFactory(project=project)
+    else:
+        AnomalyFactory(project=project)
+
+    response = admin.delete(
+        f"/api/v1/projects/{project.id}", HTTP_IF_MATCH=f'W/"{project.id}-{project.version}"'
+    )
+    assert response.status_code == 409
+    assert "Eliminazione bloccata" in response.json()["detail"]
+    assert Project.objects.filter(pk=project.id).exists()

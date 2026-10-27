@@ -81,7 +81,7 @@ def _reject_later_batches(batch: ImportBatch) -> None:
         ImportBatch.objects.filter(
             Q(applied_at__gt=batch.applied_at)
             | Q(applied_at=batch.applied_at, created_at__gt=batch.created_at),
-            kind=ImportKind.SEED_JSON,
+            kind__in=(ImportKind.SEED_JSON, ImportKind.WORKBOOK_JSON),
             status=ImportStatus.APPLIED,
         )
         .order_by("applied_at")
@@ -133,7 +133,7 @@ def rollback_seed_batch(batch_id: str) -> RollbackResult:
     except (ImportBatch.DoesNotExist, ValueError) as exc:
         raise RollbackError(f"Batch inesistente: {batch_id}.") from exc
 
-    if batch.kind != ImportKind.SEED_JSON:
+    if batch.kind not in {ImportKind.SEED_JSON, ImportKind.WORKBOOK_JSON}:
         raise RollbackError(f"Il batch {batch.id} non è un import seed JSON.")
     if batch.status == ImportStatus.ROLLED_BACK:
         raise RollbackError(f"Il batch {batch.id} è già stato annullato.")
@@ -151,10 +151,14 @@ def rollback_seed_batch(batch_id: str) -> RollbackResult:
         label: cast(Any, model).objects.filter(import_batch=batch).count()
         for label, model in ROLLBACK_ORDER
     }
+    deleted["fogli_workbook"] = batch.workbook_sheets.count()
+    deleted["dataset_workbook"] = batch.workbook_datasets.count()
     reason = f"Rollback batch seed {batch.id}"
     with allow_ledger_mutation(reason, batch=batch):
         for _label, model in ROLLBACK_ORDER:
             cast(Any, model).objects.filter(import_batch=batch).delete()
+        batch.workbook_datasets.all().delete()
+        batch.workbook_sheets.all().delete()
 
     rolled_back_at = timezone.now()
     report = dict(batch.report or {})

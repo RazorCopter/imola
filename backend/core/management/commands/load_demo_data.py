@@ -14,6 +14,7 @@ from anomalies.models import Anomaly, AnomalyStatus, Scope, Severity, build_fing
 from anomalies.runner import run_checks
 from canone.models import Canone, CanoneSubactivity, Office
 from core import roles
+from core.models import AppSettings
 from directory.models import Organization, OrganizationKind, Person
 from imports.models import ImportBatch, ImportKind, ImportStatus
 from ppm.models import PpmSnapshot, PpmSnapshotRow, SnapshotKind
@@ -57,6 +58,11 @@ class Command(BaseCommand):
 
         self.stdout.write("Configurazione ruoli e utenti demo...")
         roles.ensure_groups()
+
+        settings_obj = AppSettings.get_solo()
+        if settings_obj.daily_person_cost == Decimal("0.00"):
+            settings_obj.daily_person_cost = Decimal("650.00")
+            settings_obj.save(update_fields=["daily_person_cost"])
 
         admin, _ = User.objects.update_or_create(
             username="demo_admin",

@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -7,8 +7,13 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useState } from "react";
+
+import { cn } from "@/lib/utils";
+
+export interface DataTableColumnClasses {
+  header?: string;
+  cell?: string;
+}
 
 interface DataTableProps<T> {
   data: T[];
@@ -16,6 +21,7 @@ interface DataTableProps<T> {
   emptyLabel: string;
   rowHeight?: number;
   onRowClick?: (row: T) => void;
+  getColumnClasses?: (columnId: string) => DataTableColumnClasses | undefined;
 }
 
 export function DataTable<T>({
@@ -24,9 +30,9 @@ export function DataTable<T>({
   emptyLabel,
   rowHeight = 44,
   onRowClick,
+  getColumnClasses,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const parentRef = useRef<HTMLDivElement>(null);
   const table = useReactTable({
     data,
     columns,
@@ -36,12 +42,6 @@ export function DataTable<T>({
     getSortedRowModel: getSortedRowModel(),
   });
   const rows = table.getRowModel().rows;
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => rowHeight,
-    overscan: 8,
-  });
 
   if (rows.length === 0)
     return (
@@ -52,84 +52,70 @@ export function DataTable<T>({
 
   return (
     <div
-      ref={parentRef}
       className="max-h-[62vh] overflow-auto rounded-lg border border-border bg-card"
       role="region"
       aria-label="Tabella dati"
       tabIndex={0}
+      data-sizing-policy="content"
     >
-      <table className="w-full border-separate border-spacing-0 text-sm">
+      <table className="w-max min-w-full table-auto border-separate border-spacing-0 text-sm">
         <thead className="sticky top-0 z-10 bg-muted">
           {table.getHeaderGroups().map((group) => (
             <tr key={group.id}>
-              {group.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className="border-b border-border px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                >
-                  <button
-                    type="button"
-                    className={
-                      header.column.getCanSort() ? "cursor-pointer select-none" : "cursor-default"
-                    }
-                    onClick={header.column.getToggleSortingHandler()}
+              {group.headers.map((header) => {
+                const columnClasses = getColumnClasses?.(header.column.id);
+                return (
+                  <th
+                    key={header.id}
+                    className={cn(
+                      "whitespace-nowrap border-b border-border px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+                      columnClasses?.header,
+                    )}
                   >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                    {header.column.getIsSorted() === "asc"
-                      ? " ↑"
-                      : header.column.getIsSorted() === "desc"
-                        ? " ↓"
-                        : ""}
-                  </button>
-                </th>
-              ))}
+                    <button
+                      type="button"
+                      className={
+                        header.column.getCanSort() ? "cursor-pointer select-none" : "cursor-default"
+                      }
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.column.getIsSorted() === "asc"
+                        ? " ↑"
+                        : header.column.getIsSorted() === "desc"
+                          ? " ↓"
+                          : ""}
+                    </button>
+                  </th>
+                );
+              })}
             </tr>
           ))}
         </thead>
-        <tbody style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
-          {virtualizer.getVirtualItems().length > 0
-            ? virtualizer.getVirtualItems().map((virtualRow) => {
-                const row = rows[virtualRow.index];
-                if (row === undefined) return null;
-                return (
-                  <tr
-                    key={row.id}
-                    className={
-                      onRowClick
-                        ? "absolute left-0 top-0 flex w-full cursor-pointer border-b border-border hover:bg-muted/60"
-                        : "absolute left-0 top-0 flex w-full border-b border-border"
-                    }
-                    style={{
-                      height: virtualRow.size,
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                    onClick={() => onRowClick?.(row.original)}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="flex-1 truncate px-3 py-2">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                );
-              })
-            : rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className={
-                    onRowClick
-                      ? "flex w-full cursor-pointer border-b border-border hover:bg-muted/60"
-                      : "flex w-full border-b border-border"
-                  }
-                  onClick={() => onRowClick?.(row.original)}
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              key={row.id}
+              className={cn(
+                "border-b border-border",
+                onRowClick && "cursor-pointer hover:bg-muted/60",
+              )}
+              style={{ height: rowHeight }}
+              onClick={() => onRowClick?.(row.original)}
+            >
+              {row.getVisibleCells().map((cell) => (
+                <td
+                  key={cell.id}
+                  className={cn(
+                    "whitespace-nowrap border-b border-border px-3 py-2 align-middle",
+                    getColumnClasses?.(cell.column.id)?.cell,
+                  )}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="flex-1 truncate px-3 py-2">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </td>
               ))}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

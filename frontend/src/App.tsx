@@ -38,6 +38,11 @@ const ReviewQueuePage = lazy(() =>
 const AdminPage = lazy(() =>
   import("@/features/admin/AdminPage").then((m) => ({ default: m.AdminPage })),
 );
+const CostAnalysisPage = lazy(() =>
+  import("@/features/cost-analysis/CostAnalysisPage").then((m) => ({
+    default: m.CostAnalysisPage,
+  })),
+);
 
 export default function App() {
   const { status } = useSession();
@@ -77,6 +82,7 @@ export default function App() {
             <Route path="/progetti/:projectId" element={<ProjectDetailPage />} />
             <Route path="/wallet" element={<WalletPage />} />
             <Route path="/canone" element={<CanonePage />} />
+            <Route path="/analisi-costi" element={<CostAnalysisPage />} />
             <Route path="/riconciliazione" element={<ReconciliationPage />} />
             <Route path="/anomalie" element={<AnomaliesPage />} />
             <Route path="/revisione" element={<ReviewQueuePage />} />

@@ -30,7 +30,8 @@
     "reconciliation": "",
     "anomalies": "",
     "review": "",
-    "admin": ""
+    "admin": "",
+    "costAnalysis": "Cost Analysis"
   },
   "auth": {
     "signIn": "",
@@ -81,7 +82,13 @@
     "reassign": "",
     "source": "",
     "activity": "",
-    "noSource": ""
+    "noSource": "",
+    "monteWallet": "Monte Wallet capacity",
+    "unallocated": "Unallocated Wallet residual",
+    "allocatedTotal": "Total allocated to activities",
+    "availableOnAllocations": "Residual available on activities",
+    "consumedOnAllocations": "Consumed on activities",
+    "originMonte": "Origin: Monte Wallet"
   },
   "canone": {
     "total": "",
@@ -131,15 +138,54 @@
     "CERTO": ""
   },
   "dashboard": {
-    "title": "",
-    "whatToDoNow": "",
-    "activeProjects": "",
-    "reconciliationDelta": "",
-    "lastSnapshot": ""
+    "title": "Dashboard",
+    "whatToDoNow": "What to do now",
+    "activeProjects": "Active projects",
+    "reconciliationDelta": "PPM reconciliation delta",
+    "lastSnapshot": "Latest snapshot",
+    "projectsByStatus": "Projects by status",
+    "walletComposition": "Wallet composition",
+    "walletDetails": "Wallet availability details",
+    "upcomingBillings": "Upcoming billings",
+    "billingDate": "Billing date",
+    "classification": "Classification",
+    "days": "Days",
+    "showingBillings": "Showing {{shown}} of {{total}}",
+    "noUpcomingBillings": "No open milestones planned for the current month.",
+    "noChartData": "No data available for this chart.",
+    "dataError": "Dashboard data could not be loaded.",
+    "billingClass": {
+      "MESE_CORRENTE": "Current month"
+    }
   },
   "errors": {
     "generic": "",
     "stale": "",
     "network": ""
+  },
+  "costAnalysis": {
+    "title": "Cost Analysis",
+    "from": "From",
+    "to": "To",
+    "apply": "Apply filters",
+    "totalDays": "Total days",
+    "totalCost": "Total cost",
+    "dailyCost": "Configured average daily cost",
+    "byProject": "By project",
+    "bySupplier": "By supplier",
+    "bySource": "By source",
+    "monthlyTrend": "Monthly trend",
+    "projectChart": "Costs by project",
+    "projectChartDescription": "Projects sorted by descending cost. Search and Top N do not change global KPIs.",
+    "projectSearch": "Search project",
+    "projectLimit": "Number of projects",
+    "projectChartSummary": "Accessible project cost summary",
+    "noMatchingProjects": "No projects match your search.",
+    "label": "Item",
+    "days": "Days",
+    "cost": "Cost",
+    "zeroCost": "The person-day cost is not configured. Days remain available; configure the cost in Administration.",
+    "empty": "No timesheets in the selected period.",
+    "error": "Cost analysis unavailable"
   }
 }

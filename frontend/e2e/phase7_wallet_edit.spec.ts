@@ -6,66 +6,51 @@ const FORNITORE_USER = "demo_fornitore";
 const FORNITORE_PASS = "Demo-Local-2026!";
 
 async function login(page: Page, username = ADMIN_USER, password = ADMIN_PASS) {
+  await page.goto("/");
+  const sessionRes = await page.request.get("/api/v1/auth/session");
+  if (sessionRes.ok()) {
+    const sessionData = await sessionRes.json();
+    if (sessionData.username === username) return;
+    await page.request.post("/api/v1/auth/logout");
+    await page.context().clearCookies();
     await page.goto("/");
-    const sessionRes = await page.request.get("/api/v1/auth/session");
-    if (sessionRes.ok()) {
-        const sessionData = await sessionRes.json();
-        if (sessionData.username === username) {
-            await expect(page.getByRole("button", { name: "Esci" })).toBeVisible({ timeout: 10000 });
-            return;
-        }
-        await page.request.post("/api/v1/auth/logout");
-        await page.context().clearCookies();
-        await page.goto("/");
-    }
-
-    await expect(page.locator("#username")).toBeVisible({ timeout: 15000 });
-    await page.locator("#username").fill(username);
-    await page.locator("#password").fill(password);
-    await page.getByRole("button", { name: "Accedi" }).click();
-    await expect(page.getByRole("button", { name: "Esci" })).toBeVisible({ timeout: 15000 });
+  }
+  await page.locator("#username").fill(username);
+  await page.locator("#password").fill(password);
+  await page.getByRole("button", { name: "Accedi" }).click();
+  await expect(page.getByRole("button", { name: "Esci" })).toBeVisible({ timeout: 15000 });
 }
 
-test.describe("Tranche 5: Editing Wallet con pulsante EDIT arancione", () => {
-    test("admin vede pulsante EDIT arancione sulle allocazioni e apre modale", async ({ page }) => {
-        await login(page, ADMIN_USER, ADMIN_PASS);
-        await page.goto("/wallet");
+test.describe("Tranche C: pannello operativo Wallet", () => {
+  test("admin seleziona una riga e vede editing inline", async ({ page }) => {
+    await login(page);
+    await page.goto("/wallet");
+    await expect(page.getByRole("heading", { name: /Wallet/ })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("button", { name: "Nuova allocazione" })).toBeVisible();
+    await page.getByRole("button", { name: "Nuova allocazione" }).click();
+    await expect(page.getByText(/residuo spendibile del progetto origine/i)).toBeVisible();
+    await page.getByRole("button", { name: "Annulla" }).click();
+    const rows = page.locator("tr[data-testid^='allocation-row-']");
+    if ((await rows.count()) > 0) {
+      await rows.first().click();
+      await expect(page.getByLabel("Dettaglio allocazione")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Salva" })).toHaveClass(/bg-emerald-600/);
+      await expect(page.getByRole("button", { name: "Elimina allocazione" })).toBeVisible();
+      await page.getByRole("button", { name: "Elimina allocazione" }).click();
+      await expect(page.getByRole("button", { name: "Elimina definitivamente" })).toBeDisabled();
+      await page.getByRole("button", { name: "Annulla" }).click();
+      await expect(page.getByRole("button", { name: "Riduci al consumato" })).toHaveCount(0);
+    }
+  });
 
-        await expect(page.getByRole("heading", { name: /Wallet/ })).toBeVisible({ timeout: 15000 });
-
-        const editButtons = page.locator("button[data-testid^='edit-allocation-']");
-        const count = await editButtons.count();
-
-        if (count > 0) {
-            const firstEdit = editButtons.first();
-            await expect(firstEdit).toBeVisible();
-            await expect(firstEdit).toHaveText("EDIT");
-            await expect(firstEdit).toHaveClass(/bg-amber-500/);
-
-            // Clicca sul pulsante EDIT
-            await firstEdit.click();
-            await expect(page.getByRole("heading", { name: "Modifica Allocazione Wallet" })).toBeVisible({
-                timeout: 10000,
-            });
-            await expect(page.locator("#allocated_days_input")).toBeVisible();
-            await expect(page.getByRole("button", { name: "Chiudi" })).toBeVisible();
-
-            // Chiudi il dialog
-            await page.getByRole("button", { name: "Chiudi" }).click();
-            await expect(
-                page.getByRole("heading", { name: "Modifica Allocazione Wallet" }),
-            ).not.toBeVisible();
-        }
-    });
-
-    test("fornitore non vede il pulsante EDIT arancione sulle allocazioni wallet", async ({
-        page,
-    }) => {
-        await login(page, FORNITORE_USER, FORNITORE_PASS);
-        await page.goto("/wallet");
-
-        await expect(page.getByRole("heading", { name: /Wallet/ })).toBeVisible({ timeout: 15000 });
-        const editButtons = page.locator("button[data-testid^='edit-allocation-']");
-        await expect(editButtons).toHaveCount(0);
-    });
+  test("fornitore consulta il dettaglio ma non può salvare", async ({ page }) => {
+    await login(page, FORNITORE_USER, FORNITORE_PASS);
+    await page.goto("/wallet");
+    const rows = page.locator("tr[data-testid^='allocation-row-']");
+    if ((await rows.count()) > 0) {
+      await rows.first().press("Enter");
+      await expect(page.getByText(/Consultazione/)).toBeVisible();
+      await expect(page.getByRole("button", { name: "Salva" })).toHaveCount(0);
+    }
+  });
 });

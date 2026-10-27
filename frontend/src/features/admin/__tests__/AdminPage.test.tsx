@@ -37,6 +37,13 @@ vi.mock("@/features/auth/session", () => ({
 const getMock = vi.mocked(api.get);
 const postMock = vi.mocked(api.post);
 const putMock = vi.mocked(api.put);
+const patchMock = vi.mocked(api.patch);
+
+const settings = {
+  costo_giornata_uomo: "100.00",
+  politica_costo: "Valore globale corrente, non storicizzato.",
+  version: 1,
+};
 
 const users = {
   roles: [
@@ -86,12 +93,33 @@ describe("AdminPage", () => {
           ? { results: [] }
           : url === "/admin/users"
             ? users
-            : roleCapabilities,
+            : url === "/settings"
+              ? settings
+              : roleCapabilities,
       ),
     );
   });
 
-  it("mostra i tre tab e abilita apply solo dopo dry-run", async () => {
+  it("carica e salva la configurazione invalidando i dati dipendenti", async () => {
+    patchMock.mockResolvedValue({ ...settings, costo_giornata_uomo: "125.50", version: 2 });
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole("tab", { name: "Configurazione" }));
+    const input = await screen.findByLabelText("Costo giornata uomo (€)");
+    expect(input).toHaveValue(100);
+    await user.clear(input);
+    await user.type(input, "125.50");
+    await user.click(screen.getByRole("button", { name: "Salva" }));
+    await waitFor(() =>
+      expect(patchMock).toHaveBeenCalledWith("/settings", {
+        costo_giornata_uomo: "125.5",
+        expected_version: 1,
+      }),
+    );
+    expect(await screen.findByText("Configurazione salvata.")).toBeVisible();
+  });
+
+  it("mostra i quattro tab e abilita apply solo dopo dry-run", async () => {
     postMock.mockResolvedValue({
       mode: "dry-run",
       confirmation_hash: "hash-valido",
@@ -166,7 +194,7 @@ describe("AdminPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Username già utilizzato.");
   });
 
-  it("mostra la Zona Pericolosa con pulsante ELIMINA DB e apre il dialog", async () => {
+  it("mostra il reset solo in Configurazione con testo nuovo e apre il dialog", async () => {
     getMock.mockImplementation((path: string) => {
       if (path === "/admin/reset-data") {
         return Promise.resolve({
@@ -185,8 +213,16 @@ describe("AdminPage", () => {
     const user = userEvent.setup();
     renderPage();
 
-    const deleteDbBtn = await screen.findByTestId("open-delete-db-dialog-btn");
-    expect(deleteDbBtn).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "Import ed export" })).toBeInTheDocument();
+    expect(screen.queryByTestId("open-delete-db-dialog-btn")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Utenti" }));
+    expect(screen.queryByTestId("open-delete-db-dialog-btn")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Ruoli e privilegi" }));
+    expect(screen.queryByTestId("open-delete-db-dialog-btn")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Configurazione" }));
+
+    expect(screen.getByRole("heading", { name: "Attenzione - Reset Completo DB" })).toBeVisible();
+    const deleteDbBtn = screen.getByTestId("open-delete-db-dialog-btn");
     expect(deleteDbBtn).toHaveTextContent("ELIMINA DB");
 
     await user.click(deleteDbBtn);

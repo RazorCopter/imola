@@ -28,9 +28,26 @@ class AllocationStatus(models.TextChoices):
     CHIUSA = "CHIUSA", "Chiusa"
 
 
+class AllocationClosureReason(models.TextChoices):
+    ESAURITA = "ESAURITA", "Completamente erosa"
+    CON_RESIDUO = "CON_RESIDUO", "Chiusa con residuo rilasciato"
+
+
+class SourceLotStatus(models.TextChoices):
+    DISPONIBILE = "DISPONIBILE", "Disponibile"
+    IMPEGNATO = "IMPEGNATO", "Impegnato"
+    CHIUSURA_DA_VALIDARE = "CHIUSURA_DA_VALIDARE", "Chiusura da validare"
+    CHIUSO = "CHIUSO", "Chiuso"
+
+
 class WalletYear(TrackedModel, ImportedRecordMixin):
     year = models.PositiveSmallIntegerField(unique=True, verbose_name="anno")
     notes = models.TextField(blank=True, verbose_name="note")
+    reconciliation_adjustment_days = DaysField(
+        default=0,
+        verbose_name="rettifica di riconciliazione Excel",
+        help_text="Scarto esplicito tra KPI del workbook e somma delle righe arrotondate.",
+    )
     history = HistoricalRecords()
 
     class Meta:
@@ -101,7 +118,50 @@ class WalletActivity(TrackedModel, ImportedRecordMixin):
             )
 
 
+class WalletSourceLot(TrackedModel, ImportedRecordMixin):
+    """Residuo di un progetto che alimenta il wallet e conserva la provenienza."""
+
+    wallet_year = models.ForeignKey(
+        WalletYear, on_delete=models.PROTECT, related_name="source_lots", verbose_name="wallet"
+    )
+    source_project = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.PROTECT,
+        related_name="wallet_source_lots",
+        verbose_name="progetto di origine",
+    )
+    source_year = models.PositiveSmallIntegerField(verbose_name="anno di provenienza")
+    capacity_days = DaysField(verbose_name="giornate conferite")
+    effective_date = models.DateField(null=True, blank=True, verbose_name="data di conferimento")
+    status = models.CharField(
+        max_length=24,
+        choices=SourceLotStatus.choices,
+        default=SourceLotStatus.DISPONIBILE,
+        verbose_name="stato lotto",
+    )
+    external_ref = models.CharField(max_length=100, unique=True, verbose_name="riferimento import")
+    notes = models.TextField(blank=True, verbose_name="note")
+    history = HistoricalRecords()
+
+    class Meta:
+        verbose_name = "lotto sorgente wallet"
+        verbose_name_plural = "lotti sorgente wallet"
+        ordering = ("source_year", "effective_date", "source_project__code")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(capacity_days__gte=0), name="wallet_source_capacity_non_negative"
+            ),
+            models.UniqueConstraint(
+                fields=("wallet_year", "source_project"), name="wallet_source_project_per_year"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.source_project.code}: {self.capacity_days} gg"
+
+
 class WalletAllocation(TrackedModel, VerifiableMixin, ImportedRecordMixin):
+    """Utilizzo del wallet; le fonti sono nelle relative tranche FIFO."""
     wallet_year = models.ForeignKey(
         WalletYear,
         on_delete=models.PROTECT,
@@ -132,12 +192,23 @@ class WalletAllocation(TrackedModel, VerifiableMixin, ImportedRecordMixin):
         help_text="Obbligatorio per le nuove allocazioni create dall'interfaccia.",
     )
     allocated_days = DaysField(verbose_name="giornate allocate")
+    initial_allocated_days = DaysField(
+        default=0, verbose_name="giornate originariamente riservate"
+    )
     status = models.CharField(
         max_length=10,
         choices=AllocationStatus.choices,
         default=AllocationStatus.APERTA,
         verbose_name="stato",
     )
+    closure_reason = models.CharField(  # noqa: DJ001
+        max_length=20,
+        choices=AllocationClosureReason.choices,
+        null=True,
+        blank=True,
+        verbose_name="motivo chiusura",
+    )
+    closed_at = models.DateTimeField(null=True, blank=True, verbose_name="chiusa il")
     notes = models.TextField(blank=True, verbose_name="note")
     external_ref = models.CharField(
         max_length=100,
@@ -190,5 +261,59 @@ class WalletAllocation(TrackedModel, VerifiableMixin, ImportedRecordMixin):
         return f"{origin} -> {self.activity.code}"
 
     def save(self, *args, **kwargs) -> None:
-        self.requires_source_attribution = self.source_project_id is None
+        if self.initial_allocated_days == 0 and self.allocated_days > 0:
+            self.initial_allocated_days = self.allocated_days
+        has_funding = bool(self.pk and self.funding_tranches.exists())
+        self.requires_source_attribution = False if has_funding else self.source_project_id is None
         super().save(*args, **kwargs)
+
+
+class WalletFundingTranche(TrackedModel, ImportedRecordMixin):
+    """Quota di un utilizzo finanziata da uno specifico lotto sorgente."""
+
+    allocation = models.ForeignKey(
+        WalletAllocation,
+        on_delete=models.CASCADE,
+        related_name="funding_tranches",
+        verbose_name="utilizzo wallet",
+    )
+    source_lot = models.ForeignKey(
+        WalletSourceLot,
+        on_delete=models.PROTECT,
+        related_name="funding_tranches",
+        verbose_name="lotto sorgente",
+    )
+    sequence = models.PositiveSmallIntegerField(verbose_name="ordine FIFO")
+    initial_reserved_days = DaysField(verbose_name="giornate inizialmente riservate")
+    committed_days = DaysField(verbose_name="giornate attualmente impegnate")
+    consumed_days = DaysField(default=0, verbose_name="giornate erose")
+    external_ref = models.CharField(max_length=100, unique=True, verbose_name="riferimento import")
+    history = HistoricalRecords()
+
+    class Meta:
+        verbose_name = "tranche di finanziamento wallet"
+        verbose_name_plural = "tranche di finanziamento wallet"
+        ordering = ("allocation", "sequence")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("allocation", "sequence"), name="wallet_funding_sequence_unique"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(initial_reserved_days__gte=0),
+                name="wallet_funding_initial_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(committed_days__gte=0),
+                name="wallet_funding_committed_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(consumed_days__gte=0),
+                name="wallet_funding_consumed_non_negative",
+            ),
+        ]
+
+    def clean(self) -> None:
+        if self.committed_days > self.initial_reserved_days:
+            raise ValidationError({"committed_days": "Non può superare la riserva iniziale."})
+        if self.consumed_days > self.committed_days:
+            raise ValidationError({"consumed_days": "Non può superare le giornate impegnate."})

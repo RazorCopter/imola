@@ -6,9 +6,11 @@ export const CAPABILITIES = {
   MANAGE_PRIVILEGES: "privileges.manage",
   CREATE_PROJECTS: "projects.create",
   EDIT_PROJECTS: "projects.edit",
+  VALIDATE_PROJECT_CLOSURE: "projects.validate_closure",
   ANNOTATE_OWN_PROJECTS: "projects.annotate_own",
   CREATE_TIMESHEETS: "timesheets.create",
   EDIT_WALLET: "wallet.edit",
+  MANAGE_CANONE: "canone.manage",
   ADJUST_ACCOUNTING: "accounting.adjust",
   UPLOAD_IMPORTS: "imports.upload",
   APPLY_IMPORTS: "imports.apply",
@@ -32,6 +34,10 @@ export function hasCapability(
   return legacyFallback(session);
 }
 
+export function canManageCanone(session: Session | null): boolean {
+  return hasCapability(session, CAPABILITIES.MANAGE_CANONE, (legacy) => legacy.is_admin);
+}
+
 export function canWriteLedger(session: Session | null): boolean {
   return hasCapability(session, CAPABILITIES.ADJUST_ACCOUNTING, (legacy) => legacy.can_write);
 }
@@ -53,6 +59,12 @@ export function canEditProjects(session: Session | null): boolean {
     session,
     CAPABILITIES.EDIT_PROJECTS,
     (legacy) => legacy.is_admin || Boolean(legacy.roles?.includes("responsabile_bmed")),
+  );
+}
+
+export function canValidateProjectClosure(session: Session | null): boolean {
+  return hasCapability(session, CAPABILITIES.VALIDATE_PROJECT_CLOSURE, (legacy) =>
+    Boolean(legacy.is_admin || legacy.roles?.includes("fornitore")),
   );
 }
 

@@ -1,160 +1,331 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WalletPage } from "@/features/wallet/WalletPage";
 import { api } from "@/lib/api";
 
 vi.mock("@/lib/api", () => ({
-  api: { get: vi.fn(), post: vi.fn(), patch: vi.fn() },
+  api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
+  ApiError: class ApiError extends Error {},
 }));
-
+let capabilities = ["wallet.edit", "accounting.adjust"];
 vi.mock("@/features/auth/session", () => ({
   useSession: () => ({
     session: {
       username: "test",
-      full_name: "Test",
-      email: "",
-      roles: ["responsabile_bmed"],
+      roles: [],
+      capabilities,
       is_admin: false,
-      can_write: true,
+      can_write: false,
     },
-    status: "authenticated",
-    expired: false,
-    signIn: vi.fn(),
-    signOut: vi.fn(),
-    refresh: vi.fn(),
   }),
 }));
 
-const getMock = vi.mocked(api.get);
+const open = {
+  id: "open",
+  version: 1,
+  riferimento: null,
+  origine: "IM26-OPEN",
+  origine_titolo: "Origine aperta",
+  destinazione: "IM26-OPEN",
+  destinazione_titolo: "Attività aperta",
+  tipo_attivita: "ATTIVITA",
+  architetto: "Mario Rossi",
+  allocato: "10.0000",
+  consumato: "4.0000",
+  disponibile: "6.0000",
+  residuo_allocazione: "6.0000",
+  residuo_spendibile_origine: "3.0000",
+  validita_origine: "VALIDO",
+  scadenza_origine: "2027-12-31",
+  stato: "APERTA",
+  stato_operativo: "IN_CORSO" as const,
+};
+const closed = {
+  ...open,
+  id: "closed",
+  origine: "IM26-CLOSED",
+  destinazione: "ACT-CLOSED",
+  destinazione_titolo: "Attività chiusa",
+  stato: "CHIUSA",
+  stato_operativo: "CHIUSA" as const,
+};
+const balance = {
+  anno: new Date().getFullYear(),
+  allocato: "20.0000",
+  totale_allocato: "20.0000",
+  consumato: "8.0000",
+  consumato_allocazioni: "8.0000",
+  disponibile: "12.0000",
+  disponibile_su_allocazioni: "12.0000",
+  capacita_totale_origini: "20.0000",
+  capienza_wallet_potenziale: "20.0000",
+  residuo_wallet_non_allocato: "10.0000",
+  unallocated_capacity: "10.0000",
+  residui_validi_non_allocati: "3.0000",
+  residui_in_scadenza: "7.2500",
+  residui_scaduti: "2.0000",
+  residui_potenziali_da_verificare: "1.0000",
+  dettaglio_residui: {
+    VALIDO: { giornate: "3.0000", progetti: [] },
+    IN_SCADENZA: {
+      giornate: "7.2500",
+      progetti: [{ codice: "IM25-EXP", giornate: "7.2500", scade_il: "2026-12-31", motivo: "" }],
+    },
+    SCADUTO: { giornate: "2.0000", progetti: [] },
+    DA_VERIFICARE: { giornate: "1.0000", progetti: [] },
+  },
+};
+const detail = {
+  id: "open",
+  version: 1,
+  external_ref: null,
+  allocated_days: "10.0000",
+  consumed_days: "4.0000",
+  available_days: "6.0000",
+  residuo_allocazione: "6.0000",
+  residuo_spendibile_origine: "3.0000",
+  validita_origine: "VALIDO",
+  scadenza_origine: "2027-12-31",
+  status: "APERTA",
+  stato_operativo: "IN_CORSO",
+  notes: "nota",
+  assignee: null,
+  architetto: "Mario Rossi",
+  source_project_code: "IM26-OPEN",
+  source_project_title: "Origine aperta",
+  activity_code: "ACT-OPEN",
+  activity_title: "Attività aperta",
+  year: new Date().getFullYear(),
+  funding: [
+    {
+      ordine: 1,
+      progetto_origine: "IM25-OLD",
+      anno_provenienza: 2025,
+      riservato_iniziale: "7.0000",
+      impegnato: "7.0000",
+      consumato: "4.0000",
+    },
+    {
+      ordine: 2,
+      progetto_origine: "IM26-NEW",
+      anno_provenienza: 2026,
+      riservato_iniziale: "3.0000",
+      impegnato: "3.0000",
+      consumato: "0.0000",
+    },
+  ],
+};
 
-describe("WalletPage", () => {
-  beforeEach(() => {
-    getMock.mockReset();
-  });
-
-  it("formatta il residuo e la scadenza ricevuti dall'API senza ricalcolarli", async () => {
-    getMock.mockImplementation((path: string) => {
-      if (path.endsWith("/flow") || path.endsWith("/assignees"))
-        return Promise.resolve({ results: [] });
-      if (path.endsWith("/options"))
-        return Promise.resolve({ projects: [], activities: [], assignees: [] });
+function arrange() {
+  vi.mocked(api.get).mockImplementation((path: string) => {
+    if (path.endsWith("/flow")) return Promise.resolve({ results: [open, closed] });
+    if (path.endsWith("/assignees")) return Promise.resolve({ results: [] });
+    if (path.includes("/allocations/open/")) return Promise.resolve(detail);
+    if (path.includes("allocation-options"))
       return Promise.resolve({
-        anno: new Date().getFullYear(),
-        allocato: "0.0000",
-        consumato: "0.0000",
-        disponibile: "0.0000",
-        residui_validi_non_allocati: "0.0000",
-        residui_in_scadenza: "7.2500",
-        residui_scaduti: "0.0000",
-        residui_potenziali_da_verificare: "0.0000",
-        dettaglio_residui: {
-          IN_SCADENZA: {
-            giornate: "7.2500",
-            progetti: [
-              {
-                codice: "IM25-CHIUSO-API",
-                giornate: "7.2500",
-                scade_il: "2026-12-31",
-                motivo: "Residuo utilizzabile fino al 31/12/2026.",
-              },
-            ],
+        projects: [
+          {
+            id: "source-1",
+            code: "IM26-SOURCE",
+            title: "Origine",
+            year: new Date().getFullYear(),
+            available_days: "8.0000",
+            validity: "VALIDO",
+            expires_on: "2027-12-31",
+            usable: true,
           },
-        },
+        ],
+        activities: [{ id: "activity-1", code: "ACT-1", title: "Attività nuova" }],
+        assignees: [{ id: "person-1", name: "Mario Rossi" }],
+        unallocated_capacity: "10.0000",
+        potential_wallet_capacity: "20.0000",
       });
-    });
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return Promise.resolve(balance);
+  });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const view = render(
+    <QueryClientProvider client={client}>
+      <WalletPage />
+    </QueryClientProvider>,
+  );
+  return { client, ...view };
+}
 
-    render(
-      <QueryClientProvider client={queryClient}>
-        <WalletPage />
-      </QueryClientProvider>,
-    );
-
-    expect(await screen.findByText("IM25-CHIUSO-API")).toBeInTheDocument();
-    expect(screen.getAllByText("7,25 gg").length).toBeGreaterThan(0);
-    expect(screen.getByText(/scade 31\/12\/2026/)).toBeInTheDocument();
+describe("WalletPage Tranche C", () => {
+  beforeEach(() => {
+    capabilities = ["wallet.edit", "accounting.adjust"];
+    vi.clearAllMocks();
   });
 
-  it("mostra il pulsante arancione EDIT sulle righe del flusso wallet e apre il modale", async () => {
-    getMock.mockImplementation((path: string) => {
-      if (path.endsWith("/flow")) {
-        return Promise.resolve({
-          results: [
-            {
-              id: "alloc-123",
-              version: 2,
-              riferimento: "W26-001",
-              origine: "IM25-SRC",
-              origine_titolo: "Progetto Origine",
-              destinazione: "ACT-01",
-              destinazione_titolo: "Attività Destinazione",
-              architetto: "Architetto Mario",
-              allocato: "10.0000",
-              consumato: "4.0000",
-              disponibile: "6.0000",
-              stato: "APERTA",
-            },
-          ],
-        });
-      }
+  it("mostra per default solo in corso e consente di filtrare le chiuse", async () => {
+    arrange();
+    expect(await screen.findByText("Attività aperta")).toBeInTheDocument();
+    expect(screen.getByText("IM26-OPEN")).toBeInTheDocument();
+    expect(screen.queryByText("IM26-OPEN → IM26-OPEN")).not.toBeInTheDocument();
+    expect(screen.queryByText(/ACT-CLOSED/)).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Stato allocazione"), "CHIUSA");
+    expect(await screen.findByText(/ACT-CLOSED/)).toBeInTheDocument();
+    expect(screen.queryByText("Attività aperta")).not.toBeInTheDocument();
+  });
+
+  it("seleziona la riga con tastiera e distingue i residui", async () => {
+    arrange();
+    const row = await screen.findByTestId("allocation-row-open");
+    fireEvent.keyDown(row, { key: "Enter" });
+    expect(await screen.findByText("Residuo spendibile origine")).toBeInTheDocument();
+    expect(screen.getAllByText("Residuo allocazione").length).toBeGreaterThan(0);
+    expect(screen.getByText("IM25-EXP")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Riduci al consumato" })).not.toBeInTheDocument();
+  });
+
+  it("permette il dettaglio read-only senza wallet.edit", async () => {
+    capabilities = [];
+    arrange();
+    await userEvent.click(await screen.findByTestId("allocation-row-open"));
+    expect(await screen.findByText(/Consultazione/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Salva" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Nuovo utilizzo" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Elimina allocazione" })).not.toBeInTheDocument();
+  });
+
+  it("espone creazione FIFO e comando delete agli autorizzati", async () => {
+    arrange();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Nuovo utilizzo" }));
+    expect(screen.getByText("Monte Wallet FIFO")).toBeInTheDocument();
+    expect(screen.getByText(/attribuite automaticamente in FIFO/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Annulla" }));
+    await user.click(await screen.findByTestId("allocation-row-open"));
+    expect(await screen.findByRole("button", { name: "Elimina allocazione" })).toBeInTheDocument();
+  });
+
+  it("salva con pulsante verde e invalida flow, KPI, sommari e opzioni", async () => {
+    const { client } = arrange();
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    vi.mocked(api.patch).mockResolvedValue({ ...detail, notes: "aggiornata", version: 2 });
+    await userEvent.click(await screen.findByTestId("allocation-row-open"));
+    const save = await screen.findByRole("button", { name: "Salva" });
+    expect(save).toHaveClass("bg-emerald-600");
+    await userEvent.clear(screen.getByLabelText("Note"));
+    await userEvent.type(screen.getByLabelText("Note"), "aggiornata");
+    await userEvent.click(save);
+    await waitFor(() => expect(api.patch).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: ["wallet", "flow", new Date().getFullYear()],
+      }),
+    );
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["wallet", "balance", new Date().getFullYear()],
+    });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["wallet", "assignees", new Date().getFullYear()],
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["wallet", "allocation-options"] });
+  });
+
+  it("rettifica il consumato totale e mostra le fonti FIFO in tabella", async () => {
+    arrange();
+    vi.mocked(api.patch).mockResolvedValue({ ...detail, consumed_days: "5.5000", version: 2 });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByTestId("allocation-row-open"));
+    expect(await screen.findByText(/Ordine effettivo di erosione/)).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Progetto origine" })).toBeInTheDocument();
+    expect(screen.getByText("IM25-OLD")).toBeInTheDocument();
+    expect(screen.getByText("IM26-NEW")).toBeInTheDocument();
+
+    const consumed = screen.getByLabelText("Giornate consumate totali");
+    await user.clear(consumed);
+    await user.type(consumed, "5.5");
+    await user.click(screen.getByRole("button", { name: "Salva" }));
+
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith(
+        "/wallet/allocations/open/",
+        expect.objectContaining({ adjust_consumed_to: "5.5" }),
+        expect.anything(),
+      ),
+    );
+  });
+
+  it("mostra i 5 KPI a due livelli e badge Origine: Monte Wallet per voce generica", async () => {
+    const genericFlow = {
+      ...open,
+      id: "generic-1",
+      origine: "WALLET-GENERALE",
+      origine_titolo: "Monte Wallet (pool generico)",
+      destinazione: "ACT-X",
+      destinazione_titolo: "ATTIVITÀ X",
+    };
+    vi.mocked(api.get).mockImplementation((path: string) => {
+      if (path.endsWith("/flow")) return Promise.resolve({ results: [genericFlow] });
       if (path.endsWith("/assignees")) return Promise.resolve({ results: [] });
-      if (path.endsWith("/options") || path.endsWith("/allocation-options/")) {
+      if (path.includes("balance"))
         return Promise.resolve({
-          projects: [],
-          activities: [],
-          assignees: [{ id: "arch-1", name: "Architetto Mario" }],
-          architects: [{ id: "arch-1", name: "Architetto Mario" }],
+          ...balance,
+          capacita_totale_origini: "7.0000",
+          residuo_wallet_non_allocato: "2.0000",
+          totale_allocato: "5.0000",
+          disponibile_su_allocazioni: "5.0000",
+          consumato_allocazioni: "0.0000",
         });
-      }
-      if (path.includes("/wallet/allocations/alloc-123/")) {
-        return Promise.resolve({
-          id: "alloc-123",
-          version: 2,
-          external_ref: "W26-001",
-          allocated_days: "10.0000",
-          days_allocated: "10.0000",
-          consumed_days: "4.0000",
-          available_days: "6.0000",
-          status: "APERTA",
-          notes: "Note test",
-          assignee: "arch-1",
-          architetto: "Architetto Mario",
-          source_project: "p-src",
-          source_project_code: "IM25-SRC",
-          source_project_title: "Progetto Origine",
-          activity: "act-1",
-          activity_code: "ACT-01",
-          activity_title: "Attività Destinazione",
-          year: 2026,
-          timesheet_entries: [],
-        });
-      }
-      return Promise.resolve({
-        anno: 2026,
-        allocato: "10.0000",
-        consumato: "4.0000",
-        disponibile: "6.0000",
-        residui_validi_non_allocati: "0.0000",
-        residui_in_scadenza: "0.0000",
-        residui_scaduti: "0.0000",
-        residui_potenziali_da_verificare: "0.0000",
-        dettaglio_residui: {},
-      });
+      return Promise.resolve({ projects: [], activities: [], assignees: [] });
     });
 
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
-      <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={client}>
         <WalletPage />
       </QueryClientProvider>,
     );
 
-    const editBtn = await screen.findByTestId("edit-allocation-alloc-123");
-    expect(editBtn).toBeInTheDocument();
-    expect(editBtn).toHaveTextContent("EDIT");
-    expect(editBtn.className).toContain("bg-amber-500");
+    // Verifica 5 KPI
+    expect(await screen.findByText("Capacità Monte Wallet")).toBeInTheDocument();
+    expect(screen.getByText("Residuo Wallet non allocato")).toBeInTheDocument();
+    expect(screen.getByText("Totale allocato a voci")).toBeInTheDocument();
+    expect(screen.getByText("Residuo disponibile sulle voci")).toBeInTheDocument();
+    expect(screen.getByText("Consuntivato su voci")).toBeInTheDocument();
+
+    // Verifica voce e badge origine
+    expect(await screen.findByText("ATTIVITÀ X")).toBeInTheDocument();
+    expect(screen.getByText("Origine: Monte Wallet")).toBeInTheDocument();
+  });
+
+  it("permette la creazione di una voce generica dal monte wallet con nuova attività al volo", async () => {
+    arrange();
+    vi.mocked(api.post).mockResolvedValue({ id: "new-alloc", version: 1 });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "Nuovo utilizzo" }));
+    expect(screen.getByText("Monte Wallet FIFO")).toBeInTheDocument();
+
+    // Clic su "+ Nuova attività"
+    await user.click(screen.getByText("+ Nuova attività"));
+    const titleInput = screen.getByPlaceholderText("Nome attività");
+    await user.type(titleInput, "ATTIVITÀ X");
+
+    // Selezione assegnatario
+    await user.selectOptions(screen.getByLabelText(/Assegnatario/), "person-1");
+
+    // Inserimento giornate
+    const daysInput = screen.getByLabelText(/Giornate da riservare/);
+    await user.type(daysInput, "5.0000");
+
+    // Invio
+    await user.click(screen.getByRole("button", { name: "Crea utilizzo" }));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/allocations", {
+        year: new Date().getFullYear(),
+        assignee: "person-1",
+        allocated_days: "5",
+        new_activity_title: "ATTIVITÀ X",
+        notes: "",
+      }),
+    );
   });
 });

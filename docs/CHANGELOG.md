@@ -4,6 +4,34 @@ Formato: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Una voce per 
 
 ## [Non rilasciato]
 
+### Evoluzione UX e Funzionale Post-Feedback (Tranche A - G)
+
+**Aggiunto**
+
+- **Tranche A (Dashboard e Prossime Fatturazioni)**:
+  - Nuova API `GET /api/v1/dashboard/overview` (`backend/domain/dashboard.py`) che calcola metriche di portafoglio, distribuzione tipologie contrattuali, trend mensile dei consuntivi e lista "Prossime fatturazioni" con scadenze a 30/60/90 giorni.
+  - Grafici dedicati in `DashboardCharts.tsx` con barre di trend temporale e tabella interattiva dei progetti in scadenza con badge semantici.
+- **Tranche B (Autoresize Colonne Progetti)**:
+  - Ottimizzazione layout in `DataTable.tsx` e `ProjectsPage.tsx`: ridimensionamento automatico delle colonne con `min-w` e `max-w` proporzionati, wrapping semantico dei titoli lunghi e tooltip informativi.
+  - Eliminazione delle sovrapposizioni e miglioramento dello scorrimento orizzontale su schermi standard.
+- **Tranche C (Verifica Residui e Redesign Operativo Wallet)**:
+  - Redesign operativo di `WalletPage.tsx`: sostituzione della modale con pannello di dettaglio/editing inline, mantenendo l'audit append-only delle rettifiche.
+  - Integrazione di filtri operativi (ricerca libera, fornitore, progetto) e verifica bloccante sul residuo budget del progetto collegato per prevenire sovra-allocazioni.
+- **Tranche D (CRUD Organico Allargato e Grafico a Barre)**:
+  - Nuova capability `canone_manage` e API REST dedicate per creazione e aggiornamento canoni e sottoattività (`backend/api/canone_serializers.py`).
+  - Interfaccia `CanonePage.tsx` arricchita con dialog di inserimento/modifica e grafico a barre per la comparazione immediata delle giornate a canone previste rispetto al consuntivato semestrale.
+- **Tranche E (Badge Centrati e Colorati Esiti Riconciliazione PPM)**:
+  - Normalizzazione visiva degli stati di quadratura in `ReconciliationPage.tsx` tramite helper unificato `reconciliationOutcome.ts`.
+  - Badge di esito ("QUADRATO", "SCOSTAMENTO_ACCETTABILE", "DELTA_SIGNIFICATIVO", "ANOMALO") centrati nella colonna e mappati su scala cromatica standard accessibile.
+- **Tranche F (Costo per Giornata Uomo in Admin e Dashboard Analisi Costi)**:
+  - Aggiunta campo `daily_person_cost` al modello `AppSettings` con gestione da `AdminPage.tsx` (modifica riservata agli amministratori).
+  - Nuova pagina e rotta `/analisi-costi` (`CostAnalysisPage.tsx`) collegata al motore di calcolo `build_cost_analysis` (`backend/domain/cost_analysis.py`), con metriche KPI, grafici di ripartizione costi per fornitore e progetto, filtri temporali e avviso evidente in caso di costo medio non valorizzato.
+- **Tranche G (Verifiche di Regressione Stack e Documentazione)**:
+  - Applicazione e validazione migrazioni Django (`core.0003_canone_manage_capability` e `core.0004_appsettings_daily_person_cost`).
+  - Esecuzione integrale gate backend: 337 test `pytest` superati (100%), linters `black` e `ruff` conformi, correzione type checking `mypy` su `backend/domain/cost_analysis.py`.
+  - Esecuzione integrale gate frontend: typecheck TypeScript superato senza errori, 55 test unitari/integrazione `Vitest` superati (29 suite), conformità `ESLint` e `Prettier`, build di produzione `Vite` completata con successo.
+  - Validazione non distruttiva tramite test E2E `Playwright` mirati su editing progetti, wallet e reset DB (7 test superati).
+
 ### Fase 7 — Rifiniture evolutive e conformità operativa (7 Tranche)
 
 **Aggiunto**

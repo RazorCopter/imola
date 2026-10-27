@@ -3,6 +3,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
+  BarChart3,
   ClipboardCheck,
   Settings,
   Columns3,
@@ -26,6 +27,7 @@ const NAV = [
   { to: "/progetti", label: "nav.projects", icon: Columns3 },
   { to: "/wallet", label: "nav.wallet", icon: Wallet },
   { to: "/canone", label: "nav.canone", icon: Scale },
+  { to: "/analisi-costi", label: "nav.costAnalysis", icon: BarChart3 },
   { to: "/riconciliazione", label: "nav.reconciliation", icon: ListChecks },
   { to: "/anomalie", label: "nav.anomalies", icon: AlertTriangle },
   { to: "/revisione", label: "nav.review", icon: ClipboardCheck },

@@ -21,10 +21,10 @@ from rest_framework.views import APIView
 from core import capabilities, roles
 from core.models import AdminAuditEvent, RoleCapabilityOverride
 from core.permissions import CanManagePrivileges, CanManageUsers, CanResetData, IsAdmin
-from importers.batch import apply_seed, default_schema_path, dry_run_seed
+from importers.batch import apply_seed, dry_run_seed, schema_paths
 from importers.ppm import apply_ppm, dry_run_ppm
-from importers.schema import load_schema, validate_seed
-from imports.models import ImportBatch
+from importers.schema import validate_seed_auto
+from imports.models import ImportBatch, WorkbookDatasetSnapshot
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
@@ -57,14 +57,11 @@ class SeedImportView(APIView):
     def post(self, request):
         uploaded, raw = _uploaded_bytes(request)
         if uploaded is None or raw is None:
-            return Response(
-                {"detail": "File JSON mancante o superiore a 10 MB."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            raise serializers.ValidationError("File JSON mancante o superiore a 10 MB.")
         try:
             source_filename = uploaded.name or "seed.json"
             text = raw.decode("utf-8")
-            payload = validate_seed(text, load_schema(default_schema_path()))
+            payload = validate_seed_auto(text, schema_paths())
             content_hash = hashlib.sha256(raw).hexdigest()
             if request.data.get("apply") == "true":
                 if request.data.get("confirmation_hash") != content_hash:
@@ -80,7 +77,7 @@ class SeedImportView(APIView):
             else:
                 result = dry_run_seed(payload, source_filename=source_filename)
         except (UnicodeDecodeError, ValueError) as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            raise serializers.ValidationError(str(exc))
         return Response(
             {
                 "mode": "apply" if request.data.get("apply") == "true" else "dry-run",
@@ -98,16 +95,10 @@ class PpmImportView(APIView):
     def post(self, request):
         uploaded, raw = _uploaded_bytes(request)
         if uploaded is None or raw is None:
-            return Response(
-                {"detail": "File PPM mancante o superiore a 10 MB."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            raise serializers.ValidationError("File PPM mancante o superiore a 10 MB.")
         suffix = Path(uploaded.name or "upload").suffix.lower()
         if suffix not in {".xlsx", ".pdf"}:
-            return Response(
-                {"detail": "Formato PPM non supportato: usare .xlsx o .pdf."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            raise serializers.ValidationError("Formato PPM non supportato: usare .xlsx o .pdf.")
         content_hash = hashlib.sha256(raw).hexdigest()
         if (
             request.data.get("apply") == "true"
@@ -127,7 +118,7 @@ class PpmImportView(APIView):
                     else dry_run_ppm(temporary.name)
                 )
         except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            raise serializers.ValidationError(str(exc))
         return Response(
             {
                 "mode": "apply" if request.data.get("apply") == "true" else "dry-run",
@@ -155,6 +146,58 @@ class ImportHistoryView(APIView):
                     }
                     for row in rows
                 ]
+            }
+        )
+
+
+class WorkbookDatasetListView(APIView):
+    permission_classes = [IsAdmin]
+
+    def get(self, request, batch_id):
+        batch = ImportBatch.objects.filter(pk=batch_id).first()
+        if batch is None:
+            return Response({"detail": "Batch inesistente."}, status=status.HTTP_404_NOT_FOUND)
+        rows = batch.workbook_datasets.order_by("dataset_id")
+        return Response(
+            {
+                "batch_id": batch.id,
+                "source_filename": batch.source_filename,
+                "schema_version": batch.report.get("schema_version"),
+                "results": [
+                    {
+                        "id": row.id,
+                        "dataset_id": row.dataset_id,
+                        "sheet": row.sheet_name,
+                        "range": row.source_range,
+                        "row_count": row.row_count,
+                        "column_count": row.column_count,
+                        "columns": row.columns,
+                    }
+                    for row in rows
+                ],
+            }
+        )
+
+
+class WorkbookDatasetDetailView(APIView):
+    permission_classes = [IsAdmin]
+
+    def get(self, request, batch_id, dataset_pk):
+        dataset = WorkbookDatasetSnapshot.objects.filter(
+            pk=dataset_pk, batch_id=batch_id
+        ).first()
+        if dataset is None:
+            return Response({"detail": "Dataset inesistente."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {
+                "id": dataset.id,
+                "dataset_id": dataset.dataset_id,
+                "sheet": dataset.sheet_name,
+                "range": dataset.source_range,
+                "row_count": dataset.row_count,
+                "column_count": dataset.column_count,
+                "columns": dataset.columns,
+                "rows": dataset.rows,
             }
         )
 
@@ -435,7 +478,12 @@ class AdminDataResetView(APIView):
     def get(self, request):
         from anomalies.models import Anomaly
         from canone.models import Canone, CanoneSubactivity
-        from imports.models import ImportBatch, ImportIssue
+        from imports.models import (
+            ImportBatch,
+            ImportIssue,
+            WorkbookDatasetSnapshot,
+            WorkbookSheetSnapshot,
+        )
         from ppm.models import PpmSnapshot, PpmSnapshotRow
         from projects.models import BillingMilestone, Project
         from timesheets.models import TimesheetEntry
@@ -458,6 +506,8 @@ class AdminDataResetView(APIView):
             "anomalie": Anomaly.objects.count(),
             "batch_import": ImportBatch.objects.count(),
             "issues_import": ImportIssue.objects.count(),
+            "fogli_workbook": WorkbookSheetSnapshot.objects.count(),
+            "dataset_workbook": WorkbookDatasetSnapshot.objects.count(),
         }
         total = sum(preview.values())
         return Response(
@@ -472,7 +522,12 @@ class AdminDataResetView(APIView):
     def post(self, request):
         from anomalies.models import Anomaly
         from canone.models import Canone, CanoneSubactivity
-        from imports.models import ImportBatch, ImportIssue
+        from imports.models import (
+            ImportBatch,
+            ImportIssue,
+            WorkbookDatasetSnapshot,
+            WorkbookSheetSnapshot,
+        )
         from ppm.models import PpmSnapshot, PpmSnapshotRow
         from projects.models import BillingMilestone, Project
         from timesheets.models import TimesheetEntry
@@ -534,6 +589,10 @@ class AdminDataResetView(APIView):
                 deleted_counts["canoni"] = Canone.objects.all().delete()[0]
                 deleted_counts["milestone"] = BillingMilestone.objects.all().delete()[0]
                 deleted_counts["progetti"] = Project.objects.all().delete()[0]
+                deleted_counts["dataset_workbook"] = (
+                    WorkbookDatasetSnapshot.objects.all().delete()[0]
+                )
+                deleted_counts["fogli_workbook"] = WorkbookSheetSnapshot.objects.all().delete()[0]
                 deleted_counts["issues_import"] = ImportIssue.objects.all().delete()[0]
                 deleted_counts["batch_import"] = ImportBatch.objects.all().delete()[0]
 

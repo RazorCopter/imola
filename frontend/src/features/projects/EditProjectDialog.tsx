@@ -2,7 +2,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { AlertCircle, Lock } from "lucide-react";
+import { AlertCircle, Lock, Trash2 } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api";
 import { useSession } from "@/features/auth/session";
@@ -31,6 +31,7 @@ export interface ProjectFormData {
   version: number;
   permissions: {
     edit: boolean;
+    delete?: boolean;
     annotate: boolean;
     editable_fields: string[];
   };
@@ -71,6 +72,7 @@ interface EditProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trigger?: React.ReactNode;
+  onDeleted?: (projectId: string) => void;
 }
 
 export function EditProjectDialog({
@@ -78,10 +80,14 @@ export function EditProjectDialog({
   open,
   onOpenChange,
   trigger,
+  onDeleted,
 }: EditProjectDialogProps) {
   const queryClient = useQueryClient();
   const { session } = useSession();
   const [genericError, setGenericError] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteCode, setDeleteCode] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const detailQuery = useQuery({
     queryKey: ["project", projectId],
@@ -205,6 +211,35 @@ export function EditProjectDialog({
         );
       } else {
         setGenericError("Si è verificato un errore di rete inatteso.");
+      }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!project) return;
+      return api.delete<void>(`/projects/${projectId}`, {
+        ifMatch: `W/"${project.id}-${project.version}"`,
+      });
+    },
+    onSuccess: async () => {
+      queryClient.removeQueries({ queryKey: ["project", projectId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["projects"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["project-options"] }),
+        queryClient.invalidateQueries({ queryKey: ["cost-analysis"] }),
+        queryClient.invalidateQueries({ queryKey: ["wallet"] }),
+      ]);
+      setDeleteOpen(false);
+      onDeleted?.(projectId);
+      onOpenChange(false);
+    },
+    onError: (error: unknown) => {
+      if (error instanceof ApiError) {
+        setDeleteError(error.problem.detail || error.problem.title);
+      } else {
+        setDeleteError("Errore di rete durante l'eliminazione.");
       }
     },
   });
@@ -535,6 +570,19 @@ export function EditProjectDialog({
 
               {/* Footer con pulsanti */}
               <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+                {project?.permissions.delete && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteCode("");
+                      setDeleteError(null);
+                      setDeleteOpen(true);
+                    }}
+                    className="border-destructive text-destructive hover:bg-destructive/10 mr-auto inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium"
+                  >
+                    <Trash2 className="h-4 w-4" /> Elimina progetto
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => onOpenChange(false)}
@@ -554,6 +602,53 @@ export function EditProjectDialog({
           )}
         </Dialog.Content>
       </Dialog.Portal>
+
+      <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/60" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-[60] w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-6 shadow-xl">
+            <Dialog.Title className="text-destructive text-lg font-semibold">
+              Elimina progetto
+            </Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm text-muted-foreground">
+              La cancellazione è permanente ed è consentita solo per progetti manuali privi di
+              dipendenze. Digita il codice <strong className="font-mono">{project?.code}</strong>.
+            </Dialog.Description>
+            <label className="mt-4 block text-sm">
+              Codice progetto
+              <input
+                autoFocus
+                value={deleteCode}
+                onChange={(event) => setDeleteCode(event.target.value)}
+                className="mt-1 w-full rounded border bg-background p-2 font-mono"
+              />
+            </label>
+            {deleteError && (
+              <div
+                role="alert"
+                className="border-destructive/40 bg-destructive/10 text-destructive mt-3 rounded border p-3 text-sm"
+              >
+                {deleteError}
+              </div>
+            )}
+            <div className="mt-5 flex justify-end gap-3">
+              <Dialog.Close asChild>
+                <button type="button" className="rounded border px-4 py-2 text-sm">
+                  Annulla
+                </button>
+              </Dialog.Close>
+              <button
+                type="button"
+                disabled={deleteCode !== project?.code || deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate()}
+                className="bg-destructive text-destructive-foreground rounded px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? "Eliminazione…" : "Elimina definitivamente"}
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </Dialog.Root>
   );
 }

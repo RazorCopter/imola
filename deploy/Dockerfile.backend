@@ -20,6 +20,8 @@ FROM base AS dev
 RUN pip install -r requirements-dev.txt
 COPY backend/ /app/
 COPY seed_schema_v1.json /seed_schema_v1.json
+COPY seed_workbook_schema_v2.json /seed_workbook_schema_v2.json
+COPY seed_workbook_schema_v3.json /seed_workbook_schema_v3.json
 RUN useradd --uid 10001 --create-home app && mkdir -p /app/media /app/staticfiles \
     && chown -R app:app /app
 USER app
@@ -29,6 +31,8 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 FROM base AS prod
 COPY backend/ /app/
 COPY seed_schema_v1.json /seed_schema_v1.json
+COPY seed_workbook_schema_v2.json /seed_workbook_schema_v2.json
+COPY seed_workbook_schema_v3.json /seed_workbook_schema_v3.json
 RUN useradd --uid 10001 --create-home app \
     && mkdir -p /app/media /app/staticfiles \
     && chown -R app:app /app

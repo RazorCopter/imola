@@ -45,23 +45,27 @@ def allow_ledger_mutation(reason: str, batch: object | None = None) -> Iterator[
 
     if batch is not None:
         batch_kind = getattr(batch, "kind", batch)
-        if batch_kind != ImportKind.SEED_JSON:
+        if batch_kind not in {ImportKind.SEED_JSON, ImportKind.WORKBOOK_JSON}:
             raise PermissionError(
                 f"allow_ledger_mutation vietata per il batch di tipo '{batch_kind}': "
-                "solo i batch SEED_JSON ammettono mutazioni dirette del ledger. "
+                "solo i batch SEED_JSON ammettono mutazioni dirette del ledger, "
+                "insieme ai WORKBOOK_JSON che ne incorporano la proiezione. "
                 "I batch PPM e altri tipi richiedono storni contabili append-only (D-14)."
             )
 
     logger.warning(
         "Finestra di modifica dei consuntivi aperta", extra={"motivazione": reason.strip()}
     )
-    with connection.cursor() as cursor:
-        cursor.execute(f"SET LOCAL \"{SESSION_FLAG}\" = 'on'")
+    uses_postgresql_guard = connection.vendor == "postgresql"
+    if uses_postgresql_guard:
+        with connection.cursor() as cursor:
+            cursor.execute(f"SET LOCAL \"{SESSION_FLAG}\" = 'on'")
     try:
         yield
     finally:
-        with connection.cursor() as cursor:
-            cursor.execute(f"SET LOCAL \"{SESSION_FLAG}\" = 'off'")
+        if uses_postgresql_guard:
+            with connection.cursor() as cursor:
+                cursor.execute(f"SET LOCAL \"{SESSION_FLAG}\" = 'off'")
         logger.warning(
             "Finestra di modifica dei consuntivi chiusa", extra={"motivazione": reason.strip()}
         )

@@ -45,6 +45,14 @@ class CanCreateProjects(HasCapability):
     capability = capabilities.CREATE_PROJECTS
 
 
+class CanEditProjects(HasCapability):
+    capability = capabilities.EDIT_PROJECTS
+
+
+class CanValidateProjectClosure(HasCapability):
+    capability = capabilities.VALIDATE_PROJECT_CLOSURE
+
+
 class ReadOnlyOrCanCreateProjects(IsAuthenticatedRole):
     def has_permission(self, request, view) -> bool:
         if not super().has_permission(request, view):
@@ -56,6 +64,17 @@ class ReadOnlyOrCanCreateProjects(IsAuthenticatedRole):
 
 class CanEditWallet(HasCapability):
     capability = capabilities.EDIT_WALLET
+
+
+class ReadOnlyOrCanManageCanone(IsAuthenticatedRole):
+    """Lettura autenticata; CRUD Organico Allargato riservato a canone.manage."""
+
+    def has_permission(self, request, view) -> bool:
+        if not super().has_permission(request, view):
+            return False
+        return request.method in SAFE_METHODS or capabilities.has_capability(
+            request.user, capabilities.MANAGE_CANONE
+        )
 
 
 class CanAdjustAccounting(HasCapability):

@@ -54,7 +54,7 @@ def test_wallet_api_espone_totali_e_w26_001_del_seed_reale(authenticated_client:
         "allocato": "50.0000",
         "consumato": "50.0000",
         "disponibile": "0.0000",
-        "stato": "APERTA",
+        "stato": "CHIUSA",
     }
 
 

@@ -11,9 +11,11 @@ MANAGE_USERS: Final = "users.manage"
 MANAGE_PRIVILEGES: Final = "privileges.manage"
 CREATE_PROJECTS: Final = "projects.create"
 EDIT_PROJECTS: Final = "projects.edit"
+VALIDATE_PROJECT_CLOSURE: Final = "projects.validate_closure"
 ANNOTATE_OWN_PROJECTS: Final = "projects.annotate_own"
 CREATE_TIMESHEETS: Final = "timesheets.create"
 EDIT_WALLET: Final = "wallet.edit"
+MANAGE_CANONE: Final = "canone.manage"
 ADJUST_ACCOUNTING: Final = "accounting.adjust"
 UPLOAD_IMPORTS: Final = "imports.upload"
 APPLY_IMPORTS: Final = "imports.apply"
@@ -27,9 +29,11 @@ ALL_CAPABILITIES: Final = frozenset(
         MANAGE_PRIVILEGES,
         CREATE_PROJECTS,
         EDIT_PROJECTS,
+        VALIDATE_PROJECT_CLOSURE,
         ANNOTATE_OWN_PROJECTS,
         CREATE_TIMESHEETS,
         EDIT_WALLET,
+        MANAGE_CANONE,
         ADJUST_ACCOUNTING,
         UPLOAD_IMPORTS,
         APPLY_IMPORTS,
@@ -44,9 +48,11 @@ ROLE_DEFAULTS: Final = {
         {
             CREATE_PROJECTS,
             EDIT_PROJECTS,
+            VALIDATE_PROJECT_CLOSURE,
             ANNOTATE_OWN_PROJECTS,
             CREATE_TIMESHEETS,
             EDIT_WALLET,
+            MANAGE_CANONE,
             ADJUST_ACCOUNTING,
             UPLOAD_IMPORTS,
             APPLY_IMPORTS,
@@ -58,6 +64,7 @@ ROLE_DEFAULTS: Final = {
     roles.SUPPLIER: frozenset(
         {
             CREATE_PROJECTS,
+            VALIDATE_PROJECT_CLOSURE,
             CREATE_TIMESHEETS,
             UPLOAD_IMPORTS,
             EXPORT_DATA,

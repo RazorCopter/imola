@@ -1,6 +1,11 @@
 from django.contrib import admin
 
-from imports.models import ImportBatch, ImportIssue
+from imports.models import (
+    ImportBatch,
+    ImportIssue,
+    WorkbookDatasetSnapshot,
+    WorkbookSheetSnapshot,
+)
 
 
 class ImportIssueInline(admin.TabularInline):
@@ -15,3 +20,16 @@ class ImportBatchAdmin(admin.ModelAdmin):
     list_filter = ("kind", "status")
     readonly_fields = ("report", "error", "applied_at", "rolled_back_at")
     inlines = (ImportIssueInline,)
+
+
+@admin.register(WorkbookSheetSnapshot)
+class WorkbookSheetSnapshotAdmin(admin.ModelAdmin):
+    list_display = ("name", "position", "dimensions", "batch")
+    list_filter = ("state",)
+    search_fields = ("name", "batch__source_filename")
+
+
+@admin.register(WorkbookDatasetSnapshot)
+class WorkbookDatasetSnapshotAdmin(admin.ModelAdmin):
+    list_display = ("dataset_id", "sheet_name", "row_count", "column_count", "batch")
+    search_fields = ("dataset_id", "sheet_name", "batch__source_filename")

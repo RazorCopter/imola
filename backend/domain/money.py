@@ -11,6 +11,7 @@ from typing import Any
 
 DAYS_QUANT = Decimal("0.0001")
 DISPLAY_QUANT = Decimal("0.01")
+MONEY_QUANT = Decimal("0.01")
 ZERO = Decimal("0.0000")
 PPM_GRANULARITY = Decimal("0.0625")
 
@@ -41,6 +42,16 @@ def to_days(value: Any, *, field: str = "giornate") -> Decimal:
     if not candidate.is_finite():
         raise DaysValueError(f"{field}: valore non finito.")
     return quantize_days(candidate)
+
+
+def quantize_money(value: Decimal) -> Decimal:
+    """Arrotonda importi monetari ai centesimi con ROUND_HALF_UP."""
+    return value.quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
+
+
+def cost_for_days(days: Decimal, daily_cost: Decimal) -> Decimal:
+    """Calcola il costo di giornate nette usando il costo globale corrente."""
+    return quantize_money(days * daily_cost)
 
 
 def to_days_or_none(value: Any, *, field: str = "giornate") -> Decimal | None:

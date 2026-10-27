@@ -12,6 +12,7 @@ const ACTIONS = [
   { to: "/progetti", label: "nav.projects" },
   { to: "/wallet", label: "nav.wallet" },
   { to: "/canone", label: "nav.canone" },
+  { to: "/analisi-costi", label: "nav.costAnalysis" },
   { to: "/riconciliazione", label: "nav.reconciliation" },
   { to: "/anomalie", label: "nav.anomalies" },
   { to: "/revisione", label: "nav.review" },

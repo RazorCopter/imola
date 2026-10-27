@@ -35,13 +35,15 @@ vi.mock("@/lib/api", () => {
   }
 
   return {
-    api: { get: vi.fn(), post: vi.fn(), patch: vi.fn() },
+    api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
     ApiError: MockApiError,
   };
 });
 
 const getMock = vi.mocked(api.get);
+const postMock = vi.mocked(api.post);
 const patchMock = vi.mocked(api.patch);
+const deleteMock = vi.mocked(api.delete);
 
 function mockSession(session: Partial<Session> | null) {
   const fullSession: Session | null = session
@@ -131,6 +133,16 @@ describe("ProjectsPage ed EditProjectDialog — Tranche 4", () => {
     const editButton = await screen.findByTestId("edit-project-proj-123");
     expect(editButton).toBeInTheDocument();
     expect(editButton).toHaveClass("bg-amber-500");
+    expect(screen.getByRole("columnheader", { name: "Titolo" })).toHaveClass("min-w-64");
+    expect(screen.getByText("Progetto Test").closest("td")).toHaveClass(
+      "min-w-64",
+      "whitespace-normal",
+    );
+    expect(screen.getByRole("columnheader", { name: "Budget" })).toHaveClass("text-right");
+    expect(screen.getByTitle("Budget API: 10.0000 gg").closest("td")).toHaveClass(
+      "text-right",
+      "tabular-nums",
+    );
   });
 
   it("mostra EDIT solo sul progetto proprio per il referente BMED", async () => {
@@ -198,11 +210,13 @@ describe("ProjectsPage ed EditProjectDialog — Tranche 4", () => {
     expect(screen.queryByTestId("edit-project-proj-other")).not.toBeInTheDocument();
   });
 
-  it("nasconde EDIT al fornitore senza capability projects.edit", async () => {
+  it("consente al fornitore di validare una chiusura proposta senza mostrare EDIT", async () => {
     mockSession({
       roles: ["fornitore"],
-      capabilities: ["projects.create", "imports.upload"],
+      capabilities: ["projects.create", "projects.validate_closure", "imports.upload"],
     });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    postMock.mockResolvedValue({ stato_operativo: "CHIUSO" });
 
     getMock.mockImplementation((path: string) => {
       if (path === "/projects/balances") {
@@ -211,6 +225,7 @@ describe("ProjectsPage ed EditProjectDialog — Tranche 4", () => {
           results: [
             {
               id: "proj-fornitore",
+              version: 4,
               codice: "IM26001-SUPPLIER",
               titolo: "Progetto Fornitore",
               tipo_contratto: "AQL",
@@ -221,6 +236,7 @@ describe("ProjectsPage ed EditProjectDialog — Tranche 4", () => {
               consumato_totale: "0.0000",
               residuo: "10.0000",
               stato_consuntivazione: "ATTIVO",
+              stato_operativo: "CHIUSURA_DA_VALIDARE",
               stato_fatturazione: "DA_FATTURARE",
               stato_offerta: "ACCETTATA",
               stato_residuo: "VALIDO",
@@ -228,7 +244,7 @@ describe("ProjectsPage ed EditProjectDialog — Tranche 4", () => {
               residuo_giorni_alla_scadenza: null,
               residuo_motivo: "Ok",
               spiegazione_residuo: "Ok",
-              permissions: { edit: false, annotate: false },
+              permissions: { edit: false, annotate: false, validate_closure: true },
             },
           ],
         });
@@ -240,6 +256,10 @@ describe("ProjectsPage ed EditProjectDialog — Tranche 4", () => {
 
     await screen.findByRole("heading", { name: "Progetti" });
     expect(screen.queryByTestId("edit-project-proj-fornitore")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("validate-closure-proj-fornitore"));
+    expect(postMock).toHaveBeenCalledWith("/projects/proj-fornitore/validate-closure", {
+      expected_version: 4,
+    });
   });
 
   it("gestisce apertura form, precompilazione, codice readonly e invio PATCH con version", async () => {
@@ -283,7 +303,12 @@ describe("ProjectsPage ed EditProjectDialog — Tranche 4", () => {
           reliability: "CERTO",
           verification_points: [],
           version: 3,
-          permissions: { edit: true, annotate: true, editable_fields: ["title", "notes"] },
+          permissions: {
+            edit: true,
+            delete: true,
+            annotate: true,
+            editable_fields: ["title", "notes"],
+          },
           readonly: {
             code: "Il codice è bloccato perché può essere referenziato da import e ledger.",
           },
@@ -327,5 +352,23 @@ describe("ProjectsPage ed EditProjectDialog — Tranche 4", () => {
         }),
       );
     });
+  });
+
+  it("richiede il codice progetto prima della cancellazione", async () => {
+    deleteMock.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderWithProviders(
+      <EditProjectDialog projectId="proj-123" open={true} onOpenChange={vi.fn()} />,
+    );
+    expect(await screen.findByDisplayValue("Progetto Alfa")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Elimina progetto" }));
+    const confirm = screen.getByRole("button", { name: "Elimina definitivamente" });
+    expect(confirm).toBeDisabled();
+    await user.type(screen.getByLabelText("Codice progetto"), "IM26001-CODE");
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
+    await waitFor(() =>
+      expect(deleteMock).toHaveBeenCalledWith("/projects/proj-123", expect.anything()),
+    );
   });
 });

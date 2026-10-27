@@ -12,8 +12,9 @@ from django.db import transaction
 from django.utils import timezone
 
 from importers.report import ImportReport
-from importers.schema import load_schema, validate_seed
+from importers.schema import load_schema, validate_seed, validate_seed_auto
 from importers.seed_json import import_foundation
+from importers.workbook_seed import make_workbook_report, persist_workbook
 from imports.models import (
     ImportBatch,
     ImportIssue,
@@ -45,8 +46,21 @@ class ImportResult:
     batch: ImportBatch | None = None
 
 
-def default_schema_path() -> Path:
-    return Path(settings.BASE_DIR).parent / "seed_schema_v1.json"
+def default_schema_path(version: str = "1.0.0") -> Path:
+    filenames = {
+        "1.0.0": "seed_schema_v1.json",
+        "2.0.0": "seed_workbook_schema_v2.json",
+        "3.0.0": "seed_workbook_schema_v3.json",
+    }
+    try:
+        filename = filenames[version]
+    except KeyError as exc:
+        raise ValueError(f"Versione seed non supportata: {version}") from exc
+    return Path(settings.BASE_DIR).parent / filename
+
+
+def schema_paths() -> dict[str, Path]:
+    return {version: default_schema_path(version) for version in ("1.0.0", "2.0.0", "3.0.0")}
 
 
 def read_seed_file(path: str | Path) -> tuple[Path, str, str]:
@@ -68,6 +82,33 @@ def _make_report(payload: dict[str, Any], source_filename: str, *, dry_run: bool
         reference_date=meta.get("data_riferimento_dati"),
         dry_run=dry_run,
     )
+
+
+def _kind(payload: dict[str, Any]) -> str:
+    return (
+        ImportKind.WORKBOOK_JSON
+        if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0"}
+        else ImportKind.SEED_JSON
+    )
+
+
+def _run_import(
+    payload: dict[str, Any], *, batch: ImportBatch, report: ImportReport
+) -> None:
+    if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0"}:
+        persist_workbook(payload, batch=batch)
+        import_foundation(payload["application"]["seed_v1"], batch=batch, report=report)
+        if payload["meta"]["schema_version"] == "3.0.0":
+            from importers.seed_json import import_wallet_v3
+
+            import_wallet_v3(
+                payload["application"]["wallet_v3"],
+                batch=batch,
+                report=report,
+                reference_date=payload["meta"].get("workbook_reference_date"),
+            )
+    else:
+        import_foundation(payload, batch=batch, report=report)
 
 
 def _persist_issues(batch: ImportBatch, report: ImportReport) -> None:
@@ -106,15 +147,19 @@ def _persist_issues(batch: ImportBatch, report: ImportReport) -> None:
 def dry_run_seed(payload: dict[str, Any], *, source_filename: str) -> ImportResult:
     """Esegue il vero importer e forza il rollback, incluso il batch temporaneo."""
 
-    report = _make_report(payload, source_filename, dry_run=True)
+    report = (
+        make_workbook_report(payload, source_filename, dry_run=True)
+        if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0"}
+        else _make_report(payload, source_filename, dry_run=True)
+    )
     try:
         with transaction.atomic():
             batch = ImportBatch.objects.create(
-                kind=ImportKind.SEED_JSON,
+                kind=_kind(payload),
                 status=ImportStatus.DRY_RUN,
                 source_filename=source_filename,
             )
-            import_foundation(payload, batch=batch, report=report)
+            _run_import(payload, batch=batch, report=report)
             raise _DryRunRollback
     except _DryRunRollback:
         return ImportResult(report=report)
@@ -123,8 +168,9 @@ def dry_run_seed(payload: dict[str, Any], *, source_filename: str) -> ImportResu
 def apply_seed(payload: dict[str, Any], *, source_filename: str, content_hash: str) -> ImportResult:
     """Applica il seed in una transazione e conserva un batch FAILED se questa fallisce."""
 
+    kind = _kind(payload)
     in_progress = ImportBatch.objects.filter(
-        kind=ImportKind.SEED_JSON,
+        kind=kind,
         status=ImportStatus.DRY_RUN,
         content_hash=content_hash,
     ).first()
@@ -134,16 +180,20 @@ def apply_seed(payload: dict[str, Any], *, source_filename: str, content_hash: s
             f"({in_progress.source_filename})."
         )
 
-    report = _make_report(payload, source_filename, dry_run=False)
+    report = (
+        make_workbook_report(payload, source_filename, dry_run=False)
+        if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0"}
+        else _make_report(payload, source_filename, dry_run=False)
+    )
     try:
         with transaction.atomic():
             batch = ImportBatch.objects.create(
-                kind=ImportKind.SEED_JSON,
+                kind=kind,
                 status=ImportStatus.DRY_RUN,
                 source_filename=source_filename,
                 content_hash=content_hash,
             )
-            import_foundation(payload, batch=batch, report=report)
+            _run_import(payload, batch=batch, report=report)
             if not report.ok:
                 raise RuntimeError("Il report contiene errori; applicazione annullata.")
             batch.status = ImportStatus.APPLIED
@@ -156,7 +206,7 @@ def apply_seed(payload: dict[str, Any], *, source_filename: str, content_hash: s
         report.fail(str(exc))
         failed_report = report.as_dict()
         batch = ImportBatch.objects.create(
-            kind=ImportKind.SEED_JSON,
+            kind=kind,
             status=ImportStatus.FAILED,
             source_filename=source_filename,
             content_hash=content_hash,
@@ -174,8 +224,11 @@ def orchestrate_seed(
     schema_path: str | Path | None = None,
 ) -> ImportResult:
     source, text, content_hash = read_seed_file(path)
-    schema = load_schema(schema_path or default_schema_path())
-    payload = validate_seed(text, schema)
+    payload = (
+        validate_seed(text, load_schema(schema_path))
+        if schema_path
+        else validate_seed_auto(text, schema_paths())
+    )
     if dry_run:
         return dry_run_seed(payload, source_filename=source.name)
     return apply_seed(payload, source_filename=source.name, content_hash=content_hash)

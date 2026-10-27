@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+import { DonutChart, type ChartDatum } from "./DashboardCharts";
 import { api } from "@/lib/api";
 import { formatDays, formatDelta, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,37 @@ interface ReconciliationSummary {
     snapshot_estratto_il: string | null;
   };
 }
+
+interface DashboardSummary {
+  generato_il: string;
+  progetti_per_stato: { stato: string; conteggio: number }[];
+  wallet: { anno: number; allocato: string; consumato: string; disponibile: string };
+  prossime_fatturazioni: {
+    count: number;
+    limit: number;
+    results: {
+      id: string;
+      progetto_id: string;
+      progetto_codice: string;
+      progetto_titolo: string;
+      data_pianificata: string;
+      data_fatturazione: string;
+      data_effettiva: string | null;
+      classificazione: "MESE_CORRENTE";
+      stato: string;
+      giornate: string | null;
+      numero_spostamenti: number;
+      spostamenti: unknown[];
+    }[];
+  };
+}
+
+const CHART_COLORS: readonly [string, string, string, string] = [
+  "#4f46e5",
+  "#16a34a",
+  "#d97706",
+  "#dc2626",
+];
 
 function KpiCard({
   label,
@@ -108,7 +140,36 @@ export function DashboardPage() {
     queryFn: () => api.get<ReconciliationSummary>("/reconciliation/latest"),
   });
 
+  const dashboard = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: () => api.get<DashboardSummary>("/dashboard"),
+  });
+
   const loading = wallet.isLoading || reconciliation.isLoading;
+  const projectChart: ChartDatum[] =
+    dashboard.data?.progetti_per_stato.map((item, index) => ({
+      key: item.stato,
+      label: t(`status.${item.stato}`),
+      value: item.conteggio,
+      color: CHART_COLORS[index % CHART_COLORS.length]!,
+    })) ?? [];
+  const dashboardWallet = dashboard.data?.wallet;
+  const walletChart: ChartDatum[] = dashboardWallet
+    ? [
+        {
+          key: "consumato",
+          label: t("wallet.consumed"),
+          value: Number(dashboardWallet.consumato),
+          color: CHART_COLORS[3],
+        },
+        {
+          key: "disponibile",
+          label: t("wallet.available"),
+          value: Number(dashboardWallet.disponibile),
+          color: CHART_COLORS[1],
+        },
+      ]
+    : [];
 
   return (
     <section className="space-y-6">
@@ -191,10 +252,94 @@ export function DashboardPage() {
         )}
       </div>
 
+      <div className="grid gap-4 lg:grid-cols-2">
+        {dashboard.isLoading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : dashboard.isError ? (
+          <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-sm text-danger lg:col-span-2">
+            {t("dashboard.dataError")}
+          </div>
+        ) : (
+          <>
+            <DonutChart title={t("dashboard.projectsByStatus")} data={projectChart} />
+            <DonutChart title={t("dashboard.walletComposition")} data={walletChart} unit="days" />
+          </>
+        )}
+      </div>
+
+      <section className="rounded-lg border border-border bg-card p-4 shadow-subtle">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-semibold">{t("dashboard.upcomingBillings")}</h2>
+          {dashboard.data && (
+            <span className="text-xs text-muted-foreground">
+              {t("dashboard.showingBillings", {
+                shown: dashboard.data.prossime_fatturazioni.results.length,
+                total: dashboard.data.prossime_fatturazioni.count,
+              })}
+            </span>
+          )}
+        </div>
+        {dashboard.isLoading ? (
+          <div className="skeleton mt-4 h-32 w-full" />
+        ) : dashboard.isError ? (
+          <p className="mt-4 text-sm text-danger">{t("dashboard.dataError")}</p>
+        ) : dashboard.data?.prossime_fatturazioni.results.length ? (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[42rem] text-left text-sm">
+              <thead className="border-b border-border text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-2 py-2">Data prevista</th>
+                  <th className="px-2 py-2">{t("dashboard.billingDate")}</th>
+                  <th className="px-2 py-2">{t("project.code")}</th>
+                  <th className="px-2 py-2">{t("project.title")}</th>
+                  <th className="px-2 py-2 text-right">{t("dashboard.days")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {dashboard.data.prossime_fatturazioni.results.map((item) => (
+                  <tr key={`${item.progetto_id}-${item.data_pianificata}`}>
+                    <td className="whitespace-nowrap px-2 py-3 font-medium">
+                      {new Intl.DateTimeFormat("it-IT", { timeZone: "UTC" }).format(
+                        new Date(`${item.data_pianificata}T00:00:00Z`),
+                      )}
+                      {item.data_effettiva && (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          Effettiva:{" "}
+                          {new Intl.DateTimeFormat("it-IT", { timeZone: "UTC" }).format(
+                            new Date(`${item.data_effettiva}T00:00:00Z`),
+                          )}
+                        </span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-3 text-muted-foreground">
+                      {new Intl.DateTimeFormat("it-IT", { timeZone: "UTC" }).format(
+                        new Date(`${item.data_fatturazione}T00:00:00Z`),
+                      )}
+                    </td>
+                    <td className="px-2 py-3 font-medium">{item.progetto_codice}</td>
+                    <td className="px-2 py-3">{item.progetto_titolo}</td>
+                    <td className="px-2 py-3 text-right font-mono">
+                      {item.giornate === null ? "—" : formatDays(item.giornate)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="mt-4 rounded-md bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+            {t("dashboard.noUpcomingBillings")}
+          </p>
+        )}
+      </section>
+
       {wallet.data !== undefined && (
         <div className="grid gap-4 lg:grid-cols-2">
           <section className="rounded-lg border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold">Composizione wallet</h2>
+            <h2 className="text-sm font-semibold">{t("dashboard.walletDetails")}</h2>
             <div className="mt-4 space-y-3">
               {(
                 [
@@ -221,7 +366,7 @@ export function DashboardPage() {
             </div>
           </section>
           <section className="rounded-lg border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold">Cosa fare ora</h2>
+            <h2 className="text-sm font-semibold">{t("dashboard.whatToDoNow")}</h2>
             <ul className="mt-3 space-y-2 text-sm">
               <li>
                 <Link className="text-accent hover:underline" to="/revisione">

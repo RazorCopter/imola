@@ -73,6 +73,34 @@ class TestBilancioAllocazioni:
         assert row.consumed_days == Decimal("0.0000")
         assert row.available_days == Decimal("4.0000")
 
+    def test_flow_distingue_residuo_allocazione_origine_validita_e_stato(self):
+        project = ProjectFactory(
+            code="IM26-FLOW",
+            budget_days=Decimal("20.0000"),
+            timesheet_status=TimesheetStatus.CHIUSO,
+            actual_closure_date=date(2026, 1, 15),
+        )
+        TimesheetEntryFactory(project=project, days=Decimal("3.0000"))
+        allocation = allocate("FLOW", "8.0000", "2.5000", project=project)
+
+        row = next(
+            item
+            for item in wallet_flow(2026, today=date(2026, 6, 1))
+            if item["id"] == allocation.id
+        )
+
+        assert row["allocato"] == Decimal("8.0000")
+        assert row["consumato"] == Decimal("2.5000")
+        assert row["residuo_allocazione"] == Decimal("5.5000")
+        assert row["residuo_spendibile_origine"] == Decimal("9.0000")
+        assert row["validita_origine"] in {ResidualState.VALIDO, ResidualState.IN_SCADENZA}
+        assert row["stato_operativo"] == "IN_CORSO"
+
+        allocation.status = AllocationStatus.CHIUSA
+        allocation.save()
+        closed = next(item for item in wallet_flow(2026) if item["id"] == allocation.id)
+        assert closed["stato_operativo"] == "CHIUSA"
+
 
 class TestCaso11_4TotaliWallet2026:
     """Allocato 130,89 - consumato 120,79 -> disponibile da allocazioni 10,10 gg."""
@@ -120,6 +148,23 @@ class TestCaso11_4TotaliWallet2026:
 
 
 class TestResiduiPerValidita:
+    def test_quota_esplicitamente_rilasciata_alimenta_il_monte_wallet(self):
+        project = ProjectFactory(
+            code="IM26-WALLET",
+            budget_days=Decimal("25.0000"),
+            released_to_wallet_days=Decimal("14.5000"),
+            declared_residual_year=2026,
+            timesheet_status=TimesheetStatus.ATTIVO,
+        )
+        allocate("RELEASED", "4.0000", "1.0000", project=project)
+
+        balance = wallet_year_balance(2026, today=date(2026, 10, 20))
+
+        assert balance.total_source_capacity == Decimal("14.5000")
+        assert balance.unallocated_capacity == Decimal("10.5000")
+        assert available_residual_for_allocation(project.id) == Decimal("10.5000")
+        assert wallet_year_balance(2025).total_source_capacity == Decimal("0.0000")
+
     def test_i_bucket_separano_valido_in_scadenza_e_scaduto(self):
         ProjectFactory(
             code="IM26-ATTIVO",
@@ -273,3 +318,100 @@ class TestFlussoWallet:
         )
         allocation.refresh_from_db()
         assert allocation.requires_source_attribution is True
+
+    def test_monte_wallet_e_voci_con_erodibilita(self):
+        """Caso d'uso chiarito dall'utente:
+        Progetti A, B, C, D, E, F con avanzi 0, 2, 3, 1, 0, 1 -> monte totale 7 gg.
+        Nuova voce ATTIVITÀ X con 5 gg allocati -> residuo wallet 2 gg, disponibile voce 5 gg.
+        Consuntivo settimanale eroso dal fornitore fino ad arrivare a 0.
+        """
+        closure = date(2026, 1, 10)
+        # Progetti con residui: A(0), B(2), C(3), D(1), E(0), F(1)
+        prj_a = ProjectFactory(
+            code="PRJ-A",
+            budget_days=Decimal("10.0000"),
+            timesheet_status=TimesheetStatus.CHIUSO,
+            actual_closure_date=closure,
+        )
+        TimesheetEntryFactory(project=prj_a, days=Decimal("10.0000"))
+
+        prj_b = ProjectFactory(
+            code="PRJ-B",
+            budget_days=Decimal("5.0000"),
+            timesheet_status=TimesheetStatus.CHIUSO,
+            actual_closure_date=closure,
+        )
+        TimesheetEntryFactory(project=prj_b, days=Decimal("3.0000"))
+
+        prj_c = ProjectFactory(
+            code="PRJ-C",
+            budget_days=Decimal("6.0000"),
+            timesheet_status=TimesheetStatus.CHIUSO,
+            actual_closure_date=closure,
+        )
+        TimesheetEntryFactory(project=prj_c, days=Decimal("3.0000"))
+
+        prj_d = ProjectFactory(
+            code="PRJ-D",
+            budget_days=Decimal("4.0000"),
+            timesheet_status=TimesheetStatus.CHIUSO,
+            actual_closure_date=closure,
+        )
+        TimesheetEntryFactory(project=prj_d, days=Decimal("3.0000"))
+
+        prj_e = ProjectFactory(
+            code="PRJ-E",
+            budget_days=Decimal("8.0000"),
+            timesheet_status=TimesheetStatus.CHIUSO,
+            actual_closure_date=closure,
+        )
+        TimesheetEntryFactory(project=prj_e, days=Decimal("8.0000"))
+
+        prj_f = ProjectFactory(
+            code="PRJ-F",
+            budget_days=Decimal("2.0000"),
+            timesheet_status=TimesheetStatus.CHIUSO,
+            actual_closure_date=closure,
+        )
+        TimesheetEntryFactory(project=prj_f, days=Decimal("1.0000"))
+
+        # Inizialmente: monte = 7 gg, allocato = 0 gg, residuo non allocato = 7 gg
+        b0 = wallet_year_balance(2026, today=date(2026, 6, 1))
+        assert b0.potential_wallet_capacity == Decimal("7.0000")
+        assert b0.allocated_days == Decimal("0.0000")
+        assert b0.unallocated_capacity == Decimal("7.0000")
+
+        # Censisco nuova voce ATTIVITA X con 5 gg prelevati dal monte wallet
+        activity_x = WalletActivityFactory(code="ATT-X", title="ATTIVITA X")
+        alloc_x = WalletAllocationFactory(
+            wallet_year=WalletYearFactory(year=2026),
+            source_project=None,
+            activity=activity_x,
+            allocated_days=Decimal("5.0000"),
+        )
+
+        b1 = wallet_year_balance(2026, today=date(2026, 6, 1))
+        d1 = b1.as_dict()
+        assert d1["capacita_totale_origini"] == Decimal("7.0000")
+        assert d1["totale_allocato"] == Decimal("5.0000")
+        assert d1["residuo_wallet_non_allocato"] == Decimal("2.0000")
+        assert d1["consumato_allocazioni"] == Decimal("0.0000")
+        assert d1["disponibile_su_allocazioni"] == Decimal("5.0000")
+
+        # Il fornitore registra 2 gg consuntivati settimanalmente
+        TimesheetEntryFactory(wallet_allocation=alloc_x, days=Decimal("2.0000"))
+
+        b2 = wallet_year_balance(2026, today=date(2026, 6, 1))
+        d2 = b2.as_dict()
+        assert d2["capacita_totale_origini"] == Decimal("7.0000")
+        assert d2["totale_allocato"] == Decimal("5.0000")
+        assert d2["residuo_wallet_non_allocato"] == Decimal("2.0000")
+        assert d2["consumato_allocazioni"] == Decimal("2.0000")
+        assert d2["disponibile_su_allocazioni"] == Decimal("3.0000")
+
+        # Flusso espone origine Monte Wallet (pool generico)
+        flows = wallet_flow(2026, today=date(2026, 6, 1))
+        flow_x = next(f for f in flows if f["id"] == alloc_x.id)
+        assert flow_x["origine_titolo"] == "Monte Wallet (pool generico)"
+        assert flow_x["destinazione_titolo"] == "ATTIVITA X"
+        assert flow_x["residuo_allocazione"] == Decimal("3.0000")

@@ -36,6 +36,8 @@ from wallet.models import (
     AllocationStatus,
     WalletActivity,
     WalletAllocation,
+    WalletFundingTranche,
+    WalletSourceLot,
     WalletYear,
 )
 
@@ -137,6 +139,7 @@ def _apply_changes(
 
     for field, value in values.items():
         setattr(instance, field, value)
+    instance.full_clean()
     instance.save(update_fields=[*values, "updated_at", "updated_by", "version"])
     entity.updated += 1
     entity.updated_rows.append({"chiave": key, "modifiche": changes})
@@ -179,8 +182,12 @@ def _import_configuration(configuration: dict[str, Any], entity: EntityReport) -
             "anni_validita_dopo_chiusura"
         ],
     }
+    if "costo_giornata_uomo" in configuration:
+        values["daily_person_cost"] = configuration["costo_giornata_uomo"]
     if settings is None:
-        settings = AppSettings.objects.create(**values)
+        settings = AppSettings(**values)
+        settings.full_clean()
+        settings.save()
         _record_created(entity, "singleton")
         return
     _apply_changes(settings, values, entity=entity, key="singleton")
@@ -271,10 +278,7 @@ def _project_values(row: dict[str, Any], organizations: dict[str, Organization])
         "offer_status": row["stato_offerta"],
         "timesheet_status": row["stato_consuntivazione"],
         "billing_status": row["stato_fatturazione"],
-        # D-16: quota del residuo di IM26254 già resa disponibile al wallet.
-        "released_to_wallet_days": (
-            Decimal("10.0000") if row["codice"].startswith("IM26254") else ZERO
-        ),
+        "released_to_wallet_days": row.get("gg_rilasciati_wallet", ZERO),
         "declared_residual_year": row.get("anno_riferimento_residuo"),
         "notes": row.get("note") or "",
         "legacy_excel_status": row.get("stato_excel_originale") or "",
@@ -910,6 +914,134 @@ def _import_wallet(
             )
         _import_wallet_allocations(wallet.get("allocazioni", []), reference_date, batch, report)
     _import_historical_wallet(payload.get("progetti", []), reference_date, batch, report)
+
+
+@transaction.atomic
+def import_wallet_v3(
+    wallet: dict[str, Any],
+    *,
+    batch: ImportBatch,
+    report: ImportReport,
+    reference_date: str | date | None,
+) -> None:
+    """Importa il modello v3: lotti sorgente, utilizzi e tranche di finanziamento."""
+    from directory.models import Person
+    from wallet.services import refresh_source_lot_status, sync_allocation_funding
+
+    wallet_year = _wallet_year(int(wallet["anno"]), batch, report.entity("anni_wallet_v3"))
+    adjustment = wallet.get("rettifica_riconciliazione", ZERO)
+    if wallet_year.reconciliation_adjustment_days != adjustment:
+        wallet_year.reconciliation_adjustment_days = adjustment
+        wallet_year.save(update_fields=["reconciliation_adjustment_days", "updated_at", "version"])
+    lots_entity = report.entity("lotti_sorgente_wallet")
+    uses_entity = report.entity("utilizzi_wallet")
+    funding_entity = report.entity("finanziamenti_wallet")
+    timesheets_entity = report.entity("consuntivi_wallet_v3")
+    lot_by_ref: dict[str, WalletSourceLot] = {}
+
+    for row in wallet.get("lotti_sorgente", []):
+        ref = row["id_import"]
+        project = Project.objects.filter(code=row["progetto_origine"]).first()
+        if project is None:
+            lots_entity.skipped.append(
+                {
+                    "chiave": ref,
+                    "motivo": f"Progetto origine non trovato: {row['progetto_origine']}",
+                }
+            )
+            continue
+        values = {
+            "wallet_year": wallet_year,
+            "source_project": project,
+            "source_year": row["anno_provenienza"],
+            "capacity_days": row["gg_capienza"],
+            "effective_date": _as_date(row.get("data_conferimento")),
+            "notes": row.get("note") or "",
+        }
+        lot = WalletSourceLot.objects.filter(external_ref=ref).first()
+        if lot is None:
+            lot = WalletSourceLot.objects.create(external_ref=ref, import_batch=batch, **values)
+            _record_created(lots_entity, ref)
+        else:
+            _apply_changes(lot, values, entity=lots_entity, key=ref)
+        lot_by_ref[ref] = lot
+
+    parsed_reference = _as_date(reference_date)
+    for row in wallet.get("utilizzi", []):
+        ref = row["id_import"]
+        activity = WalletActivity.objects.filter(code=row["attivita"]).first()
+        if activity is None:
+            uses_entity.skipped.append(
+                {"chiave": ref, "motivo": f"Attività non trovata: {row['attivita']}"}
+            )
+            continue
+        assignee = None
+        if row.get("referente_imola"):
+            assignee = Person.objects.filter(full_name__iexact=row["referente_imola"]).first()
+        values = {
+            "wallet_year": wallet_year,
+            "source_project": None,
+            "activity": activity,
+            "assignee": assignee,
+            "initial_allocated_days": row["gg_richiesti"],
+            "allocated_days": row["gg_impegnati"],
+            "status": row["stato"],
+            "closure_reason": row.get("motivo_chiusura") or None,
+            "closed_at": timezone.now() if row["stato"] == AllocationStatus.CHIUSA else None,
+            "notes": row.get("note") or "",
+            "requires_source_attribution": False,
+            "reliability": row.get("affidabilita", "CERTO"),
+            "verification_points": [
+                verification_point(text) for text in row.get("punti_da_verificare", [])
+            ],
+            "is_technical": False,
+        }
+        allocation = WalletAllocation.objects.filter(external_ref=ref).first()
+        if allocation is None:
+            allocation = WalletAllocation.objects.create(
+                external_ref=ref, import_batch=batch, **values
+            )
+            _record_created(uses_entity, ref)
+        else:
+            _apply_changes(allocation, values, entity=uses_entity, key=ref)
+
+        for funding in row.get("finanziamenti", []):
+            funding_ref = funding["id_import"]
+            lot = lot_by_ref.get(funding["lotto_sorgente"])
+            if lot is None:
+                funding_entity.skipped.append(
+                    {"chiave": funding_ref, "motivo": "Lotto sorgente non importato"}
+                )
+                continue
+            funding_values = {
+                "allocation": allocation,
+                "source_lot": lot,
+                "sequence": funding["ordine"],
+                "initial_reserved_days": funding["gg_riservati_iniziali"],
+                "committed_days": funding["gg_impegnati"],
+                "consumed_days": ZERO,
+            }
+            tranche = WalletFundingTranche.objects.filter(external_ref=funding_ref).first()
+            if tranche is None:
+                WalletFundingTranche.objects.create(
+                    external_ref=funding_ref, import_batch=batch, **funding_values
+                )
+                _record_created(funding_entity, funding_ref)
+            else:
+                _apply_changes(tranche, funding_values, entity=funding_entity, key=funding_ref)
+
+        _import_wallet_timesheet(
+            allocation,
+            row["gg_consumati_iniziali"],
+            parsed_reference,
+            batch,
+            timesheets_entity,
+            report,
+        )
+        sync_allocation_funding(allocation)
+
+    for lot in lot_by_ref.values():
+        refresh_source_lot_status(lot)
 
 
 def _as_datetime(value: str | datetime) -> datetime:

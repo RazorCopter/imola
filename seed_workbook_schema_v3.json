@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "seed_workbook_schema_v3.json",
+  "title": "Imola full workbook seed v3",
+  "type": "object",
+  "required": ["$schema", "meta", "workbook", "datasets", "audit", "application"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {"const": "./seed_workbook_schema_v3.json"},
+    "meta": {
+      "type": "object",
+      "required": ["schema_version", "generated_at", "scope", "source", "workbook_reference_date", "notes"],
+      "properties": {
+        "schema_version": {"const": "3.0.0"},
+        "generated_at": {"type": "string", "format": "date-time"},
+        "scope": {"const": "FULL_WORKBOOK"},
+        "workbook_reference_date": {"type": "string", "format": "date"},
+        "notes": {"type": "array", "items": {"type": "string"}},
+        "source": {
+          "type": "object",
+          "required": ["filename", "sha256", "size_bytes", "last_modified"],
+          "properties": {
+            "filename": {"type": "string", "minLength": 1},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "size_bytes": {"type": "integer", "minimum": 1},
+            "last_modified": {"type": "string", "format": "date-time"}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "workbook": {"type": "object"},
+    "datasets": {"type": "array", "items": {"type": "object"}},
+    "audit": {"type": "object"},
+    "application": {
+      "type": "object",
+      "required": ["projection_version", "source_policy", "coverage", "seed_v1", "wallet_v3"],
+      "additionalProperties": false,
+      "properties": {
+        "projection_version": {"const": "3.0.0"},
+        "source_policy": {"type": "object", "additionalProperties": {"type": "string"}},
+        "coverage": {"type": "object"},
+        "seed_v1": {"type": "object"},
+        "wallet_v3": {"$ref": "#/$defs/walletV3"}
+      }
+    }
+  },
+  "$defs": {
+    "days": {"type": "number", "minimum": 0},
+    "sourceLot": {
+      "type": "object",
+      "required": ["id_import", "anno_wallet", "progetto_origine", "anno_provenienza", "data_conferimento", "gg_capienza", "stato_excel_progetto", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "id_import": {"type": "string", "minLength": 1},
+        "anno_wallet": {"type": "integer", "minimum": 2000},
+        "progetto_origine": {"type": "string", "minLength": 1},
+        "anno_provenienza": {"type": "integer", "minimum": 2000},
+        "data_conferimento": {"type": ["string", "null"], "format": "date"},
+        "gg_capienza": {"$ref": "#/$defs/days"},
+        "stato_excel_progetto": {"type": ["string", "null"]},
+        "note": {"type": ["string", "null"]}
+      }
+    },
+    "funding": {
+      "type": "object",
+      "required": ["id_import", "lotto_sorgente", "ordine", "gg_riservati_iniziali", "gg_impegnati", "gg_consumati", "riga_excel"],
+      "additionalProperties": false,
+      "properties": {
+        "id_import": {"type": "string", "minLength": 1},
+        "lotto_sorgente": {"type": "string", "minLength": 1},
+        "ordine": {"type": "integer", "minimum": 1},
+        "gg_riservati_iniziali": {"$ref": "#/$defs/days"},
+        "gg_impegnati": {"$ref": "#/$defs/days"},
+        "gg_consumati": {"$ref": "#/$defs/days"},
+        "riga_excel": {"type": "integer", "minimum": 1}
+      }
+    },
+    "usage": {
+      "type": "object",
+      "required": ["id_import", "anno_wallet", "attivita", "referente_imola", "gg_richiesti", "gg_impegnati", "gg_consumati_iniziali", "stato", "motivo_chiusura", "note", "finanziamenti", "affidabilita", "punti_da_verificare"],
+      "additionalProperties": false,
+      "properties": {
+        "id_import": {"type": "string", "minLength": 1},
+        "anno_wallet": {"type": "integer", "minimum": 2000},
+        "attivita": {"type": "string", "minLength": 1},
+        "referente_imola": {"type": ["string", "null"]},
+        "gg_richiesti": {"$ref": "#/$defs/days"},
+        "gg_impegnati": {"$ref": "#/$defs/days"},
+        "gg_consumati_iniziali": {"$ref": "#/$defs/days"},
+        "stato": {"enum": ["APERTA", "CHIUSA"]},
+        "motivo_chiusura": {"enum": [null, "ESAURITA", "CON_RESIDUO"]},
+        "note": {"type": ["string", "null"]},
+        "finanziamenti": {"type": "array", "items": {"$ref": "#/$defs/funding"}},
+        "affidabilita": {"enum": ["CERTO", "DA_VERIFICARE"]},
+        "punti_da_verificare": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "walletV3": {
+      "type": "object",
+      "required": ["anno", "regola_erosione", "saldo_non_allocato_excel", "rettifica_riconciliazione", "lotti_sorgente", "utilizzi"],
+      "additionalProperties": false,
+      "properties": {
+        "anno": {"type": "integer", "minimum": 2000},
+        "regola_erosione": {"const": "FIFO_ANNO_PROVENIENZA_DATA_CODICE"},
+        "saldo_non_allocato_excel": {"type": "number", "minimum": 0},
+        "rettifica_riconciliazione": {"type": "number"},
+        "lotti_sorgente": {"type": "array", "items": {"$ref": "#/$defs/sourceLot"}},
+        "utilizzi": {"type": "array", "items": {"$ref": "#/$defs/usage"}}
+      }
+    }
+  }
+}

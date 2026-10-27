@@ -30,7 +30,8 @@
     "reconciliation": "Riconciliazione PPM",
     "anomalies": "Anomalie",
     "review": "Coda di revisione",
-    "admin": "Amministrazione"
+    "admin": "Amministrazione",
+    "costAnalysis": "Analisi Costi"
   },
   "auth": {
     "signIn": "Accedi",
@@ -81,7 +82,13 @@
     "reassign": "Riassegna",
     "source": "Progetto di origine",
     "activity": "Attività",
-    "noSource": "Wallet generale (origine da attribuire)"
+    "noSource": "Wallet generale (origine da attribuire)",
+    "monteWallet": "Capacità Monte Wallet",
+    "unallocated": "Residuo Wallet non allocato",
+    "allocatedTotal": "Totale allocato a voci",
+    "availableOnAllocations": "Residuo disponibile sulle voci",
+    "consumedOnAllocations": "Consuntivato su voci",
+    "originMonte": "Origine: Monte Wallet"
   },
   "canone": {
     "total": "Monte",
@@ -135,11 +142,50 @@
     "whatToDoNow": "Cosa fare ora",
     "activeProjects": "Progetti attivi",
     "reconciliationDelta": "Delta riconciliazione PPM",
-    "lastSnapshot": "Ultimo estratto"
+    "lastSnapshot": "Ultimo estratto",
+    "projectsByStatus": "Distribuzione progetti per stato",
+    "walletComposition": "Composizione wallet",
+    "walletDetails": "Dettaglio disponibilità wallet",
+    "upcomingBillings": "Prossime fatturazioni",
+    "billingDate": "Data fatturazione",
+    "classification": "Classificazione",
+    "days": "Giornate",
+    "showingBillings": "Mostrate {{shown}} di {{total}}",
+    "noUpcomingBillings": "Nessuna milestone aperta prevista nel mese corrente.",
+    "noChartData": "Nessun dato disponibile per il grafico.",
+    "dataError": "Impossibile caricare i dati della dashboard.",
+    "billingClass": {
+      "MESE_CORRENTE": "Mese corrente"
+    }
   },
   "errors": {
     "generic": "Si è verificato un errore.",
     "stale": "I dati sono stati modificati da un altro utente: ricarica e riprova.",
     "network": "Server non raggiungibile."
+  },
+  "costAnalysis": {
+    "title": "Analisi Costi",
+    "from": "Dal",
+    "to": "Al",
+    "apply": "Applica filtri",
+    "totalDays": "Giornate totali",
+    "totalCost": "Costo totale",
+    "dailyCost": "Costo medio giornaliero configurato",
+    "byProject": "Dettaglio per progetto",
+    "bySupplier": "Dettaglio per fornitore",
+    "bySource": "Ripartizione per fonte",
+    "monthlyTrend": "Trend mensile",
+    "projectChart": "Costi per progetto",
+    "projectChartDescription": "Progetti ordinati per costo decrescente. Ricerca e Top N non modificano i KPI globali.",
+    "projectSearch": "Cerca progetto",
+    "projectLimit": "Numero di progetti",
+    "projectChartSummary": "Riepilogo accessibile dei costi per progetto",
+    "noMatchingProjects": "Nessun progetto corrisponde alla ricerca.",
+    "label": "Voce",
+    "days": "Giornate",
+    "cost": "Costo",
+    "zeroCost": "Il costo giornata uomo non è valorizzato. Le giornate restano disponibili; configura il costo in Amministrazione.",
+    "empty": "Nessun consuntivo nel periodo selezionato.",
+    "error": "Analisi costi non disponibile"
   }
 }

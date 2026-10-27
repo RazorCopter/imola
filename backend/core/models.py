@@ -127,6 +127,13 @@ class AppSettings(TrackedModel):
         default=Decimal("0.0100"),
         verbose_name="tolleranza di riconciliazione (gg)",
     )
+    daily_person_cost = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name="costo globale per giornata uomo",
+        help_text="Valore globale corrente; non è storicizzato per periodo o fornitore.",
+    )
     residual_years_after_closure = models.PositiveSmallIntegerField(
         default=1,
         verbose_name="anni di validità del residuo dopo la chiusura",
@@ -147,6 +154,8 @@ class AppSettings(TrackedModel):
     def clean(self) -> None:
         if self.hours_per_day <= 0:
             raise ValidationError({"hours_per_day": "Deve essere maggiore di zero."})
+        if self.daily_person_cost is None or self.daily_person_cost < 0:
+            raise ValidationError({"daily_person_cost": "Deve essere maggiore o uguale a zero."})
 
     @classmethod
     def get_solo(cls) -> AppSettings:

@@ -1,21 +1,22 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { DataTable } from "@/components/DataTable";
+import { DataTable, type DataTableColumnClasses } from "@/components/DataTable";
 import { DaysValue } from "@/components/DaysValue";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
-import { canCreateProjects, canEditProjects } from "@/lib/permissions";
+import { canCreateProjects, canEditProjects, canValidateProjectClosure } from "@/lib/permissions";
 import { EditProjectDialog } from "./EditProjectDialog";
 import { NewProjectDialog } from "./NewProjectDialog";
 
 export interface ProjectBalance {
   id: string;
+  version: number;
   codice: string;
   titolo: string;
   tipo_contratto: string;
@@ -26,6 +27,7 @@ export interface ProjectBalance {
   consumato_totale: string;
   residuo: string;
   stato_consuntivazione: string;
+  stato_operativo: string;
   stato_fatturazione: string;
   stato_offerta: string;
   stato_residuo: string;
@@ -36,6 +38,7 @@ export interface ProjectBalance {
   permissions: {
     edit?: boolean;
     annotate?: boolean;
+    validate_closure?: boolean;
   };
 }
 
@@ -44,14 +47,38 @@ interface ProjectResponse {
   count: number;
 }
 
+const PROJECT_COLUMN_CLASSES: Record<string, DataTableColumnClasses> = {
+  codice: { cell: "font-mono" },
+  titolo: { header: "min-w-64", cell: "min-w-64 whitespace-normal" },
+  budget: { header: "text-right", cell: "text-right tabular-nums" },
+  consumato_totale: { header: "text-right", cell: "text-right tabular-nums" },
+  residuo: { header: "text-right", cell: "text-right tabular-nums" },
+  actions: { header: "text-center", cell: "text-center" },
+};
+
 export function ProjectsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { session } = useSession();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 
   const canGlobalEdit = canEditProjects(session);
+  const canValidateClosure = canValidateProjectClosure(session);
+  const validateClosure = useMutation({
+    mutationFn: (project: ProjectBalance) =>
+      api.post(`/projects/${project.id}/validate-closure`, {
+        expected_version: project.version,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["projects", "balances"] });
+    },
+  });
+  const getProjectColumnClasses = useCallback(
+    (columnId: string) => PROJECT_COLUMN_CLASSES[columnId],
+    [],
+  );
 
   const columns = useMemo<ColumnDef<ProjectBalance>[]>(
     () => [
@@ -90,10 +117,12 @@ export function ProjectsPage() {
         ),
       },
       {
-        accessorKey: "stato_consuntivazione",
-        header: "Consuntivazione",
+        accessorKey: "stato_operativo",
+        header: "Stato",
         cell: ({ row }) => (
-          <StatusBadge status={row.original.stato_consuntivazione} domain="timesheet" />
+          <StatusBadge
+            status={row.original.stato_operativo ?? row.original.stato_consuntivazione}
+          />
         ),
       },
       {
@@ -109,25 +138,53 @@ export function ProjectsPage() {
         cell: ({ row }) => {
           const item = row.original;
           const showEdit = canGlobalEdit || item.permissions?.edit || item.permissions?.annotate;
-          if (!showEdit) return null;
+          const showValidate =
+            item.stato_operativo === "CHIUSURA_DA_VALIDARE" &&
+            canValidateClosure &&
+            item.permissions?.validate_closure;
+          if (!showEdit && !showValidate) return null;
 
           return (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingProjectId(item.id);
-              }}
-              data-testid={`edit-project-${item.id}`}
-              className="inline-flex items-center justify-center rounded bg-amber-500 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-slate-950 shadow-sm transition-colors hover:bg-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
-            >
-              EDIT
-            </button>
+            <div className="flex items-center justify-center gap-2">
+              {showValidate ? (
+                <button
+                  type="button"
+                  disabled={validateClosure.isPending}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (
+                      window.confirm(
+                        "Confermi di avere chiuso il progetto anche sul gestionale del fornitore?",
+                      )
+                    ) {
+                      validateClosure.mutate(item);
+                    }
+                  }}
+                  data-testid={`validate-closure-${item.id}`}
+                  className="inline-flex items-center justify-center rounded bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  Valida chiusura
+                </button>
+              ) : null}
+              {showEdit ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setEditingProjectId(item.id);
+                  }}
+                  data-testid={`edit-project-${item.id}`}
+                  className="inline-flex items-center justify-center rounded bg-amber-500 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-slate-950 shadow-sm transition-colors hover:bg-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
+                >
+                  EDIT
+                </button>
+              ) : null}
+            </div>
           );
         },
       },
     ],
-    [canGlobalEdit],
+    [canGlobalEdit, canValidateClosure, validateClosure],
   );
   const query = useQuery({
     queryKey: ["projects", "balances"],
@@ -140,7 +197,7 @@ export function ProjectsPage() {
         return (
           (!needle ||
             `${project.codice} ${project.titolo}`.toLocaleLowerCase("it").includes(needle)) &&
-          (!status || project.stato_consuntivazione === status)
+          (!status || (project.stato_operativo ?? project.stato_consuntivazione) === status)
         );
       }),
     [query.data, search, status],
@@ -172,11 +229,15 @@ export function ProjectsPage() {
           className="h-9 rounded-md border border-input bg-background px-3 text-sm"
           value={status}
           onChange={(event) => setStatus(event.target.value)}
-          aria-label="Filtra stato consuntivazione"
+          aria-label="Filtra stato operativo"
         >
           <option value="">Tutti gli stati</option>
-          <option value="NON_AVVIATO">Non avviato</option>
-          <option value="ATTIVO">Attivo</option>
+          <option value="CANONE">Canone</option>
+          <option value="WALLET">Wallet</option>
+          <option value="IN_CORSO">In corso</option>
+          <option value="OFFERTA_ACCETTATA">Offerta accettata</option>
+          <option value="OFFERTA_INVIATA">Offerta inviata</option>
+          <option value="CHIUSURA_DA_VALIDARE">Chiusura da validare</option>
           <option value="CHIUSO">Chiuso</option>
           <option value="DA_VERIFICARE">Da verificare</option>
         </select>
@@ -204,6 +265,7 @@ export function ProjectsPage() {
           columns={columns}
           emptyLabel="Nessun progetto corrisponde ai filtri."
           onRowClick={(project) => navigate(`/progetti/${project.id}`)}
+          getColumnClasses={getProjectColumnClasses}
         />
       )}
 
@@ -213,6 +275,18 @@ export function ProjectsPage() {
           open={Boolean(editingProjectId)}
           onOpenChange={(open) => {
             if (!open) setEditingProjectId(null);
+          }}
+          onDeleted={(projectId) => {
+            queryClient.setQueryData<ProjectResponse>(["projects", "balances"], (current) =>
+              current
+                ? {
+                    ...current,
+                    count: Math.max(0, current.count - 1),
+                    results: current.results.filter((project) => project.id !== projectId),
+                  }
+                : current,
+            );
+            setEditingProjectId(null);
           }}
         />
       )}

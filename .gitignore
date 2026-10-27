@@ -1,5 +1,6 @@
 # --- dati reali del fornitore: NON versionare ---
 data/seed/*.json
+!data/seed/seed_imola_v3_2026-10-09.json
 data/ppm/*
 !data/ppm/.gitkeep
 data/uploads/
