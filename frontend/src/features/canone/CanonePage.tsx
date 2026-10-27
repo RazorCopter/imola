@@ -124,6 +124,7 @@ export function CanonePage() {
     forecast_remaining_days: "",
     notes: "",
   });
+  const [editingSubactivity, setEditingSubactivity] = useState<Subactivity | null>(null);
   const [timesheetActivity, setTimesheetActivity] = useState<string | null>(null);
   const [timesheetForm, setTimesheetForm] = useState({ data: "", giornate: "", descrizione: "" });
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetRow | null>(null);
@@ -196,7 +197,13 @@ export function CanonePage() {
     onError: (error) => setFormError(message(error)),
   });
   const addSub = useMutation({
-    mutationFn: () => api.post<Detail>(`/canoni/${canoneId}/subactivities`, subForm),
+    mutationFn: () =>
+      editingSubactivity
+        ? api.patch<Detail>(`/canoni/${canoneId}/subactivities/${editingSubactivity.id}`, {
+            ...subForm,
+            expected_version: editingSubactivity.version,
+          })
+        : api.post<Detail>(`/canoni/${canoneId}/subactivities`, subForm),
     onSuccess: async () => {
       setSubForm({
         office: "",
@@ -208,6 +215,7 @@ export function CanonePage() {
         forecast_remaining_days: "",
         notes: "",
       });
+      setEditingSubactivity(null);
       await refresh(canoneId);
     },
     onError: (error) => setFormError(message(error)),
@@ -558,9 +566,29 @@ export function CanonePage() {
                             </button>
                           )}
                           {editable && (
-                            <button className={buttonClass} onClick={() => removeSub.mutate(row)}>
-                              Elimina attività
-                            </button>
+                            <>
+                              <button
+                                className={buttonClass}
+                                onClick={() => {
+                                  setEditingSubactivity(row);
+                                  setSubForm({
+                                    office: row.office,
+                                    title: row.title,
+                                    reserved_days: row.reserved_days,
+                                    start_date: row.start_date ?? "",
+                                    end_date: row.end_date ?? "",
+                                    quarter_estimate_days: row.quarter_estimate_days ?? "",
+                                    forecast_remaining_days: row.forecast_remaining_days ?? "",
+                                    notes: row.notes,
+                                  });
+                                }}
+                              >
+                                Modifica attività
+                              </button>
+                              <button className={buttonClass} onClick={() => removeSub.mutate(row)}>
+                                Elimina attività
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -661,6 +689,29 @@ export function CanonePage() {
                   ))}
                   {editable && (
                     <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-3">
+                      {editingSubactivity && (
+                        <div className="flex items-center justify-between sm:col-span-3">
+                          <strong>Modifica attività</strong>
+                          <button
+                            className={buttonClass}
+                            onClick={() => {
+                              setEditingSubactivity(null);
+                              setSubForm({
+                                office: "",
+                                title: "",
+                                reserved_days: "",
+                                start_date: "",
+                                end_date: "",
+                                quarter_estimate_days: "",
+                                forecast_remaining_days: "",
+                                notes: "",
+                              });
+                            }}
+                          >
+                            Annulla
+                          </button>
+                        </div>
+                      )}
                       <input
                         className={fieldClass}
                         aria-label="Titolo attività"
@@ -704,7 +755,7 @@ export function CanonePage() {
                         onChange={(e) => setSubForm({ ...subForm, end_date: e.target.value })}
                       />
                       <button className={buttonClass} onClick={() => addSub.mutate()}>
-                        Aggiungi attività
+                        {editingSubactivity ? "Salva modifiche" : "Aggiungi attività"}
                       </button>
                     </div>
                   )}
