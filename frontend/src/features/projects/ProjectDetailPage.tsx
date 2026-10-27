@@ -4,6 +4,7 @@ import * as Tabs from "@radix-ui/react-tabs";
 import { Link, useParams } from "react-router-dom";
 
 import { DaysValue } from "@/components/DaysValue";
+import { MetricLabel } from "@/components/InfoTooltip";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
@@ -97,12 +98,32 @@ export function ProjectDetailPage() {
   if (!project) return <EmptyState title="Progetto non trovato" />;
 
   const metrics = [
-    ["Budget", project.budget],
-    ["Consuntivi diretti (progetto)", project.consuntivi_diretti],
-    ["Consumato da wallet", project.consumato_via_wallet],
-    ["Consumato totale", project.consumato_totale],
-    ["Rimanente allocato wallet", project.rimanente_allocato_wallet],
-    ["Residuo", project.residuo],
+    ["Budget", project.budget, "Monte giornate complessivo previsto per il progetto."],
+    [
+      "Consuntivi diretti (progetto)",
+      project.consuntivi_diretti,
+      "Giornate registrate direttamente sul progetto, inclusi eventuali storni.",
+    ],
+    [
+      "Consumato da wallet",
+      project.consumato_via_wallet,
+      "Giornate consuntivate sulle attività wallet finanziate dal residuo di questo progetto.",
+    ],
+    [
+      "Consumato totale",
+      project.consumato_totale,
+      "Somma dei consuntivi diretti e delle giornate consumate tramite attività wallet.",
+    ],
+    [
+      "Rimanente allocato wallet",
+      project.rimanente_allocato_wallet,
+      "Giornate già riservate alle attività wallet ma non ancora consuntivate: allocato meno consumato.",
+    ],
+    [
+      "Residuo",
+      project.residuo,
+      "Per un progetto in corso è il budget operativo residuo; per un progetto chiuso è la quota wallet ancora non allocata.",
+    ],
   ] as const;
   const timesheets = ledger.data?.consuntivi ?? [];
   const walletActivities = ledger.data?.wallet ?? [];
@@ -158,9 +179,9 @@ export function ProjectDetailPage() {
 
         <Tabs.Content value="Panoramica" className="space-y-4 pt-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {metrics.map(([label, value]) => (
+            {metrics.map(([label, value, description]) => (
               <article key={label} className="rounded-lg border border-border bg-card p-4">
-                <p className="text-xs uppercase text-muted-foreground">{label}</p>
+                <MetricLabel label={label} description={description} />
                 <DaysValue
                   value={value}
                   label={label}

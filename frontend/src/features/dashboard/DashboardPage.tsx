@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { DonutChart, type ChartDatum } from "./DashboardCharts";
+import { InfoTooltip, MetricLabel } from "@/components/InfoTooltip";
 import { api } from "@/lib/api";
 import { formatDays, formatDelta, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -88,18 +89,8 @@ function KpiCard({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4 shadow-subtle" title={tooltip}>
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-        {tooltip !== undefined && (
-          <span
-            className="cursor-help text-xs text-muted-foreground hover:text-foreground"
-            aria-label={tooltip}
-          >
-            ⓘ
-          </span>
-        )}
-      </div>
+    <div className="rounded-lg border border-border bg-card p-4 shadow-subtle">
+      <MetricLabel label={label} description={tooltip ?? `Indicatore ${label}.`} />
       <p
         className={cn(
           "mt-2 font-mono text-2xl font-semibold tabular-nums",
@@ -335,22 +326,41 @@ export function DashboardPage() {
             <div className="mt-4 space-y-3">
               {(
                 [
-                  [t("wallet.available"), wallet.data.disponibile, "bg-ok"],
-                  [t("wallet.expiring"), wallet.data.residui_in_scadenza, "bg-warn"],
-                  [t("wallet.expired"), wallet.data.residui_scaduti, "bg-danger"],
+                  [
+                    t("wallet.available"),
+                    wallet.data.disponibile,
+                    "bg-ok",
+                    "Giornate ancora consumabili sulle attività wallet già allocate.",
+                  ],
+                  [
+                    t("wallet.expiring"),
+                    wallet.data.residui_in_scadenza,
+                    "bg-warn",
+                    "Residui wallet validi che raggiungeranno la scadenza entro la finestra configurata.",
+                  ],
+                  [
+                    t("wallet.expired"),
+                    wallet.data.residui_scaduti,
+                    "bg-danger",
+                    "Residui oltre la data limite e quindi non più utilizzabili per nuove allocazioni.",
+                  ],
                   [
                     t("wallet.potential"),
                     wallet.data.residui_potenziali_da_verificare,
                     "bg-accent",
+                    "Residui esclusi dal disponibile finché stato o data di chiusura del progetto non vengono confermati.",
                   ],
-                ] as [string, string, string][]
-              ).map(([label, value, color]) => (
+                ] as [string, string, string, string][]
+              ).map(([label, value, color, description]) => (
                 <div
                   key={label}
                   className="flex justify-between border-b border-border py-1 text-xs"
                 >
-                  <span className={cn("border-l-4 pl-2", color.replace("bg-", "border-"))}>
-                    {label}
+                  <span className="flex items-center gap-2">
+                    <span className={cn("border-l-4 pl-2", color.replace("bg-", "border-"))}>
+                      {label}
+                    </span>
+                    <InfoTooltip label={label} description={description} />
                   </span>
                   <span className="font-mono tabular-nums">{formatDays(value)}</span>
                 </div>

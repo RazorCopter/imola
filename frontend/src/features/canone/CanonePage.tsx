@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AccessibleBarChart, CHART_PALETTE } from "@/components/AccessibleBarChart";
 import { DaysValue } from "@/components/DaysValue";
+import { MetricLabel } from "@/components/InfoTooltip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { ApiError, api } from "@/lib/api";
@@ -218,20 +219,37 @@ export function CanonePage() {
         )}
       </header>
       <div className="grid gap-3 sm:grid-cols-4">
-        {[
-          ["Pianificato", data.summary.pianificato],
-          ["Consuntivato", data.summary.consuntivato],
-          ["Residuo", data.summary.residuo],
-        ].map(([label, value]) => (
+        {(
+          [
+            [
+              "Pianificato",
+              data.summary.pianificato,
+              "Monte giornate pianificato per il canone nel semestre selezionato.",
+            ],
+            [
+              "Consuntivato",
+              data.summary.consuntivato,
+              "Somma delle giornate registrate sulle sottoattività del canone.",
+            ],
+            [
+              "Residuo",
+              data.summary.residuo,
+              "Giornate ancora disponibili: pianificato meno consuntivato.",
+            ],
+          ] satisfies Array<[string, string, string]>
+        ).map(([label, value, description]) => (
           <div key={label} className="rounded-lg border bg-card p-4">
-            <p className="text-sm text-muted-foreground">{label}</p>
+            <MetricLabel label={label} description={description} />
             <p className="text-xl font-semibold">
-              <DaysValue value={value as string} />
+              <DaysValue value={value} />
             </p>
           </div>
         ))}
         <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Sottoattività</p>
+          <MetricLabel
+            label="Sottoattività"
+            description="Numero di voci operative censite nel canone selezionato."
+          />
           <p className="text-xl font-semibold">{data.summary.sottoattivita}</p>
         </div>
       </div>

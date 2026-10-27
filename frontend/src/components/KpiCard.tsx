@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { MetricLabel } from "@/components/InfoTooltip";
 import { cn } from "@/lib/utils";
 
 export function KpiCard({
@@ -18,15 +19,8 @@ export function KpiCard({
   action?: ReactNode;
 }) {
   return (
-    <article className="rounded-lg border border-border bg-card p-4 shadow-subtle" title={tooltip}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-        {tooltip && (
-          <span className="cursor-help text-xs text-muted-foreground" aria-label={tooltip}>
-            ⓘ
-          </span>
-        )}
-      </div>
+    <article className="rounded-lg border border-border bg-card p-4 shadow-subtle">
+      <MetricLabel label={label} description={tooltip ?? `Indicatore ${label}.`} />
       <div
         className={cn(
           "mt-2 font-mono text-2xl font-semibold tabular-nums",

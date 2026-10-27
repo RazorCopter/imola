@@ -92,6 +92,7 @@ export function ReconciliationPage() {
           label="Confronti eseguiti"
           value={riepilogo.righe_confrontabili}
           hint={`${riepilogo.righe} righe rilevanti`}
+          tooltip="Numero di progetti per cui esistono sia un totale interno sia un valore PPM confrontabile."
         />
         <KpiCard
           label="Allineate"
@@ -101,16 +102,19 @@ export function ReconciliationPage() {
               : `${riepilogo.ok} · ${formatPercent(riepilogo.percentuale_allineati)}`
           }
           tone={riepilogo.stato === "ALLINEATO" ? "ok" : "neutral"}
+          tooltip="Progetti il cui scostamento tra consuntivo interno e PPM rientra nella tolleranza configurata."
         />
         <KpiCard
           label="Non allineate"
           value={riepilogo.righe_confrontabili === 0 ? "Non disponibile" : riepilogo.ko}
           tone={riepilogo.ko > 0 ? "danger" : "neutral"}
+          tooltip="Progetti con una differenza tra consuntivo interno e PPM superiore alla tolleranza configurata."
         />
         <KpiCard
           label="Assenti in PPM"
           value={riepilogo.assenti_in_ppm}
           tone={riepilogo.assenti_in_ppm > 0 ? "warn" : "neutral"}
+          tooltip="Progetti con consuntivi interni che non trovano una riga corrispondente nell’ultimo snapshot PPM."
         />
       </div>
       <div className="overflow-auto rounded-lg border border-border bg-card">

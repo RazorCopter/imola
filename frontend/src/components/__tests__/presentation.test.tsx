@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { DaysValue } from "@/components/DaysValue";
+import { KpiCard } from "@/components/KpiCard";
 import { StatusBadge } from "@/components/StatusBadge";
 
 describe("DaysValue", () => {
@@ -21,5 +22,14 @@ describe("StatusBadge", () => {
       "Fatturazione: Da verificare",
     );
     expect(screen.getByText("Fatturazione:")).toHaveClass("sr-only");
+  });
+});
+
+describe("KpiCard", () => {
+  it("espone una descrizione funzionale tramite il pulsante informazioni", () => {
+    render(<KpiCard label="Residuo" value="3 gg" tooltip="Budget meno giornate consumate." />);
+
+    expect(screen.getByRole("button", { name: "Informazioni su Residuo" })).toBeInTheDocument();
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Budget meno giornate consumate.");
   });
 });

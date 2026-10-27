@@ -4,6 +4,7 @@ import { AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { AccessibleBarChart } from "@/components/AccessibleBarChart";
+import { MetricLabel } from "@/components/InfoTooltip";
 import { ResizableTableHeader } from "@/components/ResizableTableHeader";
 import { ErrorState, LoadingState } from "@/components/UiState";
 import { api } from "@/lib/api";
@@ -155,13 +156,27 @@ export function CostAnalysisPage() {
         </div>
       )}
       <section className="grid gap-3 sm:grid-cols-3">
-        {[
-          [t("costAnalysis.totalDays"), formatDays(data.kpi.total_days)],
-          [t("costAnalysis.totalCost"), money.format(Number(data.kpi.total_cost))],
-          [t("costAnalysis.dailyCost"), money.format(Number(data.kpi.daily_person_cost))],
-        ].map(([label, value]) => (
+        {(
+          [
+            [
+              t("costAnalysis.totalDays"),
+              formatDays(data.kpi.total_days),
+              "Somma delle giornate dei consuntivi compresi nel periodo selezionato.",
+            ],
+            [
+              t("costAnalysis.totalCost"),
+              money.format(Number(data.kpi.total_cost)),
+              "Costo complessivo del periodo: giornate filtrate moltiplicate per il costo giornaliero configurato.",
+            ],
+            [
+              t("costAnalysis.dailyCost"),
+              money.format(Number(data.kpi.daily_person_cost)),
+              "Tariffa applicata a ogni giornata per calcolare i costi delle aggregazioni.",
+            ],
+          ] satisfies Array<[string, string, string]>
+        ).map(([label, value, description]) => (
           <article key={label} className="rounded-lg border border-border bg-card p-4">
-            <p className="text-sm text-muted-foreground">{label}</p>
+            <MetricLabel label={label} description={description} />
             <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
           </article>
         ))}

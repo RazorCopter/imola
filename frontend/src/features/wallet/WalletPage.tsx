@@ -169,6 +169,7 @@ export function WalletPage() {
             />
           }
           hint="Capacità complessiva rilasciata dai progetti chiusi"
+          tooltip="Somma dei residui validi conferiti al wallet dai progetti chiusi. È il monte complessivo da cui possono essere create le allocazioni."
         />
         <KpiCard
           label="Residuo Wallet non allocato"
@@ -181,11 +182,13 @@ export function WalletPage() {
           }
           tone="ok"
           hint="Ancora spendibile per nuove voci di wallet"
+          tooltip="Capacità del wallet non ancora assegnata ad attività: capacità totale meno totale allocato."
         />
         <KpiCard
           label="Totale allocato a voci"
           value={<DaysValue value={balance.data.totale_allocato ?? balance.data.allocato} />}
           hint="Giornate complessivamente assegnate ad attività"
+          tooltip="Somma delle giornate riservate a tutte le attività wallet, indipendentemente da quanto è già stato consuntivato."
         />
         <KpiCard
           label="Residuo disponibile sulle voci"
@@ -196,11 +199,13 @@ export function WalletPage() {
           }
           tone="ok"
           hint="Disponibile da erodere settimanalmente col fornitore"
+          tooltip="Giornate ancora disponibili sulle attività già allocate: totale allocato meno giornate consuntivate sulle attività."
         />
         <KpiCard
           label="Consuntivato su voci"
           value={<DaysValue value={balance.data.consumato_allocazioni ?? balance.data.consumato} />}
           hint="Giornate già erose col fornitore"
+          tooltip="Somma dei consuntivi registrati sulle attività wallet. Riduce il rimanente delle relative allocazioni."
         />
       </div>
 
