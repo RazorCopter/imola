@@ -56,6 +56,11 @@ class MilestoneStatus(models.TextChoices):
     DA_VERIFICARE = "DA_VERIFICARE", "Da verificare"
 
 
+class BillingScheduleSlot(models.TextChoices):
+    START = "START", "Avvio progetto"
+    END = "END", "Fine progetto"
+
+
 class Project(TrackedModel, VerifiableMixin, ImportedRecordMixin):
     code = models.CharField(max_length=120, unique=True, verbose_name="codice")
     title = models.CharField(max_length=300, verbose_name="titolo")
@@ -240,12 +245,25 @@ class BillingMilestone(TrackedModel, ImportedRecordMixin):
     )
     move_count = models.PositiveSmallIntegerField(default=0, verbose_name="numero di spostamenti")
     moves = models.JSONField(default=list, blank=True, verbose_name="storico degli spostamenti")
+    schedule_slot = models.CharField(
+        max_length=10,
+        choices=BillingScheduleSlot.choices,
+        blank=True,
+        verbose_name="posizione nel piano automatico",
+    )
     history = HistoricalRecords()
 
     class Meta:
         verbose_name = "milestone di fatturazione"
         verbose_name_plural = "milestone di fatturazione"
         ordering = ("planned_date", "created_at")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("project", "schedule_slot"),
+                condition=~models.Q(schedule_slot=""),
+                name="unique_project_billing_schedule_slot",
+            )
+        ]
 
     def __str__(self) -> str:
         when = self.planned_date.isoformat() if self.planned_date else "senza data"

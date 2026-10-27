@@ -220,9 +220,11 @@ class ProjectListCreateView(DocumentedAPIView):
         )
 
     @extend_schema(request=dict, responses={201: dict})
+    @transaction.atomic
     def post(self, request):
         from django.core.exceptions import ValidationError as DjangoValidationError
 
+        from projects.billing import sync_project_billing_schedule
         from projects.models import Project
 
         allowed_fields = {
@@ -242,6 +244,7 @@ class ProjectListCreateView(DocumentedAPIView):
         try:
             project.full_clean()
             project.save()
+            sync_project_billing_schedule(project, user=request.user)
         except DjangoValidationError as exc:
             return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
         return Response(
@@ -1369,7 +1372,11 @@ class ProjectDeleteBlocked(DomainError):
 
 def _project_delete_dependencies(project) -> list[dict[str, object]]:
     checks = (
-        ("milestone", "milestone di fatturazione", project.milestones),
+        (
+            "milestone",
+            "milestone di fatturazione",
+            project.milestones.filter(schedule_slot=""),
+        ),
         ("consuntivi", "consuntivi progetto", project.timesheet_entries),
         ("allocazioni_origine", "allocazioni wallet originate", project.wallet_allocations),
         ("attivita_wallet", "attività wallet collegate", project.wallet_activities),
@@ -1461,7 +1468,10 @@ class ProjectDetailUpdateView(DocumentedAPIView):
         )
 
     @extend_schema(request=ProjectUpdateSerializer, responses={200: dict})
+    @transaction.atomic
     def patch(self, request, pk):
+        from projects.billing import sync_project_billing_schedule
+
         project = self.get_object(pk)
         check_expected_version(request, project)
         supplied_fields = set(request.data) - PROJECT_CONTROL_FIELDS
@@ -1478,6 +1488,7 @@ class ProjectDetailUpdateView(DocumentedAPIView):
         serializer = ProjectUpdateSerializer(project, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         project = serializer.save()
+        sync_project_billing_schedule(project, user=request.user)
         return Response(
             project_detail_payload(project, request.user), headers={"ETag": make_etag(project)}
         )

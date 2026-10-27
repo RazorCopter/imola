@@ -7,7 +7,8 @@ import pytest
 
 from core.models import AppSettings
 from domain.dashboard import dashboard_summary
-from projects.models import MilestoneStatus, TimesheetStatus
+from projects.billing import sync_project_billing_schedule
+from projects.models import BillingStatus, MilestoneStatus, TimesheetStatus
 from tests.factories import MilestoneFactory, ProjectFactory
 
 pytestmark = pytest.mark.django_db
@@ -105,3 +106,30 @@ def test_dashboard_limita_il_payload_ma_espone_il_totale():
     assert result["prossime_fatturazioni"]["count"] == 3
     assert result["prossime_fatturazioni"]["limit"] == 2
     assert len(result["prossime_fatturazioni"]["results"]) == 2
+
+
+def test_dashboard_avvisa_solo_la_tranche_aperta_del_mese_corrente():
+    project = ProjectFactory(
+        code="BILLING-CURRENT-MONTH",
+        start_date=date(2026, 10, 27),
+        planned_end_date=date(2026, 12, 31),
+        billing_status=BillingStatus.DA_FATTURARE,
+    )
+    sync_project_billing_schedule(project)
+
+    october = dashboard_summary(today=date(2026, 10, 27), settings_obj=AppSettings.get_solo())
+    assert [row["data_fatturazione"] for row in october["prossime_fatturazioni"]["results"]] == [
+        "2026-10-31"
+    ]
+
+    project.billing_status = BillingStatus.PARZIALE
+    project.save()
+    sync_project_billing_schedule(project)
+    october_after_first_invoice = dashboard_summary(
+        today=date(2026, 10, 27), settings_obj=AppSettings.get_solo()
+    )
+    assert october_after_first_invoice["prossime_fatturazioni"]["results"] == []
+    december = dashboard_summary(today=date(2026, 12, 1), settings_obj=AppSettings.get_solo())
+    assert [row["data_fatturazione"] for row in december["prossime_fatturazioni"]["results"]] == [
+        "2026-12-31"
+    ]

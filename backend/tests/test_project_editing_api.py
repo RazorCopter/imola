@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -8,7 +9,10 @@ from core import roles
 from core.models import AdminAuditEvent
 from imports.models import ImportKind
 from projects.models import (
+    BillingScheduleSlot,
+    BillingStatus,
     ContractType,
+    MilestoneStatus,
     OfferStatus,
     Project,
     TimesheetStatus,
@@ -74,6 +78,54 @@ def test_admin_patch_completo_progetto():
     assert str(data["supplier_owner"]) == str(supplier_person.id)
     assert data["version"] == 2
     assert "ETag" in res.headers
+
+
+def test_creazione_progetto_genera_due_tranche_a_fine_mese():
+    client, _ = make_client_for_role(roles.ADMIN)
+
+    response = client.post(
+        "/api/v1/projects",
+        {
+            "code": "IM-BILLING-AUTO",
+            "title": "Piano fatturazione automatico",
+            "contract_type": ContractType.AQL,
+            "budget_days": "10.0000",
+            "start_date": "2026-10-27",
+            "planned_end_date": "2026-12-31",
+            "billing_status": BillingStatus.DA_FATTURARE,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201, response.data
+    project = Project.objects.get(pk=response.json()["id"])
+    milestones = list(project.milestones.order_by("schedule_slot"))
+    assert [(row.schedule_slot, row.planned_date, row.status) for row in milestones] == [
+        (BillingScheduleSlot.END, date(2026, 12, 31), MilestoneStatus.PIANIFICATA),
+        (BillingScheduleSlot.START, date(2026, 10, 31), MilestoneStatus.PIANIFICATA),
+    ]
+
+
+def test_stato_parziale_segna_prima_tranche_fatturata_e_lascia_aperta_la_seconda():
+    client, _ = make_client_for_role(roles.ADMIN)
+    project = ProjectFactory(
+        code="IM-BILLING-PARTIAL",
+        start_date=date(2026, 10, 27),
+        planned_end_date=date(2026, 12, 31),
+        billing_status=BillingStatus.DA_FATTURARE,
+    )
+
+    response = client.patch(
+        f"/api/v1/projects/{project.id}",
+        {"expected_version": project.version, "billing_status": BillingStatus.PARZIALE},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.data
+    first = project.milestones.get(schedule_slot=BillingScheduleSlot.START)
+    second = project.milestones.get(schedule_slot=BillingScheduleSlot.END)
+    assert (first.status, first.actual_date) == (MilestoneStatus.FATTURATA, date(2026, 10, 31))
+    assert (second.status, second.actual_date) == (MilestoneStatus.PIANIFICATA, None)
 
 
 def test_referente_puo_modificare_solo_campi_annotazione_sul_proprio():
