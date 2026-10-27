@@ -68,6 +68,15 @@ def test_lista_aggregata_filtri_e_dettaglio():
     assert body["reserved_days"] == "5.0000"
     assert body["available_days"] == "5.0000"
 
+    filtered = client_for().get("/api/v1/canoni?management=1&office=EA")
+    assert filtered.status_code == 200
+    assert filtered.json()["count"] == 1
+    assert filtered.json()["results"][0]["id"] == str(canone.id)
+
+    excluded = client_for().get("/api/v1/canoni?management=1&office=CROSS")
+    assert excluded.status_code == 200
+    assert excluded.json()["count"] == 0
+
 
 def test_crud_lock_permission_audit_e_delete_sicura():
     project = ProjectFactory(code="CAN-CRUD")

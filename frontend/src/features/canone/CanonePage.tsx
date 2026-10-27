@@ -33,7 +33,7 @@ interface CanoneList {
     residuo: string;
     sottoattivita: number;
   };
-  filters: { semestri: string[]; stati: string[] };
+  filters: { semestri: string[]; stati: string[]; domini: string[] };
 }
 interface TimesheetRow {
   id: string;
@@ -100,6 +100,7 @@ export function CanonePage() {
   const [semester, setSemester] = useState("");
   const [search, setSearch] = useState("");
   const [state, setState] = useState("");
+  const [office, setOffice] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -133,8 +134,9 @@ export function CanonePage() {
   if (semester) params.set("semester", semester);
   if (search) params.set("search", search);
   if (state) params.set("state", state);
+  if (office) params.set("office", office);
   const index = useQuery({
-    queryKey: ["canoni", semester, search, state],
+    queryKey: ["canoni", semester, search, state, office],
     queryFn: () => api.get<CanoneList>(`/canoni${params.size ? `?${params}` : ""}`),
     placeholderData: keepPreviousData,
   });
@@ -365,6 +367,17 @@ export function CanonePage() {
         >
           <option value="">Tutti i periodi</option>
           {data.filters.semestri.map((value) => (
+            <option key={value}>{value}</option>
+          ))}
+        </select>
+        <select
+          aria-label="Dominio"
+          className={fieldClass}
+          value={office}
+          onChange={(e) => setOffice(e.target.value)}
+        >
+          <option value="">Tutti i domini</option>
+          {data.filters.domini.map((value) => (
             <option key={value}>{value}</option>
           ))}
         </select>

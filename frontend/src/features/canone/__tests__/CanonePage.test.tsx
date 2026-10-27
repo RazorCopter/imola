@@ -60,7 +60,11 @@ const list = {
     residuo: "75.0000",
     sottoattivita: 1,
   },
-  filters: { semestri: ["2026-S1"], stati: ["IN_CORSO"] },
+  filters: {
+    semestri: ["2026-S1"],
+    stati: ["IN_CORSO"],
+    domini: ["EA", "TA", "SA", "CROSS"],
+  },
 };
 const detail = {
   id: "one",

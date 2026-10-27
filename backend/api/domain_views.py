@@ -1073,6 +1073,7 @@ class CanoneListView(DocumentedAPIView):
         state = (
             request.query_params.get("state") or request.query_params.get("stato") or ""
         ).upper()
+        office = (request.query_params.get("office") or request.query_params.get("dominio") or "").upper()
         if semester:
             rows = [row for row in rows if row.semester == semester]
         if search:
@@ -1087,6 +1088,8 @@ class CanoneListView(DocumentedAPIView):
             rows = [
                 row for row in rows if _canone_state(row.total_days, row.consumed_days) == state
             ]
+        if office:
+            rows = [row for row in rows if row.subactivities.filter(office=office).exists()]
         all_rows = list(_canone_queryset())
         last_moved = max(
             (row for row in all_rows if row.last_movement is not None),
@@ -1110,6 +1113,7 @@ class CanoneListView(DocumentedAPIView):
                 "filters": {
                     "semestri": sorted({row.semester for row in all_rows}, reverse=True),
                     "stati": ["NON_AVVIATO", "IN_CORSO", "COMPLETATO", "SUPERATO"],
+                    "domini": ["EA", "TA", "SA", "CROSS"],
                 },
             }
         )
