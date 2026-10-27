@@ -66,9 +66,21 @@ def workbook_v3_payload(workbook_v3_seed_path: Path) -> tuple[dict, str]:
     return validate_seed_auto(text, schema_paths()), text
 
 
+@pytest.fixture
+def workbook_v4_seed_path() -> Path:
+    return _find_seed_file("seed_imola_v4_2026-10-09.json")
+
+
+@pytest.fixture
+def workbook_v4_payload(workbook_v4_seed_path: Path) -> tuple[dict, str]:
+    text = workbook_v4_seed_path.read_text(encoding="utf-8")
+    return validate_seed_auto(text, schema_paths()), text
+
+
 def test_rileva_versione_e_rifiuta_versioni_sconosciute():
     assert detect_schema_version('{"meta":{"schema_version":"2.0.0"}}') == "2.0.0"
     assert detect_schema_version('{"meta":{"schema_version":"3.0.0"}}') == "3.0.0"
+    assert detect_schema_version('{"meta":{"schema_version":"4.0.0"}}') == "4.0.0"
     with pytest.raises(SeedValidationError, match="schema supportata"):
         detect_schema_version(json.dumps({"meta": {"schema_version": "9.9.9"}}))
 
@@ -247,6 +259,51 @@ def test_apply_v3_persiste_wallet_v3_e_tutti_i_dati(workbook_v3_payload):
     assert balance.total_source_capacity == Decimal("123.3000")
     assert balance.allocated_days == Decimal("108.3300")
     assert balance.unallocated_capacity == Decimal("14.9700")
+
+
+@pytest.mark.django_db
+def test_apply_v4_ripartisce_i_consuntivi_sui_mesi_excel(workbook_v4_payload):
+    payload, _text = workbook_v4_payload
+
+    result = apply_seed(
+        payload,
+        source_filename="seed_imola_v4_2026-10-09.json",
+        content_hash="4" * 64,
+    )
+
+    assert result.batch is not None
+    assert result.batch.status == "APPLIED"
+    monthly_rows = payload["application"]["monthly_timesheets"]
+    assert len(monthly_rows) == 206
+    sample_code = monthly_rows[0]["codice_progetto"]
+    expected = sum(row["giornate"] for row in monthly_rows if row["codice_progetto"] == sample_code)
+    entries = TimesheetEntry.objects.filter(
+        project__code=sample_code,
+        source="SEED_INIZIALE",
+        reversals__isnull=True,
+    )
+    assert entries.values("period").distinct().count() > 1
+    assert sum((entry.days for entry in entries), Decimal("0")) == expected
+
+
+@pytest.mark.django_db
+def test_upgrade_v3_v4_storna_il_totale_senza_raddoppiare(workbook_v3_payload, workbook_v4_payload):
+    v3_payload, _v3_text = workbook_v3_payload
+    v4_payload, _v4_text = workbook_v4_payload
+    apply_seed(v3_payload, source_filename="v3.json", content_hash="3" * 64)
+
+    sample = v4_payload["application"]["monthly_timesheets"][0]
+    code = sample["codice_progetto"]
+    expected = sum(
+        row["giornate"]
+        for row in v4_payload["application"]["monthly_timesheets"]
+        if row["codice_progetto"] == code
+    )
+    apply_seed(v4_payload, source_filename="v4.json", content_hash="4" * 64)
+
+    entries = TimesheetEntry.objects.filter(project__code=code)
+    assert entries.filter(source="STORNO").exists()
+    assert sum((entry.days for entry in entries), Decimal("0")) == expected
 
 
 @pytest.mark.django_db

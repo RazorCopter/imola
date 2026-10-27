@@ -65,10 +65,10 @@ def validate_workbook_integrity(payload: dict[str, Any]) -> None:
     projected = application["seed_v1"]
     coverage = application["coverage"]
     schema_version = payload.get("meta", {}).get("schema_version")
-    is_v3 = schema_version == "3.0.0"
+    has_wallet_v3 = schema_version in {"3.0.0", "4.0.0"}
     wallet_allocations_count = (
         len(application.get("wallet_v3", {}).get("utilizzi", []))
-        if is_v3
+        if has_wallet_v3
         else len(projected["wallet"]["allocazioni"])
     )
     application_counts = {
@@ -78,11 +78,13 @@ def validate_workbook_integrity(payload: dict[str, Any]) -> None:
         "wallet_activities": len(projected["wallet"]["attivita"]),
         "wallet_allocations": wallet_allocations_count,
     }
+    if schema_version == "4.0.0":
+        application_counts["monthly_timesheets"] = len(application["monthly_timesheets"])
     for key, actual in application_counts.items():
         if coverage[key] != actual:
             problems.append(f"application.coverage.{key}={coverage[key]} ma contiene {actual}")
     if problems:
-        version_label = "v3" if is_v3 else "v2"
+        version_label = "v4" if schema_version == "4.0.0" else "v3" if has_wallet_v3 else "v2"
         raise ValueError(f"Seed workbook {version_label} incoerente: " + "; ".join(problems))
 
 

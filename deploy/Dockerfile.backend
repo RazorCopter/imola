@@ -22,6 +22,7 @@ COPY backend/ /app/
 COPY seed_schema_v1.json /seed_schema_v1.json
 COPY seed_workbook_schema_v2.json /seed_workbook_schema_v2.json
 COPY seed_workbook_schema_v3.json /seed_workbook_schema_v3.json
+COPY seed_workbook_schema_v4.json /seed_workbook_schema_v4.json
 RUN useradd --uid 10001 --create-home app && mkdir -p /app/media /app/staticfiles \
     && chown -R app:app /app
 USER app
@@ -33,6 +34,7 @@ COPY backend/ /app/
 COPY seed_schema_v1.json /seed_schema_v1.json
 COPY seed_workbook_schema_v2.json /seed_workbook_schema_v2.json
 COPY seed_workbook_schema_v3.json /seed_workbook_schema_v3.json
+COPY seed_workbook_schema_v4.json /seed_workbook_schema_v4.json
 RUN useradd --uid 10001 --create-home app \
     && mkdir -p /app/media /app/staticfiles \
     && chown -R app:app /app

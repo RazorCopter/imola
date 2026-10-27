@@ -151,6 +151,7 @@ def import_foundation(
     *,
     batch: ImportBatch,
     report: ImportReport,
+    monthly_timesheets: list[dict[str, Any]] | None = None,
 ) -> None:
     """Importa tutte le entità del seed in modo atomico e idempotente.
 
@@ -163,7 +164,7 @@ def import_foundation(
     _import_configuration(configuration, report.entity("configurazione"))
     organizations = _import_organizations(configuration, batch, report.entity("organizzazioni"))
     _import_people(payload["persone"], organizations, batch, report.entity("persone"))
-    _import_projects(payload, organizations, batch, report)
+    _import_projects(payload, organizations, batch, report, monthly_timesheets or [])
     _import_canoni(payload, batch, report)
     _import_wallet(payload, organizations, batch, report)
     if payload.get("snapshot_ppm"):
@@ -294,6 +295,7 @@ def _import_projects(
     organizations: dict[str, Organization],
     batch: ImportBatch,
     report: ImportReport,
+    monthly_timesheets: list[dict[str, Any]],
 ) -> None:
     rows = payload.get("progetti", [])
     if not rows:
@@ -303,6 +305,7 @@ def _import_projects(
     milestones_entity = report.entity("milestone")
     timesheets_entity = report.entity("consuntivi_progetto")
     reference_date = _as_date(payload.get("meta", {}).get("data_riferimento_dati"))
+    monthly_project_codes = {row["codice_progetto"] for row in monthly_timesheets}
 
     for row in rows:
         code = row["codice"]
@@ -320,14 +323,76 @@ def _import_projects(
             batch,
             milestones_entity,
         )
-        _import_project_timesheet(
-            project,
-            row["gg_consumati_su_progetto"],
-            reference_date,
-            batch,
-            timesheets_entity,
-            report,
+        if code not in monthly_project_codes:
+            _import_project_timesheet(
+                project,
+                row["gg_consumati_su_progetto"],
+                reference_date,
+                batch,
+                timesheets_entity,
+                report,
+            )
+
+    _import_monthly_project_timesheets(
+        monthly_timesheets,
+        batch,
+        timesheets_entity,
+    )
+
+
+def _import_monthly_project_timesheets(
+    rows: list[dict[str, Any]],
+    batch: ImportBatch,
+    entity: EntityReport,
+) -> None:
+    if not rows:
+        return
+
+    rows_by_project: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        rows_by_project.setdefault(row["codice_progetto"], []).append(row)
+    projects = Project.objects.in_bulk(rows_by_project, field_name="code")
+
+    for code, project_rows in rows_by_project.items():
+        project = projects.get(code)
+        if project is None:
+            entity.errors.append({"chiave": code, "motivo": "Progetto mensile non trovato"})
+            continue
+        desired = {month_start(_as_date(row["periodo"])): row for row in project_rows}
+        active_entries = list(
+            TimesheetEntry.objects.filter(
+                project=project,
+                source=TimesheetSource.SEED_INIZIALE,
+                reversals__isnull=True,
+            ).order_by("period", "created_at")
         )
+        current = {entry.period: entry.days for entry in active_entries}
+        expected = {period: row["giornate"] for period, row in desired.items()}
+        if current == expected:
+            entity.unchanged += len(expected)
+            continue
+
+        for entry in active_entries:
+            reversal = entry.build_reversal(
+                "Storno automatico del consuntivo seed aggregato sostituito dal seed v4"
+            )
+            reversal.import_batch = batch
+            reversal.save()
+
+        for period, row in sorted(desired.items()):
+            key = f"{code}:{period.isoformat()}"
+            TimesheetEntry.objects.create(
+                project=project,
+                period=period,
+                days=row["giornate"],
+                source=TimesheetSource.SEED_INIZIALE,
+                note=(
+                    "Consuntivo ripartito dalla Capacity Mensile Excel, righe "
+                    + ", ".join(str(value) for value in row["righe_excel"])
+                ),
+                import_batch=batch,
+            )
+            _record_created(entity, key)
 
 
 def _import_milestones(

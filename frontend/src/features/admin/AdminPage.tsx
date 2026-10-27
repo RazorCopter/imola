@@ -770,7 +770,7 @@ export function AdminPage() {
           <div className="grid gap-4 xl:grid-cols-2">
             <ImportPanel
               kind="seed"
-              title="Import JSON (seed v1 o workbook v2)"
+              title="Import JSON (seed v1 o workbook v2-v4)"
               accept="application/json,.json"
             />
             <ImportPanel kind="ppm" title="Import PPM" accept=".xlsx,.pdf" />

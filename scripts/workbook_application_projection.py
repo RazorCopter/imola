@@ -108,6 +108,27 @@ def build_application_projection(seed: dict[str, Any]) -> dict[str, Any]:
         for row in project_rows
         if _text(row["values"].get("codice"))
     }
+    reference_month = seed["meta"]["workbook_reference_date"][:7]
+    capacity_periods = {
+        **{str(month): f"2024-{month:02d}-01" for month in range(1, 13)},
+        **{f"{month}_2": f"2026-{month:02d}-01" for month in range(1, 13)},
+    }
+    capacity_weights: dict[str, dict[str, dict[str, Any]]] = {}
+    for source in capacity_rows:
+        values = source["values"]
+        project_code = projects_by_key.get(_code_key(values.get("codice_attività")))
+        if not project_code:
+            continue
+        for column, period in capacity_periods.items():
+            value = _number(values.get(column), None)
+            if value is None or value <= 0 or period[:7] > reference_month:
+                continue
+            period_data = capacity_weights.setdefault(project_code, {}).setdefault(
+                period,
+                {"capacity_days": 0, "source_rows": []},
+            )
+            period_data["capacity_days"] = _number(period_data["capacity_days"] + value)
+            period_data["source_rows"].append(source["source_row"])
 
     supplier_by_project: dict[str, str] = {}
     for row in wallet_rows:
@@ -124,6 +145,7 @@ def build_application_projection(seed: dict[str, Any]) -> dict[str, Any]:
             supplier_by_project.setdefault(source, supplier)
 
     projects: list[dict[str, Any]] = []
+    monthly_timesheets: list[dict[str, Any]] = []
     client_people: set[str] = set()
     supplier_people: set[str] = set(supplier_by_project.values())
     for source in project_rows:
@@ -195,6 +217,28 @@ def build_application_projection(seed: dict[str, Any]) -> dict[str, Any]:
                 "punti_da_verificare": verification_points,
             }
         )
+        weights = capacity_weights.get(code, {})
+        total_weight = sum(item["capacity_days"] for item in weights.values())
+        if consumed and consumed > 0 and total_weight > 0:
+            allocated = 0
+            weighted_periods = sorted(weights.items())
+            for index, (period, period_data) in enumerate(weighted_periods):
+                days = (
+                    _number(consumed - allocated)
+                    if index == len(weighted_periods) - 1
+                    else _number(consumed * period_data["capacity_days"] / total_weight)
+                )
+                allocated = _number(allocated + days)
+                monthly_timesheets.append(
+                    {
+                        "codice_progetto": code,
+                        "periodo": period,
+                        "giornate": days,
+                        "peso_capacity_excel": period_data["capacity_days"],
+                        "righe_excel": sorted(set(period_data["source_rows"])),
+                        "metodo": "RIPARTIZIONE_PROPORZIONALE_SU_CAPACITY_MENSILE",
+                    }
+                )
 
     activities: dict[str, dict[str, Any]] = {}
     source_lots: list[dict[str, Any]] = []
@@ -434,7 +478,7 @@ def build_application_projection(seed: dict[str, Any]) -> dict[str, Any]:
         "anomalie_aperte": [],
     }
     return {
-        "projection_version": "3.0.0",
+        "projection_version": "4.0.0",
         "source_policy": {
             "projects": "Progetti::Tabella3967",
             "wallet": (
@@ -443,7 +487,11 @@ def build_application_projection(seed: dict[str, Any]) -> dict[str, Any]:
             ),
             "canone_s1": "OA-attività S1::intervallo_principale",
             "canone_s2": "OA-attività S2::intervallo_principale",
-            "capacity": "Capacity Mensile::intervallo_principale conservato come dataset",
+            "capacity": (
+                "Capacity Mensile::intervallo_principale; valori mensili fino alla data di "
+                "riferimento usati come pesi per ripartire il consuntivo progetto senza "
+                "alterarne il totale"
+            ),
         },
         "coverage": {
             "projects": len(projects),
@@ -451,8 +499,10 @@ def build_application_projection(seed: dict[str, Any]) -> dict[str, Any]:
             "canoni": len(canoni),
             "wallet_activities": len(activities),
             "wallet_allocations": len(usages),
+            "monthly_timesheets": len(monthly_timesheets),
         },
         "seed_v1": seed_v1,
+        "monthly_timesheets": monthly_timesheets,
         "wallet_v3": {
             "anno": int(seed["meta"]["workbook_reference_date"][:4]),
             "regola_erosione": "FIFO_ANNO_PROVENIENZA_DATA_CODICE",

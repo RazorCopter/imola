@@ -51,6 +51,7 @@ def default_schema_path(version: str = "1.0.0") -> Path:
         "1.0.0": "seed_schema_v1.json",
         "2.0.0": "seed_workbook_schema_v2.json",
         "3.0.0": "seed_workbook_schema_v3.json",
+        "4.0.0": "seed_workbook_schema_v4.json",
     }
     try:
         filename = filenames[version]
@@ -60,7 +61,9 @@ def default_schema_path(version: str = "1.0.0") -> Path:
 
 
 def schema_paths() -> dict[str, Path]:
-    return {version: default_schema_path(version) for version in ("1.0.0", "2.0.0", "3.0.0")}
+    return {
+        version: default_schema_path(version) for version in ("1.0.0", "2.0.0", "3.0.0", "4.0.0")
+    }
 
 
 def read_seed_file(path: str | Path) -> tuple[Path, str, str]:
@@ -87,16 +90,21 @@ def _make_report(payload: dict[str, Any], source_filename: str, *, dry_run: bool
 def _kind(payload: dict[str, Any]) -> str:
     return (
         ImportKind.WORKBOOK_JSON
-        if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0"}
+        if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0", "4.0.0"}
         else ImportKind.SEED_JSON
     )
 
 
 def _run_import(payload: dict[str, Any], *, batch: ImportBatch, report: ImportReport) -> None:
-    if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0"}:
+    if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0", "4.0.0"}:
         persist_workbook(payload, batch=batch)
-        import_foundation(payload["application"]["seed_v1"], batch=batch, report=report)
-        if payload["meta"]["schema_version"] == "3.0.0":
+        import_foundation(
+            payload["application"]["seed_v1"],
+            batch=batch,
+            report=report,
+            monthly_timesheets=payload["application"].get("monthly_timesheets"),
+        )
+        if payload["meta"]["schema_version"] in {"3.0.0", "4.0.0"}:
             from importers.seed_json import import_wallet_v3
 
             import_wallet_v3(
@@ -147,7 +155,7 @@ def dry_run_seed(payload: dict[str, Any], *, source_filename: str) -> ImportResu
 
     report = (
         make_workbook_report(payload, source_filename, dry_run=True)
-        if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0"}
+        if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0", "4.0.0"}
         else _make_report(payload, source_filename, dry_run=True)
     )
     try:
@@ -180,7 +188,7 @@ def apply_seed(payload: dict[str, Any], *, source_filename: str, content_hash: s
 
     report = (
         make_workbook_report(payload, source_filename, dry_run=False)
-        if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0"}
+        if payload["meta"]["schema_version"] in {"2.0.0", "3.0.0", "4.0.0"}
         else _make_report(payload, source_filename, dry_run=False)
     )
     try:

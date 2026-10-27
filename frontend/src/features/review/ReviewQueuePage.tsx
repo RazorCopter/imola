@@ -3,6 +3,7 @@ import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 
 import { ErrorState, LoadingState } from "@/components/UiState";
+import { ResizableTableHeader } from "@/components/ResizableTableHeader";
 import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
 import { canWriteLedger } from "@/lib/permissions";
@@ -67,14 +68,16 @@ export function ReviewQueuePage() {
       </header>
 
       <div className="overflow-auto rounded-lg border border-border bg-card">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
           <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
             <tr>
-              <th className="p-3">Codice</th>
-              <th className="p-3">Titolo</th>
-              <th className="p-3">Stato attuale</th>
-              <th className="p-3">Data prevista / chiusura</th>
-              <th className="p-3">Azione</th>
+              <ResizableTableHeader initialWidth={180}>Codice</ResizableTableHeader>
+              <ResizableTableHeader initialWidth={360}>Titolo</ResizableTableHeader>
+              <ResizableTableHeader initialWidth={160}>Stato attuale</ResizableTableHeader>
+              <ResizableTableHeader initialWidth={210}>
+                Data prevista / chiusura
+              </ResizableTableHeader>
+              <ResizableTableHeader initialWidth={300}>Azione</ResizableTableHeader>
             </tr>
           </thead>
           <tbody>

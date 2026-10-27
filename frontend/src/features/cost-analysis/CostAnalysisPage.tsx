@@ -4,6 +4,7 @@ import { AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { AccessibleBarChart } from "@/components/AccessibleBarChart";
+import { ResizableTableHeader } from "@/components/ResizableTableHeader";
 import { ErrorState, LoadingState } from "@/components/UiState";
 import { api } from "@/lib/api";
 import { formatDays } from "@/lib/format";
@@ -40,18 +41,26 @@ function AggregationTable({ title, rows }: { title: string; rows: Row[] }) {
     <section className="overflow-hidden rounded-lg border border-border bg-card">
       <h2 className="p-4 font-semibold">{title}</h2>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
           <thead className="bg-muted/50">
             <tr>
-              <th className="p-3 text-left">{t("costAnalysis.label")}</th>
-              <th className="p-3 text-right">{t("costAnalysis.days")}</th>
-              <th className="p-3 text-right">{t("costAnalysis.cost")}</th>
+              <ResizableTableHeader initialWidth={320}>
+                {t("costAnalysis.label")}
+              </ResizableTableHeader>
+              <ResizableTableHeader initialWidth={140} align="right">
+                {t("costAnalysis.days")}
+              </ResizableTableHeader>
+              <ResizableTableHeader initialWidth={160} align="right">
+                {t("costAnalysis.cost")}
+              </ResizableTableHeader>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.label} className="border-t border-border">
-                <td className="p-3">{row.label}</td>
+                <td className="truncate p-3" title={row.label}>
+                  {row.label}
+                </td>
                 <td className="p-3 text-right tabular-nums">{formatDays(row.days)}</td>
                 <td className="p-3 text-right tabular-nums">{money.format(Number(row.cost))}</td>
               </tr>

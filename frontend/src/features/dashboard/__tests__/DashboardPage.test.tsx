@@ -82,7 +82,7 @@ describe("DashboardPage", () => {
                 progetto_id: "project-1",
                 progetto_codice: "PRJ-01",
                 data_pianificata: "2026-10-10",
-                data_fatturazione: "2026-10-31",
+                data_fatturazione: "2026-10-10",
                 data_effettiva: null,
                 classificazione: "MESE_CORRENTE",
                 stato: "PIANIFICATA",
@@ -100,15 +100,14 @@ describe("DashboardPage", () => {
 
   afterEach(() => vi.clearAllMocks());
 
-  it("mostra grafici API e fatturazioni del mese con data prevista e data di fine mese", async () => {
+  it("mostra grafici API e fatturazioni del mese con la data reale prevista", async () => {
     renderPage();
 
     expect(await screen.findByText("Distribuzione progetti per stato")).toBeInTheDocument();
     expect(screen.getByText("Prossime fatturazioni")).toBeInTheDocument();
     expect(screen.getByText("PRJ-01")).toBeInTheDocument();
     expect(screen.queryByText("Scaduta")).not.toBeInTheDocument();
-    expect(screen.getByText("10/10/2026")).toBeInTheDocument();
-    expect(screen.getByText("31/10/2026")).toBeInTheDocument();
+    expect(screen.getAllByText("10/10/2026")).toHaveLength(2);
     expect(getMock).toHaveBeenCalledWith("/dashboard");
   });
 

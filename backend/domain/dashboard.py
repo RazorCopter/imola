@@ -1,8 +1,4 @@
-"""Aggregazioni read-only per la dashboard.
-
-Le date convenzionali di fatturazione non modificano le milestone: servono solo a
-raggruppare gli impegni aperti in una data mensile confrontabile.
-"""
+"""Aggregazioni read-only per la dashboard."""
 
 from __future__ import annotations
 
@@ -74,7 +70,7 @@ def dashboard_summary(
                 "progetto_id": str(milestone.project_id),
                 "progetto_codice": milestone.project.code,
                 "data_pianificata": planned_date.isoformat(),
-                "data_fatturazione": current_month_end.isoformat(),
+                "data_fatturazione": planned_date.isoformat(),
                 "data_effettiva": (
                     milestone.actual_date.isoformat() if milestone.actual_date else None
                 ),

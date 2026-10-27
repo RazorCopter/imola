@@ -11,15 +11,15 @@ Due letture dello stesso testo, deliberatamente:
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
 SUPPORTED_SCHEMA_VERSION = "1.0.0"
-SUPPORTED_SCHEMA_VERSIONS = ("1.0.0", "2.0.0", "3.0.0")
+SUPPORTED_SCHEMA_VERSIONS = ("1.0.0", "2.0.0", "3.0.0", "4.0.0")
 
 
 class SeedValidationError(ValueError):
@@ -113,7 +113,7 @@ def validate_seed_auto(text: str, schema_paths: Mapping[str, str | Path]) -> dic
             f"Il file non rispetta lo schema seed {version} ({len(problems)} problemi).",
             problems,
         )
-    if version in {"2.0.0", "3.0.0"}:
+    if version in {"2.0.0", "3.0.0", "4.0.0"}:
         v1_validator = Draft202012Validator(
             load_schema(schema_paths["1.0.0"]), format_checker=FormatChecker()
         )

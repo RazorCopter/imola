@@ -32,6 +32,7 @@ test-results/
 # ambiente / build
 .env
 .env.local
+.env.portainer
 *.log
 .docker-data/
 .pgdata/

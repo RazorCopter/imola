@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "seed_workbook_schema_v4.json",
+  "title": "Imola full workbook seed v4",
+  "type": "object",
+  "required": ["$schema", "meta", "workbook", "datasets", "audit", "application"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {"const": "./seed_workbook_schema_v4.json"},
+    "meta": {
+      "type": "object",
+      "required": ["schema_version", "generated_at", "scope", "source", "workbook_reference_date", "notes"],
+      "properties": {
+        "schema_version": {"const": "4.0.0"},
+        "generated_at": {"type": "string", "format": "date-time"},
+        "scope": {"const": "FULL_WORKBOOK"},
+        "workbook_reference_date": {"type": "string", "format": "date"},
+        "notes": {"type": "array", "items": {"type": "string"}},
+        "source": {
+          "type": "object",
+          "required": ["filename", "sha256", "size_bytes", "last_modified"],
+          "properties": {
+            "filename": {"type": "string", "minLength": 1},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "size_bytes": {"type": "integer", "minimum": 1},
+            "last_modified": {"type": "string", "format": "date-time"}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "workbook": {"type": "object"},
+    "datasets": {"type": "array", "items": {"type": "object"}},
+    "audit": {"type": "object"},
+    "application": {
+      "type": "object",
+      "required": ["projection_version", "source_policy", "coverage", "seed_v1", "wallet_v3", "monthly_timesheets"],
+      "additionalProperties": false,
+      "properties": {
+        "projection_version": {"const": "4.0.0"},
+        "source_policy": {"type": "object", "additionalProperties": {"type": "string"}},
+        "coverage": {"type": "object"},
+        "seed_v1": {"type": "object"},
+        "wallet_v3": {"type": "object"},
+        "monthly_timesheets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["codice_progetto", "periodo", "giornate", "peso_capacity_excel", "righe_excel", "metodo"],
+            "additionalProperties": false,
+            "properties": {
+              "codice_progetto": {"type": "string", "minLength": 1},
+              "periodo": {"type": "string", "format": "date"},
+              "giornate": {"type": "number", "exclusiveMinimum": 0},
+              "peso_capacity_excel": {"type": "number", "exclusiveMinimum": 0},
+              "righe_excel": {"type": "array", "items": {"type": "integer", "minimum": 1}},
+              "metodo": {"const": "RIPARTIZIONE_PROPORZIONALE_SU_CAPACITY_MENSILE"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

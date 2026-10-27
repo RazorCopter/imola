@@ -17,9 +17,9 @@ from openpyxl.utils import get_column_letter, range_boundaries
 from workbook_application_projection import build_application_projection
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SOURCE = Path.home() / "Downloads" / "2026S1-OrgAllargatoProgetti-Situazione.xlsx"
-DEFAULT_OUTPUT = ROOT / "data" / "seed" / "seed_imola_v3_2026-10-09.json"
-DEFAULT_SCHEMA = ROOT / "seed_workbook_schema_v3.json"
+DEFAULT_SOURCE = ROOT / "docs" / "2026S1-OrgAllargatoProgetti-Situazione.xlsx"
+DEFAULT_OUTPUT = ROOT / "data" / "seed" / "seed_imola_v4_2026-10-09.json"
+DEFAULT_SCHEMA = ROOT / "seed_workbook_schema_v4.json"
 
 
 def json_value(value: Any) -> Any:
@@ -286,9 +286,9 @@ def build_seed(source: Path) -> dict[str, Any]:
         len(table["rows"]) for sheet in sheets for table in sheet["tables"]
     )
     seed = {
-        "$schema": "./seed_workbook_schema_v3.json",
+        "$schema": "./seed_workbook_schema_v4.json",
         "meta": {
-            "schema_version": "3.0.0",
+            "schema_version": "4.0.0",
             "generated_at": datetime.now(UTC).isoformat(),
             "scope": "FULL_WORKBOOK",
             "source": {
