@@ -15,7 +15,7 @@ export function InfoTooltip({ label, description }: InfoTooltipProps) {
       </button>
       <span
         role="tooltip"
-        className="bg-popover text-popover-foreground pointer-events-none absolute right-0 top-7 z-50 hidden w-72 rounded-md border border-border p-3 text-left text-xs font-normal normal-case tracking-normal shadow-lg group-focus-within:block group-hover:block"
+        className="pointer-events-none absolute right-0 top-7 z-50 hidden w-72 rounded-md border border-slate-700 bg-slate-950 p-3 text-left text-xs font-normal normal-case tracking-normal text-slate-50 opacity-100 shadow-2xl group-focus-within:block group-hover:block"
       >
         {description}
       </span>

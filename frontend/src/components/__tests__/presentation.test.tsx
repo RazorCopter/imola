@@ -30,6 +30,8 @@ describe("KpiCard", () => {
     render(<KpiCard label="Residuo" value="3 gg" tooltip="Budget meno giornate consumate." />);
 
     expect(screen.getByRole("button", { name: "Informazioni su Residuo" })).toBeInTheDocument();
-    expect(screen.getByRole("tooltip")).toHaveTextContent("Budget meno giornate consumate.");
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip).toHaveTextContent("Budget meno giornate consumate.");
+    expect(tooltip).toHaveClass("bg-slate-950", "text-slate-50", "opacity-100", "shadow-2xl");
   });
 });
