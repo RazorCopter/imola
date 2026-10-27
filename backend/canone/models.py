@@ -17,7 +17,7 @@ from core.fields import DaysField
 from core.models import TrackedModel
 from imports.models import ImportedRecordMixin
 
-SEMESTER_RE = re.compile(r"^\d{4}-S[12]$")
+PERIOD_RE = re.compile(r"^\d{4}-(?:S[12]|Q[1-4])$")
 REDMINE_RE = re.compile(r"#(\d{4,})")
 LEADING_NUMBER_RE = re.compile(r"^\s*(\d{4,})\b")
 
@@ -41,6 +41,11 @@ class Office(models.TextChoices):
     CROSS = "CROSS", "Cross"
 
 
+class CanonePeriodicity(models.TextChoices):
+    QUARTERLY = "TRIMESTRALE", "Trimestrale"
+    SEMIANNUAL = "SEMESTRALE", "Semestrale"
+
+
 class Canone(TrackedModel, ImportedRecordMixin):
     project = models.ForeignKey(
         "projects.Project",
@@ -49,6 +54,12 @@ class Canone(TrackedModel, ImportedRecordMixin):
         verbose_name="progetto",
     )
     semester = models.CharField(max_length=7, verbose_name="semestre", help_text="Es. 2026-S2")
+    periodicity = models.CharField(
+        max_length=12,
+        choices=CanonePeriodicity.choices,
+        default=CanonePeriodicity.SEMIANNUAL,
+        verbose_name="periodicità",
+    )
     total_days = DaysField(verbose_name="monte giornate")
     target_base_days = DaysField(default=2, verbose_name="giornate base del target")
     target_days_per_week = DaysField(default=0, verbose_name="giornate per settimana")
@@ -80,18 +91,32 @@ class Canone(TrackedModel, ImportedRecordMixin):
         return f"Canone {self.semester}"
 
     def clean(self) -> None:
-        if not SEMESTER_RE.match(self.semester or ""):
-            raise ValidationError({"semester": "Formato atteso AAAA-S1 o AAAA-S2."})
+        if not PERIOD_RE.match(self.semester or ""):
+            raise ValidationError(
+                {"semester": "Formato atteso AAAA-S1/S2 oppure AAAA-Q1/Q2/Q3/Q4."}
+            )
+        expected_prefix = "Q" if self.periodicity == CanonePeriodicity.QUARTERLY else "S"
+        if f"-{expected_prefix}" not in self.semester:
+            raise ValidationError(
+                {"semester": "Il periodo non corrisponde alla periodicità scelta."}
+            )
         if self.start_date and self.end_date and self.end_date < self.start_date:
             raise ValidationError({"end_date": "La fine del semestre precede l'inizio."})
 
     @staticmethod
     def semester_bounds(semester: str) -> tuple[str, str]:
-        """Date di inizio e fine convenzionali di un semestre, in formato ISO."""
-        year, half = semester.split("-S")
-        if half == "1":
-            return f"{year}-01-01", f"{year}-06-30"
-        return f"{year}-07-01", f"{year}-12-31"
+        """Date convenzionali del periodo, mantenendo il nome legacy del metodo."""
+        year, period = semester.split("-")
+        bounds = {
+            "S1": ("01-01", "06-30"),
+            "S2": ("07-01", "12-31"),
+            "Q1": ("01-01", "03-31"),
+            "Q2": ("04-01", "06-30"),
+            "Q3": ("07-01", "09-30"),
+            "Q4": ("10-01", "12-31"),
+        }
+        start, end = bounds[period]
+        return f"{year}-{start}", f"{year}-{end}"
 
 
 class CanoneSubactivity(TrackedModel, ImportedRecordMixin):
@@ -108,6 +133,7 @@ class CanoneSubactivity(TrackedModel, ImportedRecordMixin):
         verbose_name="ufficio",
     )
     title = models.CharField(max_length=400, verbose_name="titolo")
+    reserved_days = DaysField(default=0, verbose_name="giornate riservate")
     redmine_ref = models.CharField(
         max_length=20,
         blank=True,
@@ -137,6 +163,12 @@ class CanoneSubactivity(TrackedModel, ImportedRecordMixin):
         verbose_name_plural = "sotto-attività del canone"
         ordering = ("office", "title")
         indexes = [models.Index(fields=("canone", "office"))]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(reserved_days__gte=0),
+                name="canone_subactivity_reserved_nonnegative",
+            )
+        ]
 
     def __str__(self) -> str:
         return self.title[:80]

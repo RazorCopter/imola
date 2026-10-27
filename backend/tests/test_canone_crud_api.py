@@ -8,7 +8,7 @@ from django.apps import apps
 from django.contrib.auth.models import Group
 from rest_framework.test import APIClient
 
-from canone.models import Canone, CanoneSubactivity
+from canone.models import Canone, CanonePeriodicity, CanoneSubactivity
 from core import capabilities, roles
 from core.models import AdminAuditEvent, RoleCapabilityOverride
 from tests.factories import CanoneFactory, ProjectFactory, TimesheetEntryFactory, UserFactory
@@ -49,7 +49,9 @@ def test_migrazione_canone_manage_usa_ruoli_canonici_e_preserva_override_esisten
 
 def test_lista_aggregata_filtri_e_dettaglio():
     canone = CanoneFactory(semester="2026-S2", total_days=Decimal("10"))
-    sub = CanoneSubactivity.objects.create(canone=canone, title="Analisi", office="EA")
+    sub = CanoneSubactivity.objects.create(
+        canone=canone, title="Analisi", office="EA", reserved_days=Decimal("5")
+    )
     TimesheetEntryFactory(canone_subactivity=sub, days=Decimal("3"))
 
     response = client_for().get(
@@ -63,6 +65,8 @@ def test_lista_aggregata_filtri_e_dettaglio():
     body = response.json()
     assert body["status"]["consuntivato"] == "3.0000"
     assert body["subactivities"][0]["consuntivato"] == "3.0000"
+    assert body["reserved_days"] == "5.0000"
+    assert body["available_days"] == "5.0000"
 
 
 def test_crud_lock_permission_audit_e_delete_sicura():
@@ -99,7 +103,7 @@ def test_crud_lock_permission_audit_e_delete_sicura():
 
     sub = manager.post(
         f"/api/v1/canoni/{canone_id}/subactivities",
-        {"title": "Sottoattività manuale", "office": "SA"},
+        {"title": "Sottoattività manuale", "office": "SA", "reserved_days": "5"},
         format="json",
     )
     assert sub.status_code == 201
@@ -113,3 +117,35 @@ def test_crud_lock_permission_audit_e_delete_sicura():
     assert blocked.status_code == 400
     assert blocked.json()["code"] == "canone-delete-bloccata"
     assert Canone.objects.filter(pk=canone_id).exists()
+
+
+def test_canone_trimestrale_e_riserva_attivita_non_superano_il_monte():
+    project = ProjectFactory(code="CAN-Q")
+    manager = client_for(roles.MANAGER)
+    created = manager.post(
+        "/api/v1/canoni",
+        {
+            "project_id": str(project.id),
+            "semester": "2027-Q2",
+            "periodicity": CanonePeriodicity.QUARTERLY,
+            "total_days": "20",
+        },
+        format="json",
+    )
+    assert created.status_code == 201, created.data
+    assert created.json()["start_date"] == "2027-04-01"
+    assert created.json()["end_date"] == "2027-06-30"
+    canone_id = created.json()["id"]
+    first = manager.post(
+        f"/api/v1/canoni/{canone_id}/subactivities",
+        {"title": "Disegno enterprise", "office": "EA", "reserved_days": "12"},
+        format="json",
+    )
+    assert first.status_code == 201, first.data
+    overflow = manager.post(
+        f"/api/v1/canoni/{canone_id}/subactivities",
+        {"title": "Disegno solution", "office": "SA", "reserved_days": "9"},
+        format="json",
+    )
+    assert overflow.status_code == 400
+    assert "reserved_days" in str(overflow.data)

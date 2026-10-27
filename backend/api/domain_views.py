@@ -10,7 +10,7 @@ from datetime import date
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
-from django.db.models import Count, DecimalField, Max, Q, Sum, Value
+from django.db.models import Count, DecimalField, Max, OuterRef, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -987,6 +987,7 @@ def _canone_row(row) -> dict:
         "id": row.id,
         "version": row.version,
         "semestre": row.semester,
+        "periodicita": row.periodicity,
         "progetto_id": row.project_id,
         "progetto_codice": row.project.code,
         "progetto_titolo": row.project.title,
@@ -994,6 +995,8 @@ def _canone_row(row) -> dict:
             row.project.supplier_owner.organization.name if row.project.supplier_owner_id else None
         ),
         "pianificato": row.total_days,
+        "riservato": row.reserved_days,
+        "disponibile": row.total_days - row.reserved_days,
         "consuntivato": consumed,
         "residuo": row.total_days - consumed,
         "stato": _canone_state(row.total_days, consumed),
@@ -1003,11 +1006,22 @@ def _canone_row(row) -> dict:
 
 
 def _canone_queryset():
+    reserved = (
+        CanoneSubactivity.objects.filter(canone=OuterRef("pk"))
+        .order_by()
+        .values("canone")
+        .annotate(total=Sum("reserved_days", output_field=CANONE_DAYS))
+        .values("total")[:1]
+    )
     return (
         Canone.objects.select_related("project__supplier_owner__organization")
         .annotate(
             consumed_days=Coalesce(
                 Sum("subactivities__timesheet_entries__days"),
+                Value(0, output_field=CANONE_DAYS),
+            ),
+            reserved_days=Coalesce(
+                Subquery(reserved, output_field=CANONE_DAYS),
                 Value(0, output_field=CANONE_DAYS),
             ),
             subactivity_count=Count("subactivities", distinct=True),
@@ -1036,6 +1050,8 @@ class CanoneListView(DocumentedAPIView):
 
     @extend_schema(responses={200: dict})
     def get(self, request):
+        from projects.models import Project
+
         rows = list(_canone_queryset())
         if request.query_params.get("management") != "1":
             last_moved = max(
@@ -1094,6 +1110,8 @@ class CanoneListView(DocumentedAPIView):
                 "default_canone_id": default_canone.id if default_canone else None,
                 "summary": {
                     "pianificato": sum((row.total_days for row in rows), 0),
+                    "riservato": sum((row.reserved_days for row in rows), 0),
+                    "disponibile": sum((row.total_days - row.reserved_days for row in rows), 0),
                     "consuntivato": sum((row.consumed_days for row in rows), 0),
                     "residuo": sum((row.total_days - row.consumed_days for row in rows), 0),
                     "sottoattivita": sum((row.subactivity_count for row in rows), 0),
@@ -1102,6 +1120,10 @@ class CanoneListView(DocumentedAPIView):
                     "semestri": sorted({row.semester for row in all_rows}, reverse=True),
                     "stati": ["NON_AVVIATO", "IN_CORSO", "COMPLETATO", "SUPERATO"],
                 },
+                "project_options": [
+                    {"id": project.id, "code": project.code, "title": project.title}
+                    for project in Project.objects.order_by("code")
+                ],
             }
         )
 
@@ -1163,6 +1185,8 @@ def _canone_detail(canone) -> dict:
                 "version": row.version,
                 "office": row.office,
                 "title": row.title,
+                "reserved_days": row.reserved_days,
+                "remaining_reserved_days": row.reserved_days - row.consumed_days,
                 "redmine_ref": row.redmine_ref,
                 "quarter_estimate_days": row.quarter_estimate_days,
                 "forecast_remaining_days": row.forecast_remaining_days,
@@ -1179,7 +1203,11 @@ def _canone_detail(canone) -> dict:
         "progetto_codice": canone.project.code,
         "progetto_titolo": canone.project.title,
         "semester": canone.semester,
+        "periodicity": canone.periodicity,
         "total_days": canone.total_days,
+        "reserved_days": sum((row["reserved_days"] for row in subactivities), 0),
+        "available_days": canone.total_days
+        - sum((row["reserved_days"] for row in subactivities), 0),
         "target_base_days": canone.target_base_days,
         "target_days_per_week": canone.target_days_per_week,
         "weeks_elapsed_at_import": canone.weeks_elapsed_at_import,
@@ -1195,9 +1223,10 @@ def _canone_detail(canone) -> dict:
 class CanoneSubactivityListView(DocumentedAPIView):
     permission_classes = [ReadOnlyOrCanManageCanone]
 
+    @transaction.atomic
     def post(self, request, pk):
-        canone = get_object_or_404(Canone, pk=pk)
-        serializer = CanoneSubactivityWriteSerializer(data=request.data)
+        canone = get_object_or_404(Canone.objects.select_for_update(), pk=pk)
+        serializer = CanoneSubactivityWriteSerializer(data=request.data, context={"canone": canone})
         serializer.is_valid(raise_exception=True)
         row = serializer.save(canone=canone)
         _audit_canone(request, "canone.subactivity.create", row, {"canone_id": str(pk)})
@@ -1209,9 +1238,12 @@ class CanoneSubactivityDetailView(DocumentedAPIView):
 
     @transaction.atomic
     def patch(self, request, pk, subactivity_pk):
+        Canone.objects.select_for_update().get(pk=pk)
         row = CanoneSubactivity.objects.select_for_update().get(pk=subactivity_pk, canone_id=pk)
         check_expected_version(request, row)
-        serializer = CanoneSubactivityWriteSerializer(row, data=request.data, partial=True)
+        serializer = CanoneSubactivityWriteSerializer(
+            row, data=request.data, partial=True, context={"canone": row.canone}
+        )
         serializer.is_valid(raise_exception=True)
         row = serializer.save()
         _audit_canone(request, "canone.subactivity.update", row, {"version": row.version})

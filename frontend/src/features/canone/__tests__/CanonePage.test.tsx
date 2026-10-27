@@ -41,11 +41,14 @@ const list = {
       id: "one",
       version: 1,
       semestre: "2026-S1",
+      periodicita: "SEMESTRALE",
       progetto_id: "p1",
       progetto_codice: "CAN-1",
       progetto_titolo: "Organico",
       fornitore: "Imola",
       pianificato: "100.0000",
+      riservato: "50.0000",
+      disponibile: "50.0000",
       consuntivato: "25.0000",
       residuo: "75.0000",
       stato: "IN_CORSO",
@@ -54,11 +57,14 @@ const list = {
   ],
   summary: {
     pianificato: "100.0000",
+    riservato: "50.0000",
+    disponibile: "50.0000",
     consuntivato: "25.0000",
     residuo: "75.0000",
     sottoattivita: 1,
   },
   filters: { semestri: ["2026-S1"], stati: ["IN_CORSO"] },
+  project_options: [{ id: "p1", code: "CAN-1", title: "Organico" }],
 };
 const detail = {
   id: "one",
@@ -67,7 +73,10 @@ const detail = {
   progetto_codice: "CAN-1",
   progetto_titolo: "Organico",
   semester: "2026-S1",
+  periodicity: "SEMESTRALE",
   total_days: "100.0000",
+  reserved_days: "50.0000",
+  available_days: "50.0000",
   target_base_days: "2.0000",
   target_days_per_week: "4.0000",
   cap_at_total: true,
@@ -80,6 +89,8 @@ const detail = {
       version: 1,
       office: "EA",
       title: "Analisi",
+      reserved_days: "50.0000",
+      remaining_reserved_days: "25.0000",
       redmine_ref: "",
       quarter_estimate_days: null,
       forecast_remaining_days: "50.0000",
@@ -121,7 +132,7 @@ describe("CanonePage", () => {
     row.focus();
     await user.keyboard("{Enter}");
     expect(await screen.findByText("Analisi")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Crea" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Nuovo canone" })).not.toBeInTheDocument();
   });
 
   it("applica filtri e abilita CRUD con canone.manage", async () => {
@@ -133,7 +144,7 @@ describe("CanonePage", () => {
     await user.type(search, "CAN");
     expect(search).toHaveValue("CAN");
     await waitFor(() => expect(getMock.mock.calls.length).toBeGreaterThan(callsBeforeFilter));
-    expect(screen.getByRole("button", { name: "Crea" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Nuovo canone" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Modifica" })).toBeInTheDocument();
   });
 });

@@ -12,11 +12,14 @@ interface CanoneRow {
   id: string;
   version: number;
   semestre: string;
+  periodicita: "TRIMESTRALE" | "SEMESTRALE";
   progetto_id: string;
   progetto_codice: string;
   progetto_titolo: string;
   fornitore: string | null;
   pianificato: string;
+  riservato: string;
+  disponibile: string;
   consuntivato: string;
   residuo: string;
   stato: string;
@@ -25,14 +28,24 @@ interface CanoneRow {
 interface CanoneList {
   results: CanoneRow[];
   default_canone_id: string | null;
-  summary: { pianificato: string; consuntivato: string; residuo: string; sottoattivita: number };
+  summary: {
+    pianificato: string;
+    riservato: string;
+    disponibile: string;
+    consuntivato: string;
+    residuo: string;
+    sottoattivita: number;
+  };
   filters: { semestri: string[]; stati: string[] };
+  project_options: { id: string; code: string; title: string }[];
 }
 interface Subactivity {
   id: string;
   version: number;
   office: string;
   title: string;
+  reserved_days: string;
+  remaining_reserved_days: string;
   redmine_ref: string;
   quarter_estimate_days: string | null;
   forecast_remaining_days: string | null;
@@ -48,7 +61,10 @@ interface Detail {
   progetto_codice: string;
   progetto_titolo: string;
   semester: string;
+  periodicity: "TRIMESTRALE" | "SEMESTRALE";
   total_days: string;
+  reserved_days: string;
+  available_days: string;
   target_base_days: string;
   target_days_per_week: string;
   cap_at_total: boolean;
@@ -84,6 +100,7 @@ export function CanonePage() {
   const [form, setForm] = useState({
     project_id: "",
     semester: "",
+    periodicity: "SEMESTRALE" as "TRIMESTRALE" | "SEMESTRALE",
     total_days: "",
     target_base_days: "2",
     target_days_per_week: "0",
@@ -93,6 +110,7 @@ export function CanonePage() {
   const [subForm, setSubForm] = useState({
     office: "",
     title: "",
+    reserved_days: "",
     quarter_estimate_days: "",
     forecast_remaining_days: "",
     notes: "",
@@ -119,6 +137,7 @@ export function CanonePage() {
     setForm({
       project_id: detail.data.project_id,
       semester: detail.data.semester,
+      periodicity: detail.data.periodicity,
       total_days: detail.data.total_days,
       target_base_days: detail.data.target_base_days,
       target_days_per_week: detail.data.target_days_per_week,
@@ -163,6 +182,7 @@ export function CanonePage() {
       setSubForm({
         office: "",
         title: "",
+        reserved_days: "",
         quarter_estimate_days: "",
         forecast_remaining_days: "",
         notes: "",
@@ -195,7 +215,9 @@ export function CanonePage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Organico Allargato</h1>
-          <p className="text-sm text-muted-foreground">Voci, consuntivi e forecast correlati.</p>
+          <p className="text-sm text-muted-foreground">
+            Gestione canoni e attività che ne riservano il monte giornate.
+          </p>
         </div>
         {editable && (
           <button
@@ -206,6 +228,7 @@ export function CanonePage() {
               setForm({
                 project_id: "",
                 semester: "",
+                periodicity: "SEMESTRALE",
                 total_days: "",
                 target_base_days: "2",
                 target_days_per_week: "0",
@@ -214,7 +237,7 @@ export function CanonePage() {
               });
             }}
           >
-            Crea
+            Nuovo canone
           </button>
         )}
       </header>
@@ -222,19 +245,19 @@ export function CanonePage() {
         {(
           [
             [
-              "Pianificato",
+              "Monte canoni",
               data.summary.pianificato,
-              "Monte giornate pianificato per il canone nel semestre selezionato.",
+              "Monte giornate complessivo dei canoni visualizzati.",
             ],
             [
-              "Consuntivato",
-              data.summary.consuntivato,
-              "Somma delle giornate registrate sulle sottoattività del canone.",
+              "Riservato attività",
+              data.summary.riservato,
+              "Giornate assegnate alle attività censite sui canoni visualizzati.",
             ],
             [
-              "Residuo",
-              data.summary.residuo,
-              "Giornate ancora disponibili: pianificato meno consuntivato.",
+              "Disponibile da riservare",
+              data.summary.disponibile,
+              "Monte dei canoni non ancora assegnato ad attività.",
             ],
           ] satisfies Array<[string, string, string]>
         ).map(([label, value, description]) => (
@@ -247,8 +270,8 @@ export function CanonePage() {
         ))}
         <div className="rounded-lg border bg-card p-4">
           <MetricLabel
-            label="Sottoattività"
-            description="Numero di voci operative censite nel canone selezionato."
+            label="Attività"
+            description="Numero di attività operative censite sui canoni visualizzati."
           />
           <p className="text-xl font-semibold">{data.summary.sottoattivita}</p>
         </div>
@@ -272,6 +295,7 @@ export function CanonePage() {
           <p className="text-sm text-muted-foreground">Nessun dato per il grafico.</p>
         )}
       </div>
+      <h2 className="text-lg font-semibold">Canoni trimestrali e semestrali</h2>
       <div className="flex flex-wrap gap-2">
         <input
           aria-label="Ricerca"
@@ -281,12 +305,12 @@ export function CanonePage() {
           placeholder="Cerca codice o titolo"
         />
         <select
-          aria-label="Semestre"
+          aria-label="Periodo"
           className={fieldClass}
           value={semester}
           onChange={(e) => setSemester(e.target.value)}
         >
-          <option value="">Tutti i semestri</option>
+          <option value="">Tutti i periodi</option>
           {data.filters.semestri.map((value) => (
             <option key={value}>{value}</option>
           ))}
@@ -313,13 +337,15 @@ export function CanonePage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50 text-left">
-                <th className="p-3">Semestre</th>
+                <th className="p-3">Periodo</th>
+                <th>Periodicità</th>
                 <th>Progetto</th>
-                <th>Pianificato</th>
+                <th>Monte</th>
+                <th>Riservato</th>
+                <th>Disponibile</th>
                 <th>Consuntivato</th>
-                <th>Residuo</th>
                 <th>Stato</th>
-                <th>Sottoattività</th>
+                <th>Attività</th>
               </tr>
             </thead>
             <tbody>
@@ -338,6 +364,7 @@ export function CanonePage() {
                   }}
                 >
                   <td className="p-3">{row.semestre}</td>
+                  <td>{row.periodicita === "TRIMESTRALE" ? "Trimestrale" : "Semestrale"}</td>
                   <td>
                     {row.progetto_codice} · {row.progetto_titolo}
                   </td>
@@ -345,10 +372,13 @@ export function CanonePage() {
                     <DaysValue value={row.pianificato} />
                   </td>
                   <td>
-                    <DaysValue value={row.consuntivato} />
+                    <DaysValue value={row.riservato} />
                   </td>
                   <td>
-                    <DaysValue value={row.residuo} />
+                    <DaysValue value={row.disponibile} />
+                  </td>
+                  <td>
+                    <DaysValue value={row.consuntivato} />
                   </td>
                   <td>{row.stato}</td>
                   <td>{row.sottoattivita_count}</td>
@@ -370,7 +400,7 @@ export function CanonePage() {
               <div className="flex justify-between">
                 <h2 className="font-semibold">
                   {creating
-                    ? "Nuova voce"
+                    ? "Nuovo canone"
                     : `${detail.data?.progetto_codice} · ${detail.data?.semester}`}
                 </h2>
                 {editable && !creating && (
@@ -386,27 +416,62 @@ export function CanonePage() {
               </div>
               {(editing || creating) && (
                 <div className="grid gap-3 sm:grid-cols-3">
-                  {(
-                    [
-                      ["project_id", "ID progetto"],
-                      ["semester", "Semestre"],
-                      ["total_days", "Giornate"],
-                      ["target_base_days", "Base target"],
-                      ["target_days_per_week", "Giornate/settimana"],
-                      ["start_date", "Data inizio"],
-                      ["end_date", "Data fine"],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <label key={key} className="text-sm">
-                      {label}
-                      <input
-                        className={`${fieldClass} mt-1 w-full`}
-                        type={key.includes("date") ? "date" : "text"}
-                        value={form[key]}
-                        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                      />
-                    </label>
-                  ))}
+                  <label className="text-sm">
+                    Progetto
+                    <select
+                      aria-label="Progetto del canone"
+                      className={`${fieldClass} mt-1 w-full`}
+                      value={form.project_id}
+                      onChange={(e) => setForm({ ...form, project_id: e.target.value })}
+                    >
+                      <option value="">Seleziona progetto</option>
+                      {data.project_options.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.code} · {project.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-sm">
+                    Periodicità
+                    <select
+                      aria-label="Periodicità"
+                      className={`${fieldClass} mt-1 w-full`}
+                      value={form.periodicity}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          periodicity: e.target.value as "TRIMESTRALE" | "SEMESTRALE",
+                          semester: "",
+                        })
+                      }
+                    >
+                      <option value="TRIMESTRALE">Trimestrale</option>
+                      <option value="SEMESTRALE">Semestrale</option>
+                    </select>
+                  </label>
+                  <label className="text-sm">
+                    Periodo
+                    <input
+                      aria-label="Periodo del canone"
+                      className={`${fieldClass} mt-1 w-full`}
+                      placeholder={form.periodicity === "TRIMESTRALE" ? "2026-Q1" : "2026-S1"}
+                      value={form.semester}
+                      onChange={(e) => setForm({ ...form, semester: e.target.value.toUpperCase() })}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    Monte giornate
+                    <input
+                      aria-label="Monte giornate"
+                      className={`${fieldClass} mt-1 w-full`}
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={form.total_days}
+                      onChange={(e) => setForm({ ...form, total_days: e.target.value })}
+                    />
+                  </label>
                   <div className="sm:col-span-3">
                     <button
                       className={buttonClass}
@@ -425,7 +490,13 @@ export function CanonePage() {
               )}
               {!creating && detail.data && (
                 <div className="space-y-3">
-                  <h3 className="font-medium">Sottoattività e consuntivi</h3>
+                  <div>
+                    <h3 className="text-lg font-semibold">Attività del canone</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Riservato <DaysValue value={detail.data.reserved_days} /> · disponibile da
+                      assegnare <DaysValue value={detail.data.available_days} />
+                    </p>
+                  </div>
                   {detail.data.subactivities.map((row) => (
                     <div
                       key={row.id}
@@ -434,8 +505,9 @@ export function CanonePage() {
                       <div>
                         <strong>{row.title}</strong>
                         <p className="text-sm text-muted-foreground">
-                          {row.office || "Senza ufficio"} · consuntivato{" "}
-                          <DaysValue value={row.consuntivato} /> · {row.timesheet_count} movimenti
+                          Gruppo {row.office} · riservato <DaysValue value={row.reserved_days} /> ·
+                          consuntivato <DaysValue value={row.consuntivato} /> · residuo attività{" "}
+                          <DaysValue value={row.remaining_reserved_days} />
                         </p>
                       </div>
                       {editable && (
@@ -446,25 +518,37 @@ export function CanonePage() {
                     </div>
                   ))}
                   {editable && (
-                    <div className="grid gap-2 sm:grid-cols-3">
+                    <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-4">
                       <input
                         className={fieldClass}
-                        placeholder="Titolo sottoattività"
+                        aria-label="Titolo attività"
+                        placeholder="Titolo attività"
                         value={subForm.title}
                         onChange={(e) => setSubForm({ ...subForm, title: e.target.value })}
                       />
                       <select
                         className={fieldClass}
+                        aria-label="Gruppo architetturale"
                         value={subForm.office}
                         onChange={(e) => setSubForm({ ...subForm, office: e.target.value })}
                       >
-                        <option value="">Ufficio</option>
-                        {["EA", "SA", "TA", "CROSS"].map((office) => (
+                        <option value="">Gruppo</option>
+                        {["EA", "TA", "SA"].map((office) => (
                           <option key={office}>{office}</option>
                         ))}
                       </select>
+                      <input
+                        className={fieldClass}
+                        aria-label="Giornate da riservare"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="Giornate da riservare"
+                        value={subForm.reserved_days}
+                        onChange={(e) => setSubForm({ ...subForm, reserved_days: e.target.value })}
+                      />
                       <button className={buttonClass} onClick={() => addSub.mutate()}>
-                        Aggiungi sottoattività
+                        Aggiungi attività
                       </button>
                     </div>
                   )}
