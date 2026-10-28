@@ -36,6 +36,7 @@ from core.models import AdminAuditEvent, AppSettings
 from core.permissions import (
     CanCreateTimesheets,
     CanEditProjects,
+    CanEditTimesheets,
     CanEditWallet,
     CanExport,
     CanResolveAnomalies,
@@ -477,9 +478,9 @@ class ProjectLedgerView(DocumentedAPIView):
 
 
 class ProjectTimesheetDetailView(DocumentedAPIView):
-    """Rettifica o annulla un consuntivo manuale diretto; operazione riservata agli admin."""
+    """Rettifica o annulla un consuntivo manuale diretto con timesheets.edit."""
 
-    permission_classes = [IsAdmin]
+    permission_classes = [CanEditTimesheets]
 
     @staticmethod
     def get_entry(project_pk, entry_pk):
@@ -1357,9 +1358,9 @@ class CanoneSubactivityTimesheetListView(DocumentedAPIView):
 
 
 class CanoneSubactivityTimesheetDetailView(DocumentedAPIView):
-    """Rettifica append-only di un consuntivo; riservata agli amministratori."""
+    """Rettifica append-only di un consuntivo con timesheets.edit."""
 
-    permission_classes = [IsAdmin]
+    permission_classes = [CanEditTimesheets]
 
     def get_entry(self, pk, subactivity_pk, entry_pk):
         from timesheets.models import TimesheetEntry, TimesheetSource
@@ -1878,9 +1879,12 @@ def update_wallet_allocation(request, alloc, data: dict, *, enforce_version: boo
     )
 
     if has_timesheet_adjust:
-        if not capabilities.has_capability(request.user, capabilities.ADJUST_ACCOUNTING):
+        if not (
+            capabilities.has_capability(request.user, capabilities.ADJUST_ACCOUNTING)
+            or capabilities.has_capability(request.user, capabilities.EDIT_TIMESHEETS)
+        ):
             raise PermissionDenied(
-                "La rettifica dei consuntivi contabili richiede la capability accounting.adjust."
+                "La rettifica dei consuntivi richiede timesheets.edit oppure accounting.adjust."
             )
 
     released_days = ZERO

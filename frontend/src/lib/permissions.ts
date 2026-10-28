@@ -9,6 +9,7 @@ export const CAPABILITIES = {
   VALIDATE_PROJECT_CLOSURE: "projects.validate_closure",
   ANNOTATE_OWN_PROJECTS: "projects.annotate_own",
   CREATE_TIMESHEETS: "timesheets.create",
+  EDIT_TIMESHEETS: "timesheets.edit",
   EDIT_WALLET: "wallet.edit",
   MANAGE_CANONE: "canone.manage",
   ADJUST_ACCOUNTING: "accounting.adjust",
@@ -35,7 +36,11 @@ export function hasCapability(
 }
 
 export function canManageCanone(session: Session | null): boolean {
-  return hasCapability(session, CAPABILITIES.MANAGE_CANONE, (legacy) => legacy.is_admin);
+  return hasCapability(
+    session,
+    CAPABILITIES.MANAGE_CANONE,
+    (legacy) => legacy.is_admin || legacy.roles.includes("fornitore"),
+  );
 }
 
 export function canWriteLedger(session: Session | null): boolean {
@@ -43,7 +48,15 @@ export function canWriteLedger(session: Session | null): boolean {
 }
 
 export function canCreateTimesheets(session: Session | null): boolean {
-  return hasCapability(session, CAPABILITIES.CREATE_TIMESHEETS, (legacy) => legacy.can_write);
+  return hasCapability(
+    session,
+    CAPABILITIES.CREATE_TIMESHEETS,
+    (legacy) => legacy.can_write || legacy.roles.includes("fornitore"),
+  );
+}
+
+export function canEditTimesheets(session: Session | null): boolean {
+  return hasCapability(session, CAPABILITIES.EDIT_TIMESHEETS, (legacy) => legacy.is_admin);
 }
 
 export function canAdminister(session: Session | null): boolean {
@@ -55,7 +68,11 @@ export function canResetData(session: Session | null): boolean {
 }
 
 export function canCreateProjects(session: Session | null): boolean {
-  return hasCapability(session, CAPABILITIES.CREATE_PROJECTS, (legacy) => legacy.can_write);
+  return hasCapability(
+    session,
+    CAPABILITIES.CREATE_PROJECTS,
+    (legacy) => legacy.can_write || legacy.roles.includes("fornitore"),
+  );
 }
 
 export function canEditProjects(session: Session | null): boolean {
@@ -90,7 +107,9 @@ export function canEditWallet(session: Session | null): boolean {
   return hasCapability(
     session,
     CAPABILITIES.EDIT_WALLET,
-    (legacy) => legacy.is_admin || Boolean(legacy.roles?.includes("responsabile_bmed")),
+    (legacy) =>
+      legacy.is_admin ||
+      Boolean(legacy.roles?.some((role) => ["responsabile_bmed", "fornitore"].includes(role))),
   );
 }
 

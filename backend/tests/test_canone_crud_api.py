@@ -226,8 +226,7 @@ def test_canone_indipendente_attivita_e_consuntivi_append_only():
     )
     assert overflow.status_code == 400
 
-    admin = client_for(roles.ADMIN)
-    corrected = admin.patch(
+    corrected = supplier.patch(
         f"/api/v1/canoni/{canone_id}/subactivities/{activity_id}/timesheets/{entry_id}",
         {"data": "2027-07-16", "giornate": "2", "descrizione": "Analisi corretta"},
         format="json",

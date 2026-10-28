@@ -10,7 +10,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
-import { canCreateTimesheets, canEditProjects } from "@/lib/permissions";
+import { canCreateTimesheets, canEditTimesheets, canEditProjects } from "@/lib/permissions";
 import { EditProjectDialog } from "./EditProjectDialog";
 import type { ProjectBalance } from "./ProjectsPage";
 
@@ -350,7 +350,7 @@ export function ProjectDetailPage() {
                     <th className="p-3">Utente</th>
                     <th className="p-3 text-right">Giornate</th>
                     <th className="p-3">Descrizione</th>
-                    {session?.is_admin && <th className="p-3 text-right">Azioni</th>}
+                    {canEditTimesheets(session) && <th className="p-3 text-right">Azioni</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -362,7 +362,7 @@ export function ProjectDetailPage() {
                         <DaysValue value={entry.giornate} />
                       </td>
                       <td className="p-3">{entry.descrizione || "—"}</td>
-                      {session?.is_admin && (
+                      {canEditTimesheets(session) && (
                         <td className="p-3 text-right">
                           <div className="flex justify-end gap-2">
                             <Button

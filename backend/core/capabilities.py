@@ -14,6 +14,7 @@ EDIT_PROJECTS: Final = "projects.edit"
 VALIDATE_PROJECT_CLOSURE: Final = "projects.validate_closure"
 ANNOTATE_OWN_PROJECTS: Final = "projects.annotate_own"
 CREATE_TIMESHEETS: Final = "timesheets.create"
+EDIT_TIMESHEETS: Final = "timesheets.edit"
 EDIT_WALLET: Final = "wallet.edit"
 MANAGE_CANONE: Final = "canone.manage"
 ADJUST_ACCOUNTING: Final = "accounting.adjust"
@@ -32,6 +33,7 @@ ALL_CAPABILITIES: Final = frozenset(
         VALIDATE_PROJECT_CLOSURE,
         ANNOTATE_OWN_PROJECTS,
         CREATE_TIMESHEETS,
+        EDIT_TIMESHEETS,
         EDIT_WALLET,
         MANAGE_CANONE,
         ADJUST_ACCOUNTING,
@@ -66,6 +68,9 @@ ROLE_DEFAULTS: Final = {
             CREATE_PROJECTS,
             VALIDATE_PROJECT_CLOSURE,
             CREATE_TIMESHEETS,
+            EDIT_TIMESHEETS,
+            EDIT_WALLET,
+            MANAGE_CANONE,
             UPLOAD_IMPORTS,
             EXPORT_DATA,
         }

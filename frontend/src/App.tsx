@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { AppShell } from "@/components/AppShell";
 import { CommandPalette } from "@/components/CommandPalette";
+import { canAdminister } from "@/lib/permissions";
 import { LoadingState } from "@/components/UiState";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { SessionExpiredDialog } from "@/features/auth/SessionExpiredDialog";
@@ -45,7 +46,7 @@ const CostAnalysisPage = lazy(() =>
 );
 
 export default function App() {
-  const { status } = useSession();
+  const { status, session } = useSession();
   const { t } = useTranslation();
   const [paletteOpen, setPaletteOpen] = useState(false);
 
@@ -86,7 +87,10 @@ export default function App() {
             <Route path="/riconciliazione" element={<ReconciliationPage />} />
             <Route path="/anomalie" element={<AnomaliesPage />} />
             <Route path="/revisione" element={<ReviewQueuePage />} />
-            <Route path="/amministrazione" element={<AdminPage />} />
+            <Route
+              path="/amministrazione"
+              element={canAdminister(session) ? <AdminPage /> : <Navigate to="/" replace />}
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

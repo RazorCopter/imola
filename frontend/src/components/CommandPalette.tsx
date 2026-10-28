@@ -6,6 +6,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+import { useSession } from "@/features/auth/session";
+import { canAdminister } from "@/lib/permissions";
 import { api } from "@/lib/api";
 
 const ACTIONS = [
@@ -34,6 +36,7 @@ interface Props {
 export function CommandPalette({ open, onOpenChange }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { session } = useSession();
   const dialogFocus = useDialogFocusReturn();
   const [search, setSearch] = useState("");
   const query = useQuery({
@@ -81,7 +84,9 @@ export function CommandPalette({ open, onOpenChange }: Props) {
                 {search.length < 2 ? "Digita almeno due caratteri" : t("app.empty")}
               </Command.Empty>
               <Command.Group heading="Navigazione" className="text-xs text-muted-foreground">
-                {ACTIONS.map((action) => (
+                {ACTIONS.filter(
+                  (action) => action.to !== "/amministrazione" || canAdminister(session),
+                ).map((action) => (
                   <Command.Item
                     key={action.to}
                     value={action.to}

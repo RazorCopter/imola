@@ -341,7 +341,7 @@ export function EditAllocationDialog({
           </span>
           {!canAdjustConsumed ? (
             <span className="mt-1 block text-xs text-muted-foreground">
-              La modifica richiede la capability accounting.adjust.
+              La modifica richiede il permesso di rettifica dei consuntivi.
             </span>
           ) : null}
         </label>

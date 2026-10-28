@@ -79,7 +79,7 @@ def test_admin_patch_allocazione_wallet():
 
 
 def test_dettaglio_allocazione_leggibile_senza_wallet_edit_ma_patch_vietata():
-    client, _ = make_client_for_role(roles.SUPPLIER)
+    client, _ = make_client_for_role(roles.REFERENT)
     alloc = WalletAllocationFactory(allocated_days=Decimal("5.0000"))
 
     detail = client.get(f"/api/v1/wallet/allocations/{alloc.id}/")
@@ -292,8 +292,9 @@ def test_stato_operativo_progetto_wallet_dipende_dalle_quote_aperte():
     ).exists()
 
 
-def test_rettifica_consuntivi_append_only_storno_e_nuova_emissione():
-    client, _ = make_client_for_role(roles.ADMIN)
+@pytest.mark.parametrize("role", (roles.ADMIN, roles.SUPPLIER))
+def test_rettifica_consuntivi_append_only_storno_e_nuova_emissione(role):
+    client, _ = make_client_for_role(role)
     alloc = WalletAllocationFactory(allocated_days=Decimal("10.0000"))
     entry = TimesheetEntryFactory(
         wallet_allocation=alloc,

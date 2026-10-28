@@ -13,7 +13,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { ApiError, api } from "@/lib/api";
 import { formatDays, formatPercent, parseDays } from "@/lib/format";
-import { canCreateTimesheets, canManageCanone } from "@/lib/permissions";
+import { canCreateTimesheets, canEditTimesheets, canManageCanone } from "@/lib/permissions";
 
 interface CanoneRow {
   id: string;
@@ -165,7 +165,7 @@ export function CanonePage() {
   const { session } = useSession();
   const editable = canManageCanone(session);
   const canConsuntiva = canCreateTimesheets(session);
-  const isAdmin = Boolean(session?.is_admin);
+  const canEditConsuntivi = canEditTimesheets(session);
   const deleteOpener = useRef<HTMLButtonElement | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     title: string;
@@ -1127,7 +1127,7 @@ export function CanonePage() {
                                             <th>Utente</th>
                                             <th>Giornate</th>
                                             <th>Descrizione</th>
-                                            {isAdmin && <th>Azioni</th>}
+                                            {canEditConsuntivi && <th>Azioni</th>}
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -1139,7 +1139,7 @@ export function CanonePage() {
                                                 <DaysValue value={entry.giornate} />
                                               </td>
                                               <td>{entry.descrizione}</td>
-                                              {isAdmin && (
+                                              {canEditConsuntivi && (
                                                 <td className="flex gap-2 py-1">
                                                   <Button
                                                     className={buttonClass}

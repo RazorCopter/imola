@@ -247,3 +247,41 @@ def test_audit_history_endpoint_restituisce_modifiche():
     results = response.json()["results"]
     assert len(results) >= 2
     assert any("notes: Versione 1 -> Versione 2" in m for r in results for m in r["modifiche"])
+
+
+def test_fornitore_gestisce_operativita_senza_privilegi_amministrativi():
+    client, user = make_client_for_role(roles.SUPPLIER)
+    effective = capabilities.capabilities_for(user)
+    assert {
+        capabilities.CREATE_PROJECTS,
+        capabilities.CREATE_TIMESHEETS,
+        capabilities.EDIT_TIMESHEETS,
+        capabilities.MANAGE_CANONE,
+        capabilities.EDIT_WALLET,
+    } <= effective
+    assert not (effective & capabilities.RESERVED_CAPABILITIES)
+    for path in ("/api/v1/admin/users", "/api/v1/admin/roles/capabilities"):
+        assert client.get(path).status_code == 403
+    assert (
+        client.patch(
+            "/api/v1/settings", {"costo_giornata_uomo": "999.00"}, format="json"
+        ).status_code
+        == 403
+    )
+
+
+def test_fornitore_rettifica_consuntivo_manuale_di_un_altro_utente():
+    from tests.factories import TimesheetEntryFactory
+
+    client, _ = make_client_for_role(roles.SUPPLIER)
+    project = ProjectFactory(budget_days="10.0000")
+    entry = TimesheetEntryFactory(
+        project=project, days="2.0000", source="MANUALE", created_by=UserFactory()
+    )
+    response = client.patch(
+        f"/api/v1/projects/{project.id}/ledger/{entry.id}",
+        {"giornate": "1.0000", "descrizione": "Rettifica fornitore"},
+        format="json",
+    )
+    assert response.status_code == 200, response.data
+    assert entry.reversals.count() == 1

@@ -10,7 +10,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
-import { canAdjustAccounting, canEditWallet } from "@/lib/permissions";
+import { canAdjustAccounting, canEditTimesheets, canEditWallet } from "@/lib/permissions";
 import { EditAllocationDialog } from "./EditAllocationDialog";
 import { NewAllocationDialog } from "./NewAllocationDialog";
 
@@ -133,7 +133,7 @@ export function WalletPage() {
   };
 
   const canMutate = canEditWallet(session);
-  const canAdjustConsumed = canAdjustAccounting(session);
+  const canAdjustConsumed = canAdjustAccounting(session) || canEditTimesheets(session);
 
   return (
     <section className="space-y-5">
