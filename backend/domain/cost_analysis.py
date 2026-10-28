@@ -23,6 +23,8 @@ def _bucket() -> dict[str, Any]:
         "fixed_cost": Decimal("0"),
         "has_canone": False,
         "project_id": None,
+        "project_title": None,
+        "project_code": None,
         "supplier_id": None,
     }
 
@@ -90,6 +92,8 @@ def build_cost_analysis(
         project_row = projects[project_label]
         project_row["days"] += days
         project_row["project_id"] = str(project.id) if project else None
+        project_row["project_title"] = project.title if project else None
+        project_row["project_code"] = project.code if project else None
         supplier_row = suppliers[supplier_label]
         supplier_row["days"] += days
         supplier_row["supplier_id"] = str(supplier.id) if supplier else None
@@ -132,6 +136,11 @@ def build_cost_analysis(
             {
                 id_key: row[id_key],
                 "label": label,
+                **(
+                    {"project_title": row["project_title"], "project_code": row["project_code"]}
+                    if id_key == "project_id"
+                    else {}
+                ),
                 "days": (
                     None
                     if row["has_canone"] and row["days"] == 0

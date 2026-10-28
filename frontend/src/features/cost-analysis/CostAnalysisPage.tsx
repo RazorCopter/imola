@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { AccessibleBarChart } from "@/components/AccessibleBarChart";
 import { MetricLabel } from "@/components/InfoTooltip";
 import { ResizableTableHeader } from "@/components/ResizableTableHeader";
 import { ErrorState, LoadingState } from "@/components/UiState";
@@ -13,6 +12,9 @@ import { api } from "@/lib/api";
 import { formatDays } from "@/lib/format";
 
 interface Row {
+  project_id?: string | null;
+  project_title?: string | null;
+  project_code?: string | null;
   label: string;
   days: string | null;
   cost: string;
@@ -43,7 +45,17 @@ interface CostAnalysis {
   monthly_trend: TrendRow[];
 }
 
-const money = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+const money = new Intl.NumberFormat("it-IT", {
+  style: "currency",
+  currency: "EUR",
+  useGrouping: true,
+});
+
+function projectTitle(row: Row): string {
+  if (row.project_title?.trim()) return row.project_title.trim();
+  const separator = row.label.indexOf(" \u2014 ");
+  return separator >= 0 ? row.label.slice(separator + 3) : row.label;
+}
 
 function AggregationTable({ title, rows }: { title: string; rows: Row[] }) {
   const { t } = useTranslation();
@@ -74,12 +86,19 @@ function AggregationTable({ title, rows }: { title: string; rows: Row[] }) {
               </tr>
             )}
             {rows.map((row) => (
-              <tr key={row.label} className="border-t border-border">
-                <td className="truncate p-3" title={row.label}>
+              <tr key={row.project_id ?? row.label} className="border-t border-border">
+                <td
+                  className="break-words p-3 leading-relaxed [overflow-wrap:anywhere]"
+                  title={row.label}
+                >
                   {row.label}
                 </td>
-                <td className="p-3 text-right tabular-nums">{formatDays(row.days)}</td>
-                <td className="p-3 text-right tabular-nums">{money.format(Number(row.cost))}</td>
+                <td className="whitespace-nowrap p-3 text-right align-top tabular-nums">
+                  {formatDays(row.days)}
+                </td>
+                <td className="whitespace-nowrap p-3 text-right align-top tabular-nums">
+                  {money.format(Number(row.cost))}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -122,14 +141,19 @@ export function CostAnalysisPage() {
   const data = query.data;
   const empty = data.by_project.length === 0;
   const normalizedSearch = projectSearch.trim().toLocaleLowerCase();
-  const sortedProjects = [...data.by_project].sort(
+  const projectRows = data.by_project.map((row) => ({
+    ...row,
+    label: projectTitle(row),
+  }));
+  const sortedProjects = [...projectRows].sort(
     (left, right) =>
       Number(right.cost) - Number(left.cost) || left.label.localeCompare(right.label),
   );
   const matchingProjects = sortedProjects.filter((row) =>
-    row.label.toLocaleLowerCase().includes(normalizedSearch),
+    `${row.label} ${row.project_code ?? ""}`.toLocaleLowerCase().includes(normalizedSearch),
   );
   const chartProjects = matchingProjects.slice(0, projectLimit);
+  const largestCost = Math.max(0, ...chartProjects.map((row) => Math.abs(Number(row.cost))));
   return (
     <div className="space-y-5">
       <PageHeader
@@ -278,43 +302,28 @@ export function CostAnalysisPage() {
               </div>
             </div>
             {chartProjects.length ? (
-              <>
-                <div
-                  className="mt-4"
-                  style={{ height: Math.max(180, chartProjects.length * 38 + 40) }}
-                  aria-hidden="true"
-                >
-                  <AccessibleBarChart
-                    data={chartProjects.map((row) => ({ ...row, cost: Number(row.cost) }))}
-                    xKey="label"
-                    unit="euro"
-                    hideXAxis
-                    horizontal
-                    series={[{ key: "cost", label: t("costAnalysis.cost"), color: "#6366f1" }]}
-                  />
-                </div>
-                <table
-                  className="mt-4 w-full text-sm"
-                  aria-label={t("costAnalysis.projectChartSummary")}
-                >
-                  <thead className="sr-only">
-                    <tr>
-                      <th>{t("costAnalysis.label")}</th>
-                      <th>{t("costAnalysis.cost")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {chartProjects.map((row) => (
-                      <tr key={row.label}>
-                        <td className="py-2 pr-4">{row.label}</td>
-                        <td className="py-2 text-right font-medium tabular-nums">
-                          {money.format(Number(row.cost))}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </>
+              <ol className="mt-5 space-y-4" aria-label={t("costAnalysis.projectChartSummary")}>
+                {chartProjects.map((row) => (
+                  <li key={row.project_id ?? row.label} className="space-y-2">
+                    <div className="flex items-start justify-between gap-4 text-sm">
+                      <span className="min-w-0 break-words font-medium leading-relaxed [overflow-wrap:anywhere]">
+                        {row.label}
+                      </span>
+                      <span className="shrink-0 pt-0.5 text-right font-semibold tabular-nums">
+                        {money.format(Number(row.cost))}
+                      </span>
+                    </div>
+                    <div aria-hidden="true" className="h-2.5 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={`h-full rounded-full ${Number(row.cost) < 0 ? "bg-destructive" : "bg-primary"}`}
+                        style={{
+                          width: `${largestCost > 0 ? (Math.abs(Number(row.cost)) / largestCost) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ol>
             ) : (
               <p className="mt-4 rounded-lg bg-muted/40 p-8 text-center text-muted-foreground">
                 {t("costAnalysis.noMatchingProjects")}
@@ -328,7 +337,7 @@ export function CostAnalysisPage() {
                   ? "Dettaglio per progetto e canone"
                   : t("costAnalysis.byProject")
               }
-              rows={data.by_project}
+              rows={projectRows}
             />
             <AggregationTable title={t("costAnalysis.bySupplier")} rows={data.by_supplier} />
           </div>
