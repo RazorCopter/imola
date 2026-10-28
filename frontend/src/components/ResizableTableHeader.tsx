@@ -30,6 +30,7 @@ export function ResizableTableHeader({
 
   return (
     <th
+      scope="col"
       className={`relative p-3 ${align === "right" ? "text-right" : "text-left"}`}
       style={{ width, minWidth: width }}
     >
@@ -37,8 +38,19 @@ export function ResizableTableHeader({
       <button
         type="button"
         aria-label={`Ridimensiona colonna ${String(children)}`}
-        className="hover:border-primary focus:border-primary absolute inset-y-0 right-0 w-2 cursor-col-resize touch-none border-r border-transparent focus:outline-none"
+        className="absolute inset-y-0 right-0 w-2 cursor-col-resize touch-none border-r border-transparent hover:border-primary focus:border-primary focus:outline-none"
         onPointerDown={startResize}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            event.preventDefault();
+            setWidth((current) => Math.max(80, current + (event.key === "ArrowRight" ? 16 : -16)));
+          }
+          if (event.key === "Home") {
+            event.preventDefault();
+            setWidth(initialWidth);
+          }
+        }}
+        title="Frecce sinistra/destra per ridimensionare; Home per ripristinare"
       />
     </th>
   );

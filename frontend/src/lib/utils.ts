@@ -13,9 +13,9 @@ const THEME_KEY = "sl.theme";
 export function readStoredTheme(): Theme {
   try {
     const value = localStorage.getItem(THEME_KEY);
-    return value === "light" || value === "dark" ? value : "system";
+    return value === "light" || value === "dark" ? value : "dark";
   } catch {
-    return "system";
+    return "dark";
   }
 }
 

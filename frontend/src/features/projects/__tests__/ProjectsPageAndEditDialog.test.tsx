@@ -133,16 +133,59 @@ describe("ProjectsPage ed EditProjectDialog — Tranche 4", () => {
     const editButton = await screen.findByTestId("edit-project-proj-123");
     expect(editButton).toBeInTheDocument();
     expect(editButton).toHaveClass("bg-amber-500");
-    expect(screen.getByRole("columnheader", { name: "Titolo" })).toHaveClass("min-w-64");
+    expect(screen.getByRole("columnheader", { name: "Progetto" })).toHaveClass("min-w-64");
     expect(screen.getByText("Progetto Test").closest("td")).toHaveClass(
       "min-w-64",
       "whitespace-normal",
     );
+    expect(screen.getByText("IM26001-DEMO")).toBeInTheDocument();
+    expect(screen.getByText("0% del budget")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Budget" })).toHaveClass("text-right");
     expect(screen.getByTitle("Budget API: 10.0000 gg").closest("td")).toHaveClass(
       "text-right",
       "tabular-nums",
     );
+  });
+
+  it("mostra la percentuale solo con budget valido e segnala gli sforamenti", async () => {
+    mockSession({ roles: ["admin"], is_admin: true, can_write: true, capabilities: [] });
+    const rows = [
+      {
+        id: "over",
+        codice: "P-1",
+        titolo: "Progetto oltre budget",
+        budget: "10",
+        consumato_totale: "12",
+        residuo: "-2",
+      },
+      {
+        id: "zero",
+        codice: "P-2",
+        titolo: "Progetto senza budget",
+        budget: "0",
+        consumato_totale: "2",
+        residuo: "-2",
+      },
+      {
+        id: "missing",
+        codice: "P-3",
+        titolo: "Progetto con budget assente",
+        budget: null,
+        consumato_totale: "2",
+        residuo: null,
+      },
+    ].map((row) => ({
+      ...row,
+      tipo_contratto: "AQL",
+      stato_operativo: "IN_CORSO",
+      stato_fatturazione: "DA_FATTURARE",
+      permissions: {},
+    }));
+    getMock.mockResolvedValue({ count: rows.length, results: rows });
+    renderWithProviders(<ProjectsPage />);
+    expect(await screen.findByText("120% del budget")).toBeInTheDocument();
+    expect(screen.queryByText("0% del budget")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/% del budget/)).toHaveLength(1);
   });
 
   it("mostra EDIT solo sul progetto proprio per il referente BMED", async () => {

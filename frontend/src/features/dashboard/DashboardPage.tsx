@@ -1,10 +1,10 @@
-import type { ReactNode } from "react";
+import { KpiCard } from "@/components/KpiCard";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { DonutChart, type ChartDatum } from "./DashboardCharts";
-import { InfoTooltip, MetricLabel } from "@/components/InfoTooltip";
+import { InfoTooltip } from "@/components/InfoTooltip";
 import { api } from "@/lib/api";
 import { formatDays, formatDelta, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -73,40 +73,6 @@ const CHART_COLORS: readonly [string, string, string, string] = [
   "#dc2626",
 ];
 
-function KpiCard({
-  label,
-  value,
-  hint,
-  tone = "neutral",
-  tooltip,
-  action,
-}: {
-  label: string;
-  value: string;
-  hint?: ReactNode;
-  tone?: "neutral" | "ok" | "warn" | "danger";
-  tooltip?: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-4 shadow-subtle">
-      <MetricLabel label={label} description={tooltip ?? `Indicatore ${label}.`} />
-      <p
-        className={cn(
-          "mt-2 font-mono text-2xl font-semibold tabular-nums",
-          tone === "ok" && "text-ok",
-          tone === "warn" && "text-warn",
-          tone === "danger" && "text-danger",
-        )}
-      >
-        {value}
-      </p>
-      {hint !== undefined && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
-      {action !== undefined && <div className="mt-2 text-xs font-medium">{action}</div>}
-    </div>
-  );
-}
-
 function SkeletonCard() {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
@@ -138,23 +104,27 @@ export function DashboardPage() {
   const projectChart: ChartDatum[] =
     dashboard.data?.progetti_per_stato.map((item, index) => ({
       key: item.stato,
-      label: t(`status.${item.stato}`),
+      label: t(`status.${item.stato}`, {
+        defaultValue: item.stato.replaceAll("_", " ").toLocaleLowerCase("it"),
+      }),
       value: item.conteggio,
       color: CHART_COLORS[index % CHART_COLORS.length]!,
     })) ?? [];
   const dashboardWallet = dashboard.data?.wallet;
+  const chartValue = (value: unknown) =>
+    typeof value === "string" && value.trim() ? Number(value) : NaN;
   const walletChart: ChartDatum[] = dashboardWallet
     ? [
         {
           key: "consumato",
           label: t("wallet.consumed"),
-          value: Number(dashboardWallet.consumato),
+          value: chartValue(dashboardWallet.consumato),
           color: CHART_COLORS[3],
         },
         {
           key: "disponibile",
           label: t("wallet.available"),
-          value: Number(dashboardWallet.disponibile),
+          value: chartValue(dashboardWallet.disponibile),
           color: CHART_COLORS[1],
         },
       ]
@@ -162,104 +132,165 @@ export function DashboardPage() {
 
   return (
     <section className="space-y-6">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">{t("dashboard.title")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("wallet.available")} {year}
+      <header className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-7 md:px-8">
+        <div aria-hidden="true" className="absolute right-0 top-0 h-full w-1/3 bg-accent/5" />
+        <p className="relative text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+          Supplier Ledger · Overview
         </p>
+        <div className="relative mt-3 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">{t("dashboard.title")}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Controllo economico e operativo del portafoglio
+            </p>
+          </div>
+          <span className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground">
+            Anno {year}
+          </span>
+        </div>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {loading ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        ) : (
-          <>
-            <KpiCard
-              label={t("wallet.available")}
-              value={formatDays(wallet.data?.disponibile)}
-              hint={`${t("wallet.allocated")} ${formatDays(wallet.data?.allocato)} · ${t(
-                "wallet.consumed",
-              )} ${formatDays(wallet.data?.consumato)}`}
-              tooltip={`Disponibile = allocato (${formatDays(wallet.data?.allocato)}) − consumato (${formatDays(wallet.data?.consumato)}) = ${formatDays(wallet.data?.disponibile)}`}
-              tone="ok"
-            />
-            <KpiCard
-              label={t("wallet.ongoingBudget")}
-              value={formatDays(wallet.data?.budget_residuo_progetti_in_corso)}
-              hint={`Separato dal wallet · ${t("wallet.ongoingOverrun")}: ${formatDays(wallet.data?.sforamenti_progetti_in_corso)}`}
-              tooltip={`Budget residuo progetti in corso al netto dei rilasci al wallet. Sforamenti: ${formatDays(wallet.data?.sforamenti_progetti_in_corso)}`}
-              tone="neutral"
-            />
-            <KpiCard
-              label={t("wallet.potential")}
-              value={formatDays(wallet.data?.residui_potenziali_da_verificare)}
-              hint="Esclusi dal disponibile ufficiale"
-              tooltip="12 progetti da verificare o chiusi senza data; non spendibili finché non chiariti"
-              action={
-                <Link
-                  to="/revisione"
-                  className="text-primary inline-flex items-center underline underline-offset-4 hover:opacity-80"
-                >
-                  {t("wallet.reviewQueueLink")} &rarr;
-                </Link>
-              }
-              tone="warn"
-            />
-            <KpiCard
-              label={t("dashboard.reconciliationDelta")}
-              value={
-                reconciliation.data?.riepilogo.delta_totale === null
-                  ? "Non disponibile"
-                  : formatDelta(reconciliation.data?.riepilogo.delta_totale)
-              }
-              hint={
-                reconciliation.data?.riepilogo.stato === "NON_VERIFICABILE"
-                  ? "Riconciliazione non verificabile / dati assenti"
-                  : reconciliation.data?.riepilogo.snapshot_estratto_il
-                    ? `${t("dashboard.lastSnapshot")}: ${new Date(
-                        reconciliation.data.riepilogo.snapshot_estratto_il,
-                      ).toLocaleDateString("it-IT")}`
-                    : t("app.empty")
-              }
-              tooltip="Differenza consuntivi interni vs ultimo estratto PPM fornitore"
-              tone={
-                reconciliation.data?.riepilogo.stato === "ALLINEATO"
-                  ? "ok"
-                  : reconciliation.data?.riepilogo.stato === "NON_ALLINEATO"
-                    ? "danger"
-                    : reconciliation.data?.riepilogo.stato === "PARZIALE"
-                      ? "warn"
-                      : "neutral"
-              }
-            />
-          </>
-        )}
-      </div>
+      {(wallet.isError || reconciliation.isError) && (
+        <div
+          role="alert"
+          className="rounded-xl border border-danger/30 bg-danger-subtle p-4 text-sm text-danger"
+        >
+          Alcuni indicatori non sono disponibili perché il caricamento dei dati è fallito.
+        </div>
+      )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {dashboard.isLoading ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        ) : dashboard.isError ? (
-          <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-sm text-danger lg:col-span-2">
-            {t("dashboard.dataError")}
-          </div>
-        ) : (
-          <>
-            <DonutChart title={t("dashboard.projectsByStatus")} data={projectChart} />
-            <DonutChart title={t("dashboard.walletComposition")} data={walletChart} unit="days" />
-          </>
-        )}
-      </div>
+      <section aria-label="Situazione economica" className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Situazione economica</h2>
+          <p className="text-sm text-muted-foreground">
+            Disponibilità, residui e confronto con il fornitore
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {loading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : (
+            <>
+              <KpiCard
+                featured
+                label={t("wallet.available")}
+                value={wallet.isError ? "Errore caricamento" : formatDays(wallet.data?.disponibile)}
+                hint={`${t("wallet.allocated")} ${formatDays(wallet.data?.allocato)} · ${t(
+                  "wallet.consumed",
+                )} ${formatDays(wallet.data?.consumato)}`}
+                tooltip={`Disponibile = allocato (${formatDays(wallet.data?.allocato)}) − consumato (${formatDays(wallet.data?.consumato)}) = ${formatDays(wallet.data?.disponibile)}`}
+                tone={wallet.isError ? "neutral" : "ok"}
+              />
+              <KpiCard
+                label={t("wallet.ongoingBudget")}
+                value={
+                  wallet.isError
+                    ? "Errore caricamento"
+                    : formatDays(wallet.data?.budget_residuo_progetti_in_corso)
+                }
+                hint={`Separato dal wallet · ${t("wallet.ongoingOverrun")}: ${formatDays(wallet.data?.sforamenti_progetti_in_corso)}`}
+                tooltip={`Budget residuo progetti in corso al netto dei rilasci al wallet. Sforamenti: ${formatDays(wallet.data?.sforamenti_progetti_in_corso)}`}
+                tone="neutral"
+              />
+              <KpiCard
+                label={t("wallet.potential")}
+                value={
+                  wallet.isError
+                    ? "Errore caricamento"
+                    : formatDays(wallet.data?.residui_potenziali_da_verificare)
+                }
+                hint="Esclusi dal disponibile ufficiale"
+                tooltip="Residui da verificare o chiusi senza data; non spendibili finché non chiariti"
+                action={
+                  <Link
+                    to="/revisione"
+                    className="inline-flex items-center text-primary underline underline-offset-4 hover:opacity-80"
+                  >
+                    {t("wallet.reviewQueueLink")} &rarr;
+                  </Link>
+                }
+                tone={wallet.isError ? "neutral" : "warn"}
+              />
+              <KpiCard
+                label={t("dashboard.reconciliationDelta")}
+                value={
+                  reconciliation.isError
+                    ? "Errore caricamento"
+                    : reconciliation.data?.riepilogo.delta_totale === null
+                      ? "Non disponibile"
+                      : formatDelta(reconciliation.data?.riepilogo.delta_totale)
+                }
+                hint={
+                  reconciliation.data?.riepilogo.stato === "NON_VERIFICABILE"
+                    ? "Riconciliazione non verificabile / dati assenti"
+                    : reconciliation.data?.riepilogo.snapshot_estratto_il
+                      ? `${t("dashboard.lastSnapshot")}: ${new Date(
+                          reconciliation.data.riepilogo.snapshot_estratto_il,
+                        ).toLocaleDateString("it-IT")}`
+                      : t("app.empty")
+                }
+                tooltip="Differenza consuntivi interni vs ultimo estratto PPM fornitore"
+                tone={
+                  reconciliation.data?.riepilogo.stato === "ALLINEATO"
+                    ? "ok"
+                    : reconciliation.data?.riepilogo.stato === "NON_ALLINEATO"
+                      ? "danger"
+                      : reconciliation.data?.riepilogo.stato === "PARZIALE"
+                        ? "warn"
+                        : "neutral"
+                }
+              />
+            </>
+          )}
+        </div>
+      </section>
 
-      <section className="rounded-lg border border-border bg-card p-4 shadow-subtle">
+      <section aria-label="Distribuzione e composizione" className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Portafoglio e wallet</h2>
+          <p className="text-sm text-muted-foreground">Composizione dei dati disponibili</p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {dashboard.isLoading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : dashboard.isError ? (
+            <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-sm text-danger lg:col-span-2">
+              {t("dashboard.dataError")}
+            </div>
+          ) : (
+            <>
+              <DonutChart title={t("dashboard.projectsByStatus")} data={projectChart} />
+              {walletChart.some((item) => !Number.isFinite(item.value) || item.value < 0) ? (
+                <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
+                  <h2 className="font-semibold text-foreground">
+                    {t("dashboard.walletComposition")}
+                  </h2>
+                  <p className="mt-3">
+                    La composizione non è rappresentabile come grafico: uno o più valori sono
+                    negativi o non disponibili.
+                  </p>
+                </div>
+              ) : (
+                <DonutChart
+                  title={t("dashboard.walletComposition")}
+                  data={walletChart}
+                  unit="days"
+                />
+              )}
+            </>
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-5 shadow-subtle">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-semibold">{t("dashboard.upcomingBillings")}</h2>
           {dashboard.data && (
@@ -306,7 +337,14 @@ export function DashboardPage() {
                         new Date(`${item.data_fatturazione}T00:00:00Z`),
                       )}
                     </td>
-                    <td className="px-2 py-3 font-medium">{item.progetto_codice}</td>
+                    <td className="px-2 py-3 font-medium">
+                      <Link
+                        className="text-accent hover:underline dark:text-indigo-300"
+                        to={`/progetti/${item.progetto_id}`}
+                      >
+                        {item.progetto_codice}
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>

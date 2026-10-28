@@ -8,14 +8,14 @@
  */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 10%;
+    --background: 220 25% 97%;
+    --foreground: 222 35% 14%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 10%;
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 46%;
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
+    --muted: 220 24% 95%;
+    --muted-foreground: 219 13% 39%;
+    --border: 218 20% 88%;
+    --input: 218 20% 85%;
     --ring: 243 75% 59%;
     --accent: 243 75% 59%;
     --accent-foreground: 0 0% 100%;
@@ -26,8 +26,10 @@
     --warn-subtle: 48 96% 94%;
     --danger: 0 72% 51%;
     --danger-subtle: 0 86% 97%;
+    --danger-action: 0 74% 40%;
+    --danger-foreground: 0 0% 100%;
     --shadow: 240 10% 10%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 
   :root:not([data-theme="light"]) {
@@ -41,7 +43,7 @@
       --border: 240 6% 20%;
       --input: 240 6% 20%;
       --ring: 243 85% 70%;
-      --accent: 243 85% 68%;
+      --accent: 243 85% 76%;
       --accent-foreground: 240 10% 7%;
       --accent-subtle: 243 40% 18%;
       --ok: 142 60% 52%;
@@ -55,16 +57,17 @@
   }
 
   :root[data-theme="dark"] {
-    --background: 240 10% 7%;
-    --foreground: 240 6% 94%;
-    --card: 240 8% 10%;
-    --card-foreground: 240 6% 94%;
-    --muted: 240 6% 15%;
-    --muted-foreground: 240 5% 65%;
-    --border: 240 6% 20%;
-    --input: 240 6% 20%;
+    color-scheme: dark;
+    --background: 220 35% 7%;
+    --foreground: 218 40% 97%;
+    --card: 220 33% 12%;
+    --card-foreground: 218 40% 97%;
+    --muted: 218 31% 16%;
+    --muted-foreground: 218 19% 73%;
+    --border: 218 27% 23%;
+    --input: 218 27% 25%;
     --ring: 243 85% 70%;
-    --accent: 243 85% 68%;
+    --accent: 243 85% 76%;
     --accent-foreground: 240 10% 7%;
     --accent-subtle: 243 40% 18%;
     --ok: 142 60% 52%;
@@ -74,6 +77,10 @@
     --danger: 0 72% 62%;
     --danger-subtle: 0 40% 18%;
     --shadow: 0 0% 0%;
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
   }
 
   * {
@@ -90,7 +97,7 @@
   /* I numeri contabili vanno sempre allineati e monospaziati in colonna. */
   .tabular {
     font-variant-numeric: tabular-nums;
-    @apply text-right font-mono;
+    @apply text-right;
   }
 
   code,

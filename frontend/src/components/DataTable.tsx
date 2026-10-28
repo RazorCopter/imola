@@ -22,6 +22,7 @@ interface DataTableProps<T> {
   rowHeight?: number;
   onRowClick?: (row: T) => void;
   getColumnClasses?: (columnId: string) => DataTableColumnClasses | undefined;
+  fitWidth?: boolean;
 }
 
 export function DataTable<T>({
@@ -31,6 +32,7 @@ export function DataTable<T>({
   rowHeight = 44,
   onRowClick,
   getColumnClasses,
+  fitWidth = false,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const table = useReactTable({
@@ -58,7 +60,12 @@ export function DataTable<T>({
       tabIndex={0}
       data-sizing-policy="content"
     >
-      <table className="w-max min-w-full table-auto border-separate border-spacing-0 text-sm">
+      <table
+        className={cn(
+          "min-w-full table-auto border-separate border-spacing-0 text-sm",
+          fitWidth ? "w-full" : "w-max",
+        )}
+      >
         <thead className="sticky top-0 z-10 bg-muted">
           {table.getHeaderGroups().map((group) => (
             <tr key={group.id}>
@@ -67,6 +74,14 @@ export function DataTable<T>({
                 return (
                   <th
                     key={header.id}
+                    scope="col"
+                    aria-sort={
+                      header.column.getIsSorted() === "asc"
+                        ? "ascending"
+                        : header.column.getIsSorted() === "desc"
+                          ? "descending"
+                          : undefined
+                    }
                     className={cn(
                       "whitespace-nowrap border-b border-border px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground",
                       columnClasses?.header,
@@ -102,6 +117,17 @@ export function DataTable<T>({
               )}
               style={{ height: rowHeight }}
               onClick={() => onRowClick?.(row.original)}
+              tabIndex={onRowClick ? 0 : undefined}
+              onKeyDown={(event) => {
+                if (
+                  onRowClick &&
+                  event.target === event.currentTarget &&
+                  (event.key === "Enter" || event.key === " ")
+                ) {
+                  event.preventDefault();
+                  onRowClick(row.original);
+                }
+              }}
             >
               {row.getVisibleCells().map((cell) => (
                 <td

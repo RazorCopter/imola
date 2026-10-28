@@ -1,3 +1,4 @@
+import { Button, Input, Select } from "@/components/Controls";
 import { useEffect, useMemo, useState } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -155,6 +156,7 @@ export function CanonePage() {
     notes: "",
   });
   const [editingSubactivity, setEditingSubactivity] = useState<Subactivity | null>(null);
+  const [creatingActivity, setCreatingActivity] = useState(false);
   const [activityTab, setActivityTab] = useState("Panoramica");
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
   const [timesheetActivity, setTimesheetActivity] = useState<string | null>(null);
@@ -217,6 +219,7 @@ export function CanonePage() {
   const detailIsCurrent = detail.data?.id === canoneId;
   useEffect(() => {
     setSelectedActivity(null);
+    setCreatingActivity(false);
     setTimesheetActivity(null);
     setEditingTimesheet(null);
     setEditingSubactivity(null);
@@ -296,6 +299,8 @@ export function CanonePage() {
         notes: "",
       });
       setEditingSubactivity(null);
+      setCreatingActivity(false);
+      setFormError("");
       await refresh(canoneId);
     },
     onError: (error) => setFormError(message(error)),
@@ -350,13 +355,16 @@ export function CanonePage() {
 
   return (
     <section className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
         <div>
-          <h1 className="text-xl font-semibold">{t("canone.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("canone.description")}</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+            Gestione · Capacità
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">{t("canone.title")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t("canone.description")}</p>
         </div>
         {editable && (
-          <button
+          <Button
             className={buttonClass}
             onClick={() => {
               setCreating(true);
@@ -374,7 +382,7 @@ export function CanonePage() {
             }}
           >
             Nuovo canone
-          </button>
+          </Button>
         )}
       </header>
       <div className="grid gap-3 sm:grid-cols-4">
@@ -401,30 +409,37 @@ export function CanonePage() {
         />
       </div>
       <div
-        className="h-72 rounded-lg border bg-card p-4"
+        className="h-48 rounded-xl border bg-card p-4"
         aria-label="Confronto pianificato, consuntivato e residuo per voce"
       >
         {chart.length ? (
-          <AccessibleBarChart
-            data={chart}
-            xKey="name"
-            unit="days"
-            series={[
-              { key: "pianificato", label: "Pianificato", color: CHART_PALETTE.slate },
-              { key: "consuntivato", label: "Consuntivato", color: CHART_PALETTE.blue },
-              { key: "residuo", label: "Residuo", color: CHART_PALETTE.green },
-            ]}
-          />
+          <div className="mx-auto h-full max-w-4xl">
+            <AccessibleBarChart
+              data={chart}
+              xKey="name"
+              unit="days"
+              series={[
+                { key: "pianificato", label: "Pianificato", color: CHART_PALETTE.slate },
+                { key: "consuntivato", label: "Consuntivato", color: CHART_PALETTE.blue },
+                { key: "residuo", label: "Residuo", color: CHART_PALETTE.green },
+              ]}
+            />
+          </div>
         ) : (
           <p className="text-sm text-muted-foreground">Nessun dato per il grafico.</p>
         )}
       </div>
-      <h2 className="text-lg font-semibold">Canoni trimestrali e semestrali</h2>
-      <div className="flex flex-wrap gap-2">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">Canoni trimestrali e semestrali</h2>
+        <p className="text-sm text-muted-foreground">
+          Seleziona un canone per consultare capacità e attività.
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2 rounded-xl border border-border bg-card p-3">
         <label className="sr-only" htmlFor="canone-search">
           {t("canone.search")}
         </label>
-        <input
+        <Input
           id="canone-search"
           aria-label={t("canone.search")}
           className={fieldClass}
@@ -435,7 +450,7 @@ export function CanonePage() {
         <label className="sr-only" htmlFor="canone-period-filter">
           {t("canone.period")}
         </label>
-        <select
+        <Select
           id="canone-period-filter"
           aria-label={t("canone.period")}
           className={fieldClass}
@@ -446,11 +461,11 @@ export function CanonePage() {
           {data.filters.semestri.map((value) => (
             <option key={value}>{value}</option>
           ))}
-        </select>
+        </Select>
         <label className="sr-only" htmlFor="canone-domain-filter">
           {t("canone.domain")}
         </label>
-        <select
+        <Select
           id="canone-domain-filter"
           aria-label={t("canone.domain")}
           className={fieldClass}
@@ -461,11 +476,11 @@ export function CanonePage() {
           {data.filters.domini.map((value) => (
             <option key={value}>{value}</option>
           ))}
-        </select>
+        </Select>
         <label className="sr-only" htmlFor="canone-state-filter">
           {t("canone.state")}
         </label>
-        <select
+        <Select
           id="canone-state-filter"
           aria-label={t("canone.state")}
           className={fieldClass}
@@ -476,8 +491,8 @@ export function CanonePage() {
           {data.filters.stati.map((value) => (
             <option key={value}>{value}</option>
           ))}
-        </select>
-        <button
+        </Select>
+        <Button
           className={buttonClass}
           onClick={() => {
             setSelected(null);
@@ -492,8 +507,8 @@ export function CanonePage() {
           }}
         >
           {t("canone.applyFilters")}
-        </button>
-        <button
+        </Button>
+        <Button
           className={buttonClass}
           onClick={() => {
             setSemester("");
@@ -512,7 +527,7 @@ export function CanonePage() {
           }}
         >
           {t("canone.resetFilters")}
-        </button>
+        </Button>
       </div>
       {!data.results.length ? (
         <EmptyState
@@ -565,7 +580,9 @@ export function CanonePage() {
                   <td>
                     <DaysValue value={row.consuntivato} />
                   </td>
-                  <td>{row.stato}</td>
+                  <td>
+                    <StatusBadge status={row.stato} />
+                  </td>
                   <td>{row.sottoattivita_count}</td>
                 </tr>
               ))}
@@ -578,7 +595,16 @@ export function CanonePage() {
           className="space-y-4 rounded-lg border bg-card p-4"
           aria-label="Dettaglio Organico Allargato"
         >
-          {!creating && detail.isLoading ? (
+          {!creating && detail.isError ? (
+            <ErrorState
+              title="Impossibile caricare il canone"
+              action={
+                <Button variant="secondary" onClick={() => void detail.refetch()}>
+                  Riprova
+                </Button>
+              }
+            />
+          ) : !creating && (detail.isLoading || !detailIsCurrent) ? (
             <LoadingState />
           ) : (
             <>
@@ -588,12 +614,12 @@ export function CanonePage() {
                 </h2>
                 {editable && !creating && detailIsCurrent && (
                   <div className="flex gap-2">
-                    <button className={buttonClass} onClick={() => setEditing(!editing)}>
+                    <Button className={buttonClass} onClick={() => setEditing(!editing)}>
                       {editing ? "Annulla" : "Modifica"}
-                    </button>
-                    <button className={buttonClass} onClick={() => remove.mutate()}>
+                    </Button>
+                    <Button className={buttonClass} onClick={() => remove.mutate()}>
                       Elimina
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -601,7 +627,7 @@ export function CanonePage() {
                 <div className="grid gap-3 sm:grid-cols-3">
                   <label className="text-sm">
                     Nome canone
-                    <input
+                    <Input
                       aria-label="Nome canone"
                       className={`${fieldClass} mt-1 w-full`}
                       placeholder="Es. Organico Allargato"
@@ -611,7 +637,7 @@ export function CanonePage() {
                   </label>
                   <label className="text-sm">
                     Periodicità
-                    <select
+                    <Select
                       aria-label="Periodicità"
                       className={`${fieldClass} mt-1 w-full`}
                       value={form.periodicity}
@@ -625,11 +651,11 @@ export function CanonePage() {
                     >
                       <option value="TRIMESTRALE">Trimestrale</option>
                       <option value="SEMESTRALE">Semestrale</option>
-                    </select>
+                    </Select>
                   </label>
                   <label className="text-sm">
                     Periodo
-                    <input
+                    <Input
                       aria-label="Periodo del canone"
                       className={`${fieldClass} mt-1 w-full`}
                       placeholder={form.periodicity === "TRIMESTRALE" ? "2026-Q1" : "2026-S1"}
@@ -639,7 +665,7 @@ export function CanonePage() {
                   </label>
                   <label className="text-sm">
                     Monte giornate
-                    <input
+                    <Input
                       aria-label="Monte giornate"
                       className={`${fieldClass} mt-1 w-full`}
                       type="number"
@@ -650,18 +676,18 @@ export function CanonePage() {
                     />
                   </label>
                   <div className="sm:col-span-3">
-                    <button
+                    <Button
                       className={buttonClass}
                       disabled={save.isPending}
                       onClick={() => save.mutate()}
                     >
                       Salva
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
               {formError && (
-                <p role="alert" className="text-destructive text-sm">
+                <p role="alert" className="text-sm text-destructive">
                   {formError}
                 </p>
               )}
@@ -724,7 +750,7 @@ export function CanonePage() {
                       .map((row) => (
                         <div key={row.id} className="space-y-3 rounded border p-3">
                           {!selectedActivity ? (
-                            <button
+                            <Button
                               className="w-full rounded text-left hover:bg-muted/50 focus-visible:outline focus-visible:outline-2"
                               onClick={() => {
                                 setSelectedActivity(row.id);
@@ -739,10 +765,10 @@ export function CanonePage() {
                                 <DaysValue value={row.consuntivato} /> · residuo{" "}
                                 <DaysValue value={row.remaining_reserved_days} />
                               </p>
-                            </button>
+                            </Button>
                           ) : (
                             <>
-                              <button
+                              <Button
                                 className={buttonClass}
                                 onClick={() => {
                                   setSelectedActivity(null);
@@ -753,7 +779,7 @@ export function CanonePage() {
                                 }}
                               >
                                 ← Tutte le attività
-                              </button>
+                              </Button>
                               <h3 className="text-lg font-semibold">{row.title}</h3>
                               <Tabs.Root value={activityTab} onValueChange={setActivityTab}>
                                 <Tabs.List
@@ -764,7 +790,7 @@ export function CanonePage() {
                                     <Tabs.Trigger
                                       key={tab}
                                       value={tab}
-                                      className="data-[state=active]:border-primary border-b-2 border-transparent px-2 py-2 text-sm data-[state=active]:font-semibold"
+                                      className="border-b-2 border-transparent px-2 py-2 text-sm data-[state=active]:border-primary data-[state=active]:font-semibold"
                                     >
                                       {tab}
                                     </Tabs.Trigger>
@@ -793,7 +819,7 @@ export function CanonePage() {
                                   {row.notes && <p className="text-sm">{row.notes}</p>}
                                   {editable && detailIsCurrent && (
                                     <div className="flex gap-2">
-                                      <button
+                                      <Button
                                         className={buttonClass}
                                         onClick={() => {
                                           setEditingSubactivity(row);
@@ -812,20 +838,20 @@ export function CanonePage() {
                                         }}
                                       >
                                         Modifica attività
-                                      </button>
-                                      <button
+                                      </Button>
+                                      <Button
                                         className={dangerButtonClass}
                                         onClick={() => removeSub.mutate(row)}
                                       >
                                         ELIMINA
-                                      </button>
+                                      </Button>
                                     </div>
                                   )}
                                   {editingSubactivity?.id === row.id && (
-                                    <div className="border-primary/50 grid gap-2 rounded border bg-muted/30 p-3 sm:grid-cols-3">
+                                    <div className="grid gap-2 rounded border border-primary/50 bg-muted/30 p-3 sm:grid-cols-3">
                                       <div className="flex items-center justify-between sm:col-span-3">
                                         <strong>Modifica attività</strong>
-                                        <button
+                                        <Button
                                           className={buttonClass}
                                           onClick={() => {
                                             setEditingSubactivity(null);
@@ -843,9 +869,9 @@ export function CanonePage() {
                                           }}
                                         >
                                           Annulla
-                                        </button>
+                                        </Button>
                                       </div>
-                                      <input
+                                      <Input
                                         className={fieldClass}
                                         aria-label="Titolo attività in modifica"
                                         value={subForm.title}
@@ -853,7 +879,7 @@ export function CanonePage() {
                                           setSubForm({ ...subForm, title: e.target.value })
                                         }
                                       />
-                                      <input
+                                      <Input
                                         className={fieldClass}
                                         aria-label="Redmine in modifica"
                                         placeholder="Redmine"
@@ -862,7 +888,7 @@ export function CanonePage() {
                                           setSubForm({ ...subForm, redmine_ref: e.target.value })
                                         }
                                       />
-                                      <select
+                                      <Select
                                         className={fieldClass}
                                         aria-label="Dominio attività in modifica"
                                         value={subForm.office}
@@ -873,8 +899,8 @@ export function CanonePage() {
                                         {["EA", "TA", "SA", "CROSS"].map((office) => (
                                           <option key={office}>{office}</option>
                                         ))}
-                                      </select>
-                                      <input
+                                      </Select>
+                                      <Input
                                         className={fieldClass}
                                         aria-label="Giornate riservate in modifica"
                                         type="number"
@@ -885,7 +911,7 @@ export function CanonePage() {
                                           setSubForm({ ...subForm, reserved_days: e.target.value })
                                         }
                                       />
-                                      <input
+                                      <Input
                                         className={fieldClass}
                                         aria-label="Data inizio attività in modifica"
                                         type="date"
@@ -894,7 +920,7 @@ export function CanonePage() {
                                           setSubForm({ ...subForm, start_date: e.target.value })
                                         }
                                       />
-                                      <input
+                                      <Input
                                         className={fieldClass}
                                         aria-label="Data fine attività in modifica"
                                         type="date"
@@ -903,12 +929,12 @@ export function CanonePage() {
                                           setSubForm({ ...subForm, end_date: e.target.value })
                                         }
                                       />
-                                      <button
+                                      <Button
                                         className={buttonClass}
                                         onClick={() => addSub.mutate()}
                                       >
                                         Salva modifiche
-                                      </button>
+                                      </Button>
                                     </div>
                                   )}
                                 </Tabs.Content>
@@ -916,7 +942,7 @@ export function CanonePage() {
                                   {canConsuntiva &&
                                     detailIsCurrent &&
                                     timesheetActivity !== row.id && (
-                                      <button
+                                      <Button
                                         className={buttonClass}
                                         onClick={() => {
                                           setTimesheetActivity(row.id);
@@ -930,11 +956,11 @@ export function CanonePage() {
                                         }}
                                       >
                                         Nuovo consuntivo
-                                      </button>
+                                      </Button>
                                     )}
                                   {timesheetActivity === row.id && (
                                     <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-4">
-                                      <input
+                                      <Input
                                         className={fieldClass}
                                         aria-label="Data consuntivo"
                                         type="date"
@@ -946,7 +972,7 @@ export function CanonePage() {
                                           })
                                         }
                                       />
-                                      <input
+                                      <Input
                                         className={fieldClass}
                                         aria-label="Giornate consuntivo"
                                         type="number"
@@ -961,7 +987,7 @@ export function CanonePage() {
                                           })
                                         }
                                       />
-                                      <input
+                                      <Input
                                         className={fieldClass}
                                         aria-label="Descrizione consuntivo"
                                         placeholder="Descrizione"
@@ -973,13 +999,14 @@ export function CanonePage() {
                                           })
                                         }
                                       />
-                                      <button
+                                      <Button
                                         className={buttonClass}
+                                        disabled={saveTimesheet.isPending}
                                         onClick={() => saveTimesheet.mutate()}
                                       >
                                         {editingTimesheet ? "Salva rettifica" : "Registra"}
-                                      </button>
-                                      <button
+                                      </Button>
+                                      <Button
                                         className={buttonClass}
                                         onClick={() => {
                                           setTimesheetActivity(null);
@@ -988,7 +1015,7 @@ export function CanonePage() {
                                         }}
                                       >
                                         Annulla
-                                      </button>
+                                      </Button>
                                     </div>
                                   )}
                                   {row.consuntivi.length > 0 && (
@@ -1014,7 +1041,7 @@ export function CanonePage() {
                                               <td>{entry.descrizione}</td>
                                               {isAdmin && (
                                                 <td className="flex gap-2 py-1">
-                                                  <button
+                                                  <Button
                                                     className={buttonClass}
                                                     onClick={() => {
                                                       setTimesheetActivity(row.id);
@@ -1027,8 +1054,8 @@ export function CanonePage() {
                                                     }}
                                                   >
                                                     Modifica
-                                                  </button>
-                                                  <button
+                                                  </Button>
+                                                  <Button
                                                     className={buttonClass}
                                                     onClick={() =>
                                                       removeTimesheet.mutate({
@@ -1038,7 +1065,7 @@ export function CanonePage() {
                                                     }
                                                   >
                                                     Elimina
-                                                  </button>
+                                                  </Button>
                                                 </td>
                                               )}
                                             </tr>
@@ -1059,62 +1086,90 @@ export function CanonePage() {
                         </div>
                       ))
                   )}
-                  {editable && detailIsCurrent && !editingSubactivity && !selectedActivity && (
-                    <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-3">
-                      <input
-                        className={fieldClass}
-                        aria-label="Titolo attività"
-                        placeholder="Titolo attività"
-                        value={subForm.title}
-                        onChange={(e) => setSubForm({ ...subForm, title: e.target.value })}
-                      />
-                      <input
-                        className={fieldClass}
-                        aria-label="Redmine"
-                        placeholder="Redmine"
-                        value={subForm.redmine_ref}
-                        onChange={(e) => setSubForm({ ...subForm, redmine_ref: e.target.value })}
-                      />
-                      <select
-                        className={fieldClass}
-                        aria-label="Gruppo architetturale"
-                        value={subForm.office}
-                        onChange={(e) => setSubForm({ ...subForm, office: e.target.value })}
+                  {editable &&
+                    detailIsCurrent &&
+                    !editingSubactivity &&
+                    !selectedActivity &&
+                    !creatingActivity && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setCreatingActivity(true);
+                          setFormError("");
+                        }}
                       >
-                        <option value="">Gruppo</option>
-                        {["EA", "TA", "SA", "CROSS"].map((office) => (
-                          <option key={office}>{office}</option>
-                        ))}
-                      </select>
-                      <input
-                        className={fieldClass}
-                        aria-label="Giornate da riservare"
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        placeholder="Giornate da riservare"
-                        value={subForm.reserved_days}
-                        onChange={(e) => setSubForm({ ...subForm, reserved_days: e.target.value })}
-                      />
-                      <input
-                        className={fieldClass}
-                        aria-label="Data inizio attività"
-                        type="date"
-                        value={subForm.start_date}
-                        onChange={(e) => setSubForm({ ...subForm, start_date: e.target.value })}
-                      />
-                      <input
-                        className={fieldClass}
-                        aria-label="Data fine attività"
-                        type="date"
-                        value={subForm.end_date}
-                        onChange={(e) => setSubForm({ ...subForm, end_date: e.target.value })}
-                      />
-                      <button className={buttonClass} onClick={() => addSub.mutate()}>
-                        Aggiungi attività
-                      </button>
-                    </div>
-                  )}
+                        Nuova attività
+                      </Button>
+                    )}
+                  {editable &&
+                    detailIsCurrent &&
+                    !editingSubactivity &&
+                    !selectedActivity &&
+                    creatingActivity && (
+                      <div className="grid gap-2 rounded border border-dashed p-3 sm:grid-cols-3">
+                        <Input
+                          className={fieldClass}
+                          aria-label="Titolo attività"
+                          placeholder="Titolo attività"
+                          value={subForm.title}
+                          onChange={(e) => setSubForm({ ...subForm, title: e.target.value })}
+                        />
+                        <Input
+                          className={fieldClass}
+                          aria-label="Redmine"
+                          placeholder="Redmine"
+                          value={subForm.redmine_ref}
+                          onChange={(e) => setSubForm({ ...subForm, redmine_ref: e.target.value })}
+                        />
+                        <Select
+                          className={fieldClass}
+                          aria-label="Gruppo architetturale"
+                          value={subForm.office}
+                          onChange={(e) => setSubForm({ ...subForm, office: e.target.value })}
+                        >
+                          <option value="">Gruppo</option>
+                          {["EA", "TA", "SA", "CROSS"].map((office) => (
+                            <option key={office}>{office}</option>
+                          ))}
+                        </Select>
+                        <Input
+                          className={fieldClass}
+                          aria-label="Giornate da riservare"
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          placeholder="Giornate da riservare"
+                          value={subForm.reserved_days}
+                          onChange={(e) =>
+                            setSubForm({ ...subForm, reserved_days: e.target.value })
+                          }
+                        />
+                        <Input
+                          className={fieldClass}
+                          aria-label="Data inizio attività"
+                          type="date"
+                          value={subForm.start_date}
+                          onChange={(e) => setSubForm({ ...subForm, start_date: e.target.value })}
+                        />
+                        <Input
+                          className={fieldClass}
+                          aria-label="Data fine attività"
+                          type="date"
+                          value={subForm.end_date}
+                          onChange={(e) => setSubForm({ ...subForm, end_date: e.target.value })}
+                        />
+                        <Button
+                          className={buttonClass}
+                          disabled={addSub.isPending}
+                          onClick={() => addSub.mutate()}
+                        >
+                          Aggiungi attività
+                        </Button>
+                        <Button variant="secondary" onClick={() => setCreatingActivity(false)}>
+                          Annulla
+                        </Button>
+                      </div>
+                    )}
                 </div>
               )}
             </>

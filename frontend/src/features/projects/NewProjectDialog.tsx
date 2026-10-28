@@ -1,3 +1,4 @@
+import { Button, Input, Select } from "@/components/Controls";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -45,16 +46,19 @@ export function NewProjectDialog() {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground">
+        <Button className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground">
           Nuovo progetto
-        </button>
+        </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(38rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-card p-5 shadow-raised">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[min(38rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-raised">
           <Dialog.Title className="text-lg font-semibold">
             Nuovo progetto · passo {step} di 3
           </Dialog.Title>
+          <Dialog.Description className="mt-1 text-sm text-muted-foreground">
+            Identifica il progetto, assegna i referenti e definisci il budget.
+          </Dialog.Description>
           <form
             className="mt-4 space-y-4"
             onSubmit={(event) => {
@@ -64,27 +68,27 @@ export function NewProjectDialog() {
             {step === 1 && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Codice" error={errors.code?.message}>
-                  <input
+                  <Input
                     {...register("code", { required: "Campo obbligatorio" })}
                     className="input"
                   />
                 </Field>
                 <Field label="Tipo contratto">
-                  <select {...register("contract_type")} className="input">
+                  <Select {...register("contract_type")} className="input">
                     <option>AQL</option>
                     <option>CORPO</option>
                     <option>PPM</option>
                     <option>ATTIVITA</option>
-                  </select>
+                  </Select>
                 </Field>
                 <Field label="Titolo" error={errors.title?.message}>
-                  <input
+                  <Input
                     {...register("title", { required: "Campo obbligatorio" })}
                     className="input"
                   />
                 </Field>
                 <Field label="Budget (gg)" error={errors.budget_days?.message}>
-                  <input
+                  <Input
                     {...register("budget_days", {
                       required: "Campo obbligatorio",
                       pattern: {
@@ -101,10 +105,10 @@ export function NewProjectDialog() {
             {step === 2 && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Data inizio">
-                  <input {...register("start_date")} type="date" className="input" />
+                  <Input {...register("start_date")} type="date" className="input" />
                 </Field>
                 <Field label="Fine prevista">
-                  <input {...register("planned_end_date")} type="date" className="input" />
+                  <Input {...register("planned_end_date")} type="date" className="input" />
                 </Field>
               </div>
             )}
@@ -131,16 +135,16 @@ export function NewProjectDialog() {
               <Dialog.Close className="text-sm text-muted-foreground">Annulla</Dialog.Close>
               <div className="flex gap-2">
                 {step > 1 && (
-                  <button
+                  <Button
                     type="button"
                     className="rounded-md border border-border px-3 py-2 text-sm"
                     onClick={() => setStep((value) => value - 1)}
                   >
                     Indietro
-                  </button>
+                  </Button>
                 )}
                 {step < 3 ? (
-                  <button
+                  <Button
                     type="button"
                     className="rounded-md bg-accent px-3 py-2 text-sm text-accent-foreground"
                     onClick={(event) => {
@@ -148,14 +152,14 @@ export function NewProjectDialog() {
                     }}
                   >
                     Continua
-                  </button>
+                  </Button>
                 ) : (
-                  <button
+                  <Button
                     disabled={mutation.isPending}
                     className="rounded-md bg-accent px-3 py-2 text-sm text-accent-foreground disabled:opacity-50"
                   >
                     Crea progetto
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>

@@ -10,6 +10,7 @@ export function KpiCard({
   tone = "neutral",
   tooltip,
   action,
+  featured = false,
 }: {
   label: string;
   value: ReactNode;
@@ -17,13 +18,19 @@ export function KpiCard({
   tone?: "neutral" | "ok" | "warn" | "danger";
   tooltip?: string;
   action?: ReactNode;
+  featured?: boolean;
 }) {
   return (
-    <article className="rounded-lg border border-border bg-card p-4 shadow-subtle">
+    <article
+      className={cn(
+        "relative min-w-0 rounded-xl border border-border bg-card p-5 shadow-subtle",
+        featured && "border-accent/40 bg-accent-subtle/40 xl:col-span-2",
+      )}
+    >
       <MetricLabel label={label} description={tooltip ?? `Indicatore ${label}.`} />
       <div
         className={cn(
-          "mt-2 font-mono text-2xl font-semibold tabular-nums",
+          "mt-3 text-2xl font-semibold tabular-nums tracking-tight",
           tone === "ok" && "text-ok",
           tone === "warn" && "text-warn",
           tone === "danger" && "text-danger",
@@ -32,7 +39,7 @@ export function KpiCard({
         {value}
       </div>
       {(hint || action) && (
-        <div className="mt-1 flex items-end justify-between gap-2 text-xs text-muted-foreground">
+        <div className="mt-2 flex flex-col items-start gap-2 text-xs text-muted-foreground">
           <span>{hint}</span>
           {action}
         </div>

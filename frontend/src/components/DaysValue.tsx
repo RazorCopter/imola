@@ -14,7 +14,7 @@ export function DaysValue({ value, label, suffix = true, className }: DaysValueP
 
   return (
     <span
-      className={className ?? "font-mono tabular-nums"}
+      className={className ?? "tabular-nums"}
       title={raw ? `${label ?? "Valore API"}: ${raw} gg` : undefined}
     >
       {formatted}

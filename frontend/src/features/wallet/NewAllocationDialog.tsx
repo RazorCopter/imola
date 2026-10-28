@@ -1,3 +1,4 @@
+import { Button, Input, Select, Textarea } from "@/components/Controls";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertCircle, Plus, Wallet } from "lucide-react";
@@ -77,13 +78,13 @@ export function NewAllocationDialog({ year, unallocatedCapacity, onCreated }: Pr
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button className="inline-flex items-center gap-2 rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+        <Button className="inline-flex items-center gap-2 rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">
           <Plus className="h-4 w-4" /> Nuovo utilizzo
-        </button>
+        </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[min(38rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border bg-card p-6 shadow-xl">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[min(38rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border bg-card p-6 shadow-xl">
           <Dialog.Title className="text-lg font-semibold">Nuovo utilizzo wallet</Dialog.Title>
           <Dialog.Description className="mt-1 text-sm text-muted-foreground">
             Le fonti vengono attribuite automaticamente in FIFO: anno precedente, data, codice.
@@ -98,9 +99,9 @@ export function NewAllocationDialog({ year, unallocatedCapacity, onCreated }: Pr
           >
             <label className="block text-sm">
               Anno
-              <input value={year} readOnly className="mt-1 w-full rounded border bg-muted p-2" />
+              <Input value={year} readOnly className="mt-1 w-full rounded border bg-muted p-2" />
             </label>
-            <div className="border-primary/30 bg-primary/5 rounded border p-3 text-sm">
+            <div className="rounded border border-primary/30 bg-primary/5 p-3 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2 font-medium">
                   <Wallet className="h-4 w-4" /> Monte Wallet FIFO
@@ -114,16 +115,17 @@ export function NewAllocationDialog({ year, unallocatedCapacity, onCreated }: Pr
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Attività destinataria *</span>
-                <button
+                <Button
                   type="button"
-                  className="text-primary text-xs underline"
+                  className="text-xs text-primary underline"
                   onClick={() => setActivityMode(activityMode === "NEW" ? "EXISTING" : "NEW")}
                 >
                   {activityMode === "NEW" ? "Seleziona esistente" : "+ Nuova attività"}
-                </button>
+                </Button>
               </div>
               {activityMode === "NEW" ? (
-                <input
+                <Input
+                  aria-label="Nome attività destinataria"
                   required
                   value={newActivityTitle}
                   onChange={(event) => setNewActivityTitle(event.target.value)}
@@ -131,7 +133,8 @@ export function NewAllocationDialog({ year, unallocatedCapacity, onCreated }: Pr
                   className="w-full rounded border bg-background p-2 text-sm"
                 />
               ) : (
-                <select
+                <Select
+                  aria-label="Attività destinataria"
                   required
                   value={activity}
                   onChange={(event) => setActivity(event.target.value)}
@@ -143,12 +146,12 @@ export function NewAllocationDialog({ year, unallocatedCapacity, onCreated }: Pr
                       {item.code} · {item.title}
                     </option>
                   ))}
-                </select>
+                </Select>
               )}
             </div>
             <label className="block text-sm">
               Assegnatario *
-              <select
+              <Select
                 required
                 value={assignee}
                 onChange={(event) => setAssignee(event.target.value)}
@@ -160,11 +163,11 @@ export function NewAllocationDialog({ year, unallocatedCapacity, onCreated }: Pr
                     {person.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block text-sm">
               Giornate da riservare *
-              <input
+              <Input
                 required
                 type="number"
                 min="0.0001"
@@ -177,7 +180,7 @@ export function NewAllocationDialog({ year, unallocatedCapacity, onCreated }: Pr
             </label>
             <label className="block text-sm">
               Note
-              <textarea
+              <Textarea
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
                 className="mt-1 min-h-20 w-full rounded border bg-background p-2"
@@ -186,24 +189,24 @@ export function NewAllocationDialog({ year, unallocatedCapacity, onCreated }: Pr
             {error && (
               <div
                 role="alert"
-                className="border-destructive/40 bg-destructive/10 text-destructive flex gap-2 rounded border p-3 text-sm"
+                className="flex gap-2 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
               >
                 <AlertCircle className="h-4 w-4 shrink-0" /> {error}
               </div>
             )}
             <div className="flex justify-end gap-3 border-t pt-4">
               <Dialog.Close asChild>
-                <button type="button" className="rounded border px-4 py-2 text-sm">
+                <Button type="button" className="rounded border px-4 py-2 text-sm">
                   Annulla
-                </button>
+                </Button>
               </Dialog.Close>
-              <button
+              <Button
                 type="submit"
                 disabled={create.isPending}
-                className="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {create.isPending ? "Creazione..." : "Crea utilizzo"}
-              </button>
+              </Button>
             </div>
           </form>
         </Dialog.Content>

@@ -88,34 +88,62 @@ export function AccessibleBarChart({
   series,
   unit,
   hideXAxis = false,
+  horizontal = false,
 }: {
   data: object[];
   xKey: string;
   series: Series[];
   unit: "days" | "euro";
   hideXAxis?: boolean;
+  horizontal?: boolean;
 }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data} margin={{ top: 8, right: 12, bottom: 8, left: 12 }}>
+      <BarChart
+        data={data}
+        layout={horizontal ? "vertical" : "horizontal"}
+        margin={{ top: 8, right: 12, bottom: 8, left: 12 }}
+      >
         <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
-        <XAxis
-          dataKey={xKey}
-          hide={hideXAxis}
-          stroke="hsl(var(--muted-foreground))"
-          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-        />
-        <YAxis
-          stroke="hsl(var(--muted-foreground))"
-          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-          tickFormatter={(value: unknown) => {
-            const numericValue = typeof value === "number" ? value : Number(String(value));
-            return unit === "euro"
-              ? formatEuro(numericValue).replace(",00", "")
-              : formatDays(numericValue);
-          }}
-          width={88}
-        />
+        {horizontal ? (
+          <XAxis
+            type="number"
+            hide
+            tickFormatter={(value: number) =>
+              unit === "euro" ? formatEuro(value) : formatDays(value)
+            }
+          />
+        ) : (
+          <XAxis
+            dataKey={xKey}
+            hide={hideXAxis}
+            stroke="hsl(var(--muted-foreground))"
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+          />
+        )}
+        {horizontal ? (
+          <YAxis
+            type="category"
+            dataKey={xKey}
+            width={180}
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+            tickFormatter={(value: string) =>
+              value.length > 24 ? `${value.slice(0, 24)}…` : value
+            }
+          />
+        ) : (
+          <YAxis
+            stroke="hsl(var(--muted-foreground))"
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+            tickFormatter={(value: unknown) => {
+              const numericValue = typeof value === "number" ? value : Number(String(value));
+              return unit === "euro"
+                ? formatEuro(numericValue).replace(",00", "")
+                : formatDays(numericValue);
+            }}
+            width={88}
+          />
+        )}
         <Tooltip content={<ChartTooltip unit={unit} />} cursor={{ fill: "transparent" }} />
         <Legend wrapperStyle={{ color: "hsl(var(--foreground))", fontSize: 12 }} />
         {series.map((item) => (
@@ -124,7 +152,7 @@ export function AccessibleBarChart({
             dataKey={item.key}
             name={item.label}
             fill={item.color}
-            radius={[7, 7, 0, 0]}
+            radius={horizontal ? [0, 7, 7, 0] : [7, 7, 0, 0]}
             isAnimationActive={false}
             activeBar={{ fill: item.color, fillOpacity: 0.78, stroke: "#f8fafc", strokeWidth: 1 }}
           />

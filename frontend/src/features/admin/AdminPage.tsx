@@ -1,4 +1,7 @@
+import { PageHeader } from "@/components/PageHeader";
+import { Button, Input, Select } from "@/components/Controls";
 import { FormEvent, useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 
@@ -124,7 +127,7 @@ function DatabaseBackupPanel() {
           copia preventiva sul server. Durante il ripristino sospendi le altre operazioni; potrebbe
           essere necessario accedere di nuovo.
         </p>
-        <input
+        <Input
           aria-label="File backup database"
           type="file"
           accept=".dump"
@@ -136,21 +139,21 @@ function DatabaseBackupPanel() {
         />
         <label className="block text-sm">
           Scrivi RIPRISTINA per confermare{" "}
-          <input
+          <Input
             className="ml-2 rounded border bg-background px-2 py-1"
             value={confirmation}
             onChange={(e) => setConfirmation(e.target.value)}
           />
         </label>
-        <button
+        <Button
           className="rounded bg-red-700 px-3 py-2 text-sm text-white disabled:opacity-50"
           disabled={!file || confirmation !== "RIPRISTINA" || restore.isPending}
           onClick={() => restore.mutate()}
         >
           Ripristina database
-        </button>
+        </Button>
         {restore.isError && (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-sm text-destructive">
             {errorMessage(restore.error)}
           </p>
         )}
@@ -200,35 +203,44 @@ function ImportPanel({
     },
   });
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <h2 className="font-medium">{title}</h2>
-      <input
-        className="mt-3 block text-sm"
+    <section className="rounded-xl border border-border bg-card p-5 shadow-subtle">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Selezione · Simulazione · Conferma
+      </p>
+      <h2 className="font-semibold tracking-tight">{title}</h2>
+      <Input
+        aria-label={`File per ${title}`}
+        className="mt-4 block w-full rounded-md border border-input bg-background p-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1 file:text-foreground"
         type="file"
         accept={accept}
-        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        disabled={upload.isPending}
+        onChange={(e) => {
+          setFile(e.target.files?.[0] ?? null);
+          setPreview(null);
+          upload.reset();
+        }}
       />
       <div className="mt-3 flex gap-2">
-        <button
+        <Button
           className="rounded border px-3 py-2 text-sm"
           disabled={!file || upload.isPending}
           onClick={() => upload.mutate(false)}
         >
           Valida e simula
-        </button>
-        <button
+        </Button>
+        <Button
           className="rounded border border-emerald-800 bg-emerald-600 px-3 py-2 text-sm text-white disabled:opacity-50"
           disabled={!file || !hasValidPreview || upload.isPending}
           onClick={() => upload.mutate(true)}
         >
           Conferma e applica
-        </button>
+        </Button>
       </div>
       {!hasValidPreview && (
         <p className="mt-2 text-xs text-muted-foreground">Esegui prima “Valida e simula”.</p>
       )}
       {upload.isError && (
-        <p role="alert" className="text-destructive mt-2 text-sm">
+        <p role="alert" className="mt-2 text-sm text-destructive">
           {errorMessage(upload.error)}
         </p>
       )}
@@ -305,109 +317,118 @@ function UserForm({
     mutation.mutate();
   }
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="user-form-title"
-      className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4"
+    <Dialog.Root
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      <form
-        onSubmit={submit}
-        className="w-full max-w-lg space-y-3 rounded-lg bg-background p-5 shadow-xl"
-      >
-        <h2 id="user-form-title" className="text-lg font-semibold">
-          {initial ? "Modifica utente" : "Crea utente"}
-        </h2>
-        <label className="block text-sm">
-          Username
-          <input
-            aria-label="Username"
-            required
-            className="mt-1 w-full rounded border p-2"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-        </label>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm">
-            Nome
-            <input
-              aria-label="Nome"
-              className="mt-1 w-full rounded border p-2"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-            />
-          </label>
-          <label className="text-sm">
-            Cognome
-            <input
-              aria-label="Cognome"
-              className="mt-1 w-full rounded border p-2"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-            />
-          </label>
-        </div>
-        <label className="block text-sm">
-          Email
-          <input
-            aria-label="Email"
-            type="email"
-            className="mt-1 w-full rounded border p-2"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </label>
-        {!initial && (
-          <label className="block text-sm">
-            Password iniziale
-            <input
-              aria-label="Password iniziale"
-              required
-              type="password"
-              className="mt-1 w-full rounded border p-2"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
-        )}
-        <label className="block text-sm">
-          Ruolo
-          <select
-            aria-label="Ruolo"
-            className="mt-1 w-full rounded border p-2"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-          >
-            {roles.map((item) => (
-              <option key={item.key} value={item.key}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex gap-2 text-sm">
-          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
-          Utente attivo
-        </label>
-        {mutation.isError && (
-          <p role="alert" className="text-destructive text-sm">
-            {errorMessage(mutation.error)}
-          </p>
-        )}
-        <div className="flex justify-end gap-2">
-          <button type="button" className="rounded border px-3 py-2" onClick={onClose}>
-            Annulla
-          </button>
-          <button
-            className="bg-primary text-primary-foreground rounded px-3 py-2"
-            disabled={mutation.isPending}
-          >
-            Salva
-          </button>
-        </div>
-      </form>
-    </div>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-raised">
+          <form onSubmit={submit} className="space-y-3">
+            <Dialog.Title className="text-lg font-semibold">
+              {initial ? "Modifica utente" : "Crea utente"}
+            </Dialog.Title>
+            <Dialog.Description className="text-sm text-muted-foreground">
+              Dati account, ruolo e stato di accesso.
+            </Dialog.Description>
+            <label className="block text-sm">
+              Username
+              <Input
+                aria-label="Username"
+                required
+                className="mt-1 w-full rounded border p-2"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-sm">
+                Nome
+                <Input
+                  aria-label="Nome"
+                  className="mt-1 w-full rounded border p-2"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </label>
+              <label className="text-sm">
+                Cognome
+                <Input
+                  aria-label="Cognome"
+                  className="mt-1 w-full rounded border p-2"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+              </label>
+            </div>
+            <label className="block text-sm">
+              Email
+              <Input
+                aria-label="Email"
+                type="email"
+                className="mt-1 w-full rounded border p-2"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+            {!initial && (
+              <label className="block text-sm">
+                Password iniziale
+                <Input
+                  aria-label="Password iniziale"
+                  required
+                  type="password"
+                  className="mt-1 w-full rounded border p-2"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </label>
+            )}
+            <label className="block text-sm">
+              Ruolo
+              <Select
+                aria-label="Ruolo"
+                className="mt-1 w-full rounded border p-2"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              >
+                {roles.map((item) => (
+                  <option key={item.key} value={item.key}>
+                    {item.label}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <label className="flex gap-2 text-sm">
+              <Input
+                type="checkbox"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+              />
+              Utente attivo
+            </label>
+            {mutation.isError && (
+              <p role="alert" className="text-sm text-destructive">
+                {errorMessage(mutation.error)}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button type="button" className="rounded border px-3 py-2" onClick={onClose}>
+                Annulla
+              </Button>
+              <Button
+                className="rounded bg-primary px-3 py-2 text-primary-foreground"
+                disabled={mutation.isPending}
+              >
+                Salva
+              </Button>
+            </div>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
@@ -440,12 +461,12 @@ function UsersPanel({ data }: { data: UsersPayload }) {
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium">Utenti</h2>
-        <button
-          className="bg-primary text-primary-foreground rounded px-3 py-2"
+        <Button
+          className="rounded bg-primary px-3 py-2 text-primary-foreground"
           onClick={() => setEditing("new")}
         >
           Crea utente
-        </button>
+        </Button>
       </div>
       {message && (
         <p role="status" className="text-sm text-emerald-700">
@@ -453,7 +474,7 @@ function UsersPanel({ data }: { data: UsersPayload }) {
         </p>
       )}
       {action.isError && (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className="text-sm text-destructive">
           {errorMessage(action.error)}
         </p>
       )}
@@ -491,11 +512,11 @@ function UsersPanel({ data }: { data: UsersPayload }) {
                 <td className="p-2">{new Date(user.date_joined).toLocaleDateString()}</td>
                 <td className="p-2">
                   <div className="flex flex-wrap gap-1">
-                    <button className="rounded border px-2 py-1" onClick={() => setEditing(user)}>
+                    <Button className="rounded border px-2 py-1" onClick={() => setEditing(user)}>
                       Modifica
-                    </button>
+                    </Button>
                     {user.is_active && (
-                      <button
+                      <Button
                         className="rounded border px-2 py-1"
                         onClick={() => {
                           if (window.confirm(`Disattivare ${user.username}?`))
@@ -503,23 +524,23 @@ function UsersPanel({ data }: { data: UsersPayload }) {
                         }}
                       >
                         Disattiva
-                      </button>
+                      </Button>
                     )}
-                    <button
+                    <Button
                       className="rounded border px-2 py-1"
                       onClick={() => action.mutate({ user, kind: "password" })}
                     >
                       Reset password
-                    </button>
-                    <button
-                      className="border-destructive text-destructive rounded border px-2 py-1"
+                    </Button>
+                    <Button
+                      className="rounded border border-destructive px-2 py-1 text-destructive"
                       onClick={() => {
                         if (window.confirm(`Eliminare definitivamente ${user.username}?`))
                           action.mutate({ user, kind: "delete" });
                       }}
                     >
                       Elimina
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -576,7 +597,7 @@ function ConfigurationPanel() {
       <label className="block text-sm font-medium" htmlFor="daily-person-cost">
         Costo giornata uomo (€)
       </label>
-      <input
+      <Input
         id="daily-person-cost"
         type="number"
         min="0"
@@ -588,25 +609,25 @@ function ConfigurationPanel() {
         }}
         className="w-full rounded-md border border-input bg-background px-3 py-2"
       />
-      {!valid && <p className="text-destructive text-sm">Inserire un importo non negativo.</p>}
+      {!valid && <p className="text-sm text-destructive">Inserire un importo non negativo.</p>}
       {message && (
         <p role="status" className="text-sm text-emerald-700">
           {message}
         </p>
       )}
       {save.isError && (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className="text-sm text-destructive">
           {errorMessage(save.error)}
         </p>
       )}
-      <button
+      <Button
         type="button"
         disabled={!valid || save.isPending}
         onClick={() => save.mutate()}
-        className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm disabled:opacity-50"
+        className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
       >
         {save.isPending ? "Salvataggio…" : "Salva"}
-      </button>
+      </Button>
     </section>
   );
 }
@@ -649,7 +670,7 @@ function RolesPanel({ data }: { data: RolesPayload }) {
         </p>
       )}
       {save.isError && (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className="text-sm text-destructive">
           {errorMessage(save.error)}
         </p>
       )}
@@ -673,7 +694,7 @@ function RolesPanel({ data }: { data: RolesPayload }) {
                   const locked = role.key === "admin" || data.reserved.includes(capability);
                   return (
                     <td key={role.key} className="p-2 text-center">
-                      <input
+                      <Input
                         aria-label={`${role.label}: ${capability}`}
                         type="checkbox"
                         checked={matrix[role.key]?.has(capability) ?? false}
@@ -692,13 +713,13 @@ function RolesPanel({ data }: { data: RolesPayload }) {
         {data.roles
           .filter((role) => role.key !== "admin")
           .map((role) => (
-            <button
+            <Button
               key={role.key}
-              className="bg-primary text-primary-foreground rounded px-3 py-2"
+              className="rounded bg-primary px-3 py-2 text-primary-foreground"
               onClick={() => save.mutate(role.key)}
             >
               Salva {role.label}
-            </button>
+            </Button>
           ))}
       </div>
     </section>
@@ -720,20 +741,20 @@ function WorkbookExplorer({ batch, onClose }: { batch: ImportRow; onClose: () =>
     enabled: Boolean(datasetId),
   });
   return (
-    <section className="border-primary/30 space-y-3 rounded-lg border bg-card p-4">
+    <section className="space-y-3 rounded-lg border border-primary/30 bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-medium">Dataset di {batch.source_filename}</h3>
           <p className="text-xs text-muted-foreground">Batch {batch.id}</p>
         </div>
-        <button className="rounded border px-2 py-1 text-sm" onClick={onClose}>
+        <Button className="rounded border px-2 py-1 text-sm" onClick={onClose}>
           Chiudi
-        </button>
+        </Button>
       </div>
       {datasets.isLoading && <LoadingState />}
       {datasets.isError && <ErrorState title="Dataset non disponibili" />}
       {datasets.data && (
-        <select
+        <Select
           aria-label="Dataset workbook"
           className="w-full rounded border bg-background p-2 text-sm"
           value={datasetId}
@@ -745,7 +766,7 @@ function WorkbookExplorer({ batch, onClose }: { batch: ImportRow; onClose: () =>
               {dataset.dataset_id} ({dataset.row_count} righe)
             </option>
           ))}
-        </select>
+        </Select>
       )}
       {selected && detail.data && (
         <div className="max-h-[32rem] overflow-auto rounded border">
@@ -856,7 +877,7 @@ function ReferentsPanel() {
       >
         <label className="text-sm">
           Nome e cognome
-          <input
+          <Input
             required
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
@@ -865,7 +886,7 @@ function ReferentsPanel() {
         </label>
         <label className="text-sm">
           Email
-          <input
+          <Input
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -874,25 +895,25 @@ function ReferentsPanel() {
         </label>
         <label className="text-sm">
           Tipologia
-          <select
+          <Select
             value={organizationKind}
             onChange={(event) => setOrganizationKind(event.target.value as "CLIENT" | "SUPPLIER")}
             className="mt-1 w-full rounded border border-input bg-background px-3 py-2"
           >
             <option value="CLIENT">Collega BMED</option>
             <option value="SUPPLIER">Consulente Imola</option>
-          </select>
+          </Select>
         </label>
         <div className="flex gap-2">
-          <button
+          <Button
             type="submit"
             disabled={save.isPending}
-            className="bg-primary text-primary-foreground rounded px-4 py-2 text-sm disabled:opacity-50"
+            className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
           >
             {editing ? "Aggiorna" : "Aggiungi"}
-          </button>
+          </Button>
           {editing && (
-            <button
+            <Button
               type="button"
               className="rounded border px-3 py-2 text-sm"
               onClick={() => {
@@ -902,11 +923,11 @@ function ReferentsPanel() {
               }}
             >
               Annulla
-            </button>
+            </Button>
           )}
         </div>
       </form>
-      {save.isError && <p className="text-destructive text-sm">{errorMessage(save.error)}</p>}
+      {save.isError && <p className="text-sm text-destructive">{errorMessage(save.error)}</p>}
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-left">
@@ -929,7 +950,7 @@ function ReferentsPanel() {
                 <td className="p-3">{row.is_active ? "Attivo" : "Disattivato"}</td>
                 <td className="p-3">
                   <div className="flex justify-end gap-2">
-                    <button
+                    <Button
                       type="button"
                       className="rounded border px-2 py-1 text-xs"
                       onClick={() => {
@@ -940,15 +961,15 @@ function ReferentsPanel() {
                       }}
                     >
                       Modifica
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       className="rounded border px-2 py-1 text-xs"
                       disabled={setActive.isPending}
                       onClick={() => setActive.mutate({ row, active: !row.is_active })}
                     >
                       {row.is_active ? "Disattiva" : "Riattiva"}
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -989,13 +1010,16 @@ export function AdminPage() {
     return <ErrorState title="Amministrazione non disponibile" />;
   return (
     <section className="space-y-5">
-      <header>
-        <h1 className="text-xl font-semibold">Amministrazione</h1>
-        <p className="text-sm text-muted-foreground">
-          Import, utenti, referenti, ruoli e configurazione.
-        </p>
-      </header>
-      <nav aria-label="Sezioni amministrazione" className="flex gap-2 border-b">
+      <PageHeader
+        eyebrow="Sistema · Configurazione"
+        title="Amministrazione"
+        description={<>Import, utenti, referenti, ruoli e configurazione.</>}
+      />
+      <div
+        role="tablist"
+        aria-label="Sezioni amministrazione"
+        className="flex gap-2 overflow-x-auto border-b"
+      >
         {(
           [
             ["imports", "Import ed export"],
@@ -1005,99 +1029,133 @@ export function AdminPage() {
             ["configuration", "Configurazione"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
-          <button
+          <Button
             key={key}
             role="tab"
+            id={`admin-tab-${key}`}
+            aria-controls="admin-panel"
+            tabIndex={tab === key ? 0 : -1}
             aria-selected={tab === key}
             className={`border-b-2 px-3 py-2 ${tab === key ? "border-primary font-medium" : "border-transparent"}`}
             onClick={() => setTab(key)}
+            onKeyDown={(event) => {
+              const keys: Tab[] = ["imports", "users", "referents", "roles", "configuration"];
+              let next = keys.indexOf(key);
+              if (event.key === "ArrowRight") next = (next + 1) % keys.length;
+              else if (event.key === "ArrowLeft") next = (next + keys.length - 1) % keys.length;
+              else if (event.key === "Home") next = 0;
+              else if (event.key === "End") next = keys.length - 1;
+              else return;
+              event.preventDefault();
+              setTab(keys[next]!);
+              document.getElementById(`admin-tab-${keys[next]}`)?.focus();
+            }}
           >
             {label}
-          </button>
+          </Button>
         ))}
-      </nav>
-      {tab === "imports" && (
-        <div className="space-y-4">
-          <div className="grid gap-4 xl:grid-cols-2">
-            <ImportPanel
-              kind="seed"
-              title="Import JSON (seed v1 o workbook v2-v4)"
-              accept="application/json,.json"
-            />
-            <ImportPanel kind="ppm" title="Import PPM" accept=".xlsx,.pdf" />
-          </div>
-          {session?.is_admin && <DatabaseBackupPanel />}
-          <section className="rounded-lg border p-4">
-            <h2 className="mb-3 font-medium">Export</h2>
-            <div className="flex gap-2">
-              <a className="rounded border px-3 py-2" href={`${API_BASE}/export/json`}>
-                JSON
-              </a>
-              <a className="rounded border px-3 py-2" href={`${API_BASE}/export/excel`}>
-                Excel
-              </a>
+      </div>
+      <div
+        role="tabpanel"
+        id="admin-panel"
+        aria-labelledby={`admin-tab-${tab}`}
+        className="space-y-4"
+      >
+        {tab === "imports" && (
+          <div className="space-y-4">
+            <div className="grid gap-4 xl:grid-cols-2">
+              <ImportPanel
+                kind="seed"
+                title="Import JSON (seed v1 o workbook v2-v4)"
+                accept="application/json,.json"
+              />
+              <ImportPanel kind="ppm" title="Import PPM" accept=".xlsx,.pdf" />
             </div>
-            <h3 className="mb-2 mt-4 font-medium">Storico import</h3>
-            {imports.data.results.length ? (
-              <ul>
-                {imports.data.results.map((row) => (
-                  <li
-                    key={row.id}
-                    className="flex items-center justify-between gap-3 border-t py-2 first:border-0"
-                  >
-                    <span>
-                      {row.kind} · {row.status} · {row.source_filename}
-                    </span>
-                    {row.kind === "WORKBOOK_JSON" && row.status === "APPLIED" && (
-                      <button
-                        className="rounded border px-2 py-1 text-xs"
-                        onClick={() => setWorkbookBatch(row)}
-                      >
-                        Esplora dataset
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">Nessun import registrato.</p>
+            {session?.is_admin && <DatabaseBackupPanel />}
+            <section className="rounded-lg border p-4">
+              <h2 className="mb-3 font-medium">Export</h2>
+              <div className="flex gap-2">
+                <a className="rounded border px-3 py-2" href={`${API_BASE}/export/json`}>
+                  JSON
+                </a>
+                <a className="rounded border px-3 py-2" href={`${API_BASE}/export/excel`}>
+                  Excel
+                </a>
+              </div>
+              <h3 className="mb-2 mt-4 font-medium">Storico import</h3>
+              {imports.data.results.length ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="border-b text-xs text-muted-foreground">
+                      <tr>
+                        <th className="p-3">File</th>
+                        <th className="p-3">Tipo</th>
+                        <th className="p-3">Stato</th>
+                        <th className="p-3">Azione</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {imports.data.results.map((row) => (
+                        <tr key={row.id} className="border-b last:border-0">
+                          <td className="max-w-sm break-words p-3 font-medium">
+                            {row.source_filename}
+                          </td>
+                          <td className="p-3">{row.kind}</td>
+                          <td className="p-3">{row.status}</td>
+                          <td className="p-3">
+                            {row.kind === "WORKBOOK_JSON" && row.status === "APPLIED" && (
+                              <Button
+                                className="rounded border px-2 py-1 text-xs"
+                                onClick={() => setWorkbookBatch(row)}
+                              >
+                                Esplora dataset
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nessun import registrato.</p>
+              )}
+            </section>
+            {workbookBatch && (
+              <WorkbookExplorer batch={workbookBatch} onClose={() => setWorkbookBatch(null)} />
             )}
-          </section>
-          {workbookBatch && (
-            <WorkbookExplorer batch={workbookBatch} onClose={() => setWorkbookBatch(null)} />
-          )}
-        </div>
-      )}
-      {tab === "users" && <UsersPanel data={users.data} />}
-      {tab === "referents" && <ReferentsPanel />}
-      {tab === "roles" && <RolesPanel data={roleCapabilities.data} />}
-      {tab === "configuration" && <ConfigurationPanel />}
-
-      {tab === "configuration" && canResetData(session) && (
-        <section className="mt-8 rounded-lg border-2 border-danger/40 bg-danger/5 p-4">
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <h2 className="flex items-center gap-2 text-sm font-bold text-danger">
-                <AlertTriangle className="h-5 w-5" /> Attenzione - Reset Completo DB
-              </h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Cancellazione irreversibile di tutti i dati operativi (progetti, consuntivi, wallet,
-                canoni, anomalie, import). Gli utenti e le impostazioni restano intatti. Richiede
-                digitazione obbligatoria di conferma.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowDeleteDbDialog(true)}
-              data-testid="open-delete-db-dialog-btn"
-              className="inline-flex shrink-0 items-center justify-center rounded-md border-2 border-danger bg-danger px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-danger/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
-            >
-              ELIMINA DB
-            </button>
           </div>
-        </section>
-      )}
+        )}
+        {tab === "users" && <UsersPanel data={users.data} />}
+        {tab === "referents" && <ReferentsPanel />}
+        {tab === "roles" && <RolesPanel data={roleCapabilities.data} />}
+        {tab === "configuration" && <ConfigurationPanel />}
 
+        {tab === "configuration" && canResetData(session) && (
+          <section className="mt-8 rounded-lg border-2 border-danger/40 bg-danger/5 p-4">
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <h2 className="flex items-center gap-2 text-sm font-bold text-danger">
+                  <AlertTriangle className="h-5 w-5" /> Attenzione - Reset Completo DB
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Cancellazione irreversibile di tutti i dati operativi (progetti, consuntivi,
+                  wallet, canoni, anomalie, import). Gli utenti e le impostazioni restano intatti.
+                  Richiede digitazione obbligatoria di conferma.
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => setShowDeleteDbDialog(true)}
+                data-testid="open-delete-db-dialog-btn"
+                className="inline-flex shrink-0 items-center justify-center rounded-md border-2 border-danger bg-danger px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-danger/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+              >
+                ELIMINA DB
+              </Button>
+            </div>
+          </section>
+        )}
+      </div>
       <DeleteDatabaseDialog
         open={showDeleteDbDialog}
         onClose={() => setShowDeleteDbDialog(false)}

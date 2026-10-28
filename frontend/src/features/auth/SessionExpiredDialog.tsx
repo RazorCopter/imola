@@ -1,3 +1,4 @@
+import { Button, Input } from "@/components/Controls";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -51,14 +52,14 @@ export function SessionExpiredDialog() {
           </Dialog.Description>
 
           <form onSubmit={(event) => void onSubmit(event)} className="mt-5 space-y-3" noValidate>
-            <input
+            <Input
               aria-label={t("auth.username")}
               placeholder={t("auth.username")}
               autoComplete="username"
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
               {...register("username", { required: true })}
             />
-            <input
+            <Input
               type="password"
               aria-label={t("auth.password")}
               placeholder={t("auth.password")}
@@ -71,13 +72,13 @@ export function SessionExpiredDialog() {
                 {error}
               </p>
             )}
-            <button
+            <Button
               type="submit"
               disabled={isSubmitting}
               className="h-9 w-full rounded-md bg-accent text-sm font-medium text-accent-foreground disabled:opacity-60"
             >
               {t("auth.signInAgain")}
-            </button>
+            </Button>
           </form>
         </Dialog.Content>
       </Dialog.Portal>

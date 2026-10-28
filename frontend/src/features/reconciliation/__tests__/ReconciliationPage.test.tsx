@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
+import userEvent from "@testing-library/user-event";
 
 import { ReconciliationPage } from "@/features/reconciliation/ReconciliationPage";
 import { api } from "@/lib/api";
@@ -17,7 +19,9 @@ function renderPage() {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <ReconciliationPage />
+      <MemoryRouter>
+        <ReconciliationPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -121,6 +125,10 @@ describe("ReconciliationPage", () => {
     expect(missing).toHaveAttribute("data-tone", "warn");
     expect(valid.closest("td")).toHaveClass("text-center");
     expect(screen.getByRole("columnheader", { name: "Esito" })).toHaveClass("text-center");
+    await userEvent.selectOptions(screen.getByLabelText("Filtra esito riconciliazione"), "KO");
+    expect(screen.getByText("DISCREPANZA")).toBeInTheDocument();
+    expect(screen.queryByText("Valido")).not.toBeInTheDocument();
+    expect(screen.getByText("Confronti eseguiti").closest("article")).toHaveTextContent("2");
   });
 
   it("rende visibile e neutro un esito backend inatteso", async () => {

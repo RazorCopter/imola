@@ -1,3 +1,4 @@
+import { Button, Input } from "@/components/Controls";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Tabs from "@radix-ui/react-tabs";
@@ -157,31 +158,33 @@ export function ProjectDetailPage() {
 
   return (
     <section className="space-y-5">
-      <header>
+      <header className="rounded-2xl border border-border bg-card p-6 md:p-7">
         <Link to="/progetti" className="text-sm text-accent">
           ← Progetti
         </Link>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-xl font-semibold">{project.codice}</h1>
-            <StatusBadge status={project.stato_consuntivazione} domain="timesheet" />
-            <StatusBadge status={project.stato_fatturazione} domain="billing" />
-            <StatusBadge status={project.stato_offerta} domain="offer" />
+        <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="break-all text-xs font-medium text-muted-foreground">{project.codice}</p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight">{project.titolo}</h1>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <StatusBadge status={project.stato_consuntivazione} domain="timesheet" />
+              <StatusBadge status={project.stato_fatturazione} domain="billing" />
+              <StatusBadge status={project.stato_offerta} domain="offer" />
+            </div>
           </div>
           {(canEditProjects(session) ||
             project.permissions?.edit ||
             project.permissions?.annotate) && (
-            <button
+            <Button
               type="button"
               onClick={() => setEditOpen(true)}
               data-testid="edit-project-detail-button"
               className="rounded bg-amber-500 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-950 hover:bg-amber-400"
             >
               Edit progetto
-            </button>
+            </Button>
           )}
         </div>
-        <p className="mt-1 text-muted-foreground">{project.titolo}</p>
       </header>
 
       {editOpen && projectId && (
@@ -211,7 +214,7 @@ export function ProjectDetailPage() {
                 <DaysValue
                   value={value}
                   label={label}
-                  className="mt-2 block font-mono text-xl font-semibold tabular-nums"
+                  className="mt-3 block text-xl font-semibold tabular-nums tracking-tight"
                 />
               </article>
             ))}
@@ -238,7 +241,7 @@ export function ProjectDetailPage() {
 
         <Tabs.Content value="Consuntivi" className="space-y-4 pt-4">
           {canCreateTimesheets(session) && (
-            <button
+            <Button
               type="button"
               onClick={() => {
                 setEditingTimesheetId(null);
@@ -250,7 +253,7 @@ export function ProjectDetailPage() {
               className="rounded bg-accent px-4 py-2 text-sm font-medium text-accent-foreground"
             >
               Consuntiva
-            </button>
+            </Button>
           )}
           {timesheetOpen && (
             <form
@@ -263,7 +266,7 @@ export function ProjectDetailPage() {
             >
               <label className="text-sm">
                 Giornate
-                <input
+                <Input
                   aria-label="Giornate"
                   type="number"
                   min="0.01"
@@ -276,7 +279,7 @@ export function ProjectDetailPage() {
               </label>
               <label className="text-sm">
                 Data
-                <input
+                <Input
                   aria-label="Data"
                   type="date"
                   required
@@ -287,7 +290,7 @@ export function ProjectDetailPage() {
               </label>
               <label className="text-sm">
                 Descrizione
-                <input
+                <Input
                   aria-label="Descrizione"
                   type="text"
                   maxLength={300}
@@ -297,19 +300,19 @@ export function ProjectDetailPage() {
                   className="mt-1 w-full rounded border border-input bg-background px-3 py-2"
                 />
               </label>
-              <button
+              <Button
                 type="submit"
                 disabled={createTimesheet.isPending || updateTimesheet.isPending}
-                className="bg-primary text-primary-foreground rounded px-4 py-2 text-sm disabled:opacity-50"
+                className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
               >
                 {createTimesheet.isPending || updateTimesheet.isPending
                   ? "Salvataggio…"
                   : editingTimesheetId
                     ? "Aggiorna"
                     : "Salva"}
-              </button>
+              </Button>
               {editingTimesheetId && (
-                <button
+                <Button
                   type="button"
                   onClick={() => {
                     setEditingTimesheetId(null);
@@ -318,12 +321,12 @@ export function ProjectDetailPage() {
                   className="rounded border border-border px-4 py-2 text-sm"
                 >
                   Annulla
-                </button>
+                </Button>
               )}
             </form>
           )}
           {(createTimesheet.isError || updateTimesheet.isError || deleteTimesheet.isError) && (
-            <p role="alert" className="text-destructive text-sm">
+            <p role="alert" className="text-sm text-destructive">
               Impossibile registrare il consuntivo. Verifica giornate e descrizione.
             </p>
           )}
@@ -353,7 +356,7 @@ export function ProjectDetailPage() {
                       {session?.is_admin && (
                         <td className="p-3 text-right">
                           <div className="flex justify-end gap-2">
-                            <button
+                            <Button
                               type="button"
                               onClick={() => {
                                 setEditingTimesheetId(entry.id);
@@ -365,8 +368,8 @@ export function ProjectDetailPage() {
                               className="rounded border border-border px-2 py-1 text-xs hover:bg-muted"
                             >
                               Modifica
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               type="button"
                               onClick={() => {
                                 if (window.confirm("Eliminare questo consuntivo?")) {
@@ -374,10 +377,10 @@ export function ProjectDetailPage() {
                                 }
                               }}
                               disabled={deleteTimesheet.isPending}
-                              className="border-destructive text-destructive hover:bg-destructive/10 rounded border px-2 py-1 text-xs disabled:opacity-50"
+                              className="rounded border border-destructive px-2 py-1 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-50"
                             >
                               Elimina
-                            </button>
+                            </Button>
                           </div>
                         </td>
                       )}
@@ -443,13 +446,13 @@ export function ProjectDetailPage() {
             <div className="rounded-lg border border-border bg-card p-4">
               <h2 className="font-medium">Azioni sul progetto</h2>
               <div className="mt-3 flex flex-wrap gap-2">
-                <input
+                <Input
                   id="planned-end-date"
                   type="date"
                   defaultValue={project.data_fine_prevista ?? ""}
                   className="rounded border border-input bg-background px-3 py-2 text-sm"
                 />
-                <button
+                <Button
                   className="rounded bg-accent px-3 py-2 text-sm font-medium text-accent-foreground"
                   onClick={() => {
                     const input = document.getElementById("planned-end-date") as HTMLInputElement;
@@ -457,7 +460,7 @@ export function ProjectDetailPage() {
                   }}
                 >
                   Aggiorna data fine prevista
-                </button>
+                </Button>
               </div>
             </div>
           ) : (

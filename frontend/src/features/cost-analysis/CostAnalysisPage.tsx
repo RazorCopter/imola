@@ -1,3 +1,5 @@
+import { PageHeader } from "@/components/PageHeader";
+import { Button, Input, Select } from "@/components/Controls";
 import { FormEvent, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
@@ -45,13 +47,13 @@ function AggregationTable({ title, rows }: { title: string; rows: Row[] }) {
         <table className="w-full table-fixed text-sm">
           <thead className="bg-muted/50">
             <tr>
-              <ResizableTableHeader initialWidth={320}>
+              <ResizableTableHeader initialWidth={220}>
                 {t("costAnalysis.label")}
               </ResizableTableHeader>
-              <ResizableTableHeader initialWidth={140} align="right">
+              <ResizableTableHeader initialWidth={100} align="right">
                 {t("costAnalysis.days")}
               </ResizableTableHeader>
-              <ResizableTableHeader initialWidth={160} align="right">
+              <ResizableTableHeader initialWidth={120} align="right">
                 {t("costAnalysis.cost")}
               </ResizableTableHeader>
             </tr>
@@ -114,17 +116,18 @@ export function CostAnalysisPage() {
   const chartProjects = matchingProjects.slice(0, projectLimit);
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-xl font-semibold">{t("costAnalysis.title")}</h1>
-        <p className="text-sm text-muted-foreground">{data.policy}</p>
-      </header>
+      <PageHeader
+        eyebrow="Controllo · Analisi economica"
+        title={t("costAnalysis.title")}
+        description={<> {data.policy} </>}
+      />
       <form
         onSubmit={submit}
         className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4"
       >
         <label className="text-sm">
           {t("costAnalysis.from")}
-          <input
+          <Input
             aria-label={t("costAnalysis.from")}
             type="date"
             value={draftFrom}
@@ -134,7 +137,7 @@ export function CostAnalysisPage() {
         </label>
         <label className="text-sm">
           {t("costAnalysis.to")}
-          <input
+          <Input
             aria-label={t("costAnalysis.to")}
             type="date"
             value={draftTo}
@@ -142,9 +145,9 @@ export function CostAnalysisPage() {
             className="mt-1 block rounded-md border border-input bg-background px-3 py-2"
           />
         </label>
-        <button className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm">
+        <Button className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">
           {t("costAnalysis.apply")}
-        </button>
+        </Button>
       </form>
       {Number(data.kpi.daily_person_cost) === 0 && (
         <div
@@ -202,7 +205,7 @@ export function CostAnalysisPage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <input
+                <Input
                   type="search"
                   aria-label={t("costAnalysis.projectSearch")}
                   value={projectSearch}
@@ -210,7 +213,7 @@ export function CostAnalysisPage() {
                   placeholder={t("costAnalysis.projectSearch")}
                   className="rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
-                <select
+                <Select
                   aria-label={t("costAnalysis.projectLimit")}
                   value={projectLimit}
                   onChange={(event) => setProjectLimit(Number(event.target.value))}
@@ -221,17 +224,22 @@ export function CostAnalysisPage() {
                       Top {limit}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
             {chartProjects.length ? (
               <>
-                <div className="mt-4 h-72" aria-hidden="true">
+                <div
+                  className="mt-4"
+                  style={{ height: Math.max(180, chartProjects.length * 38 + 40) }}
+                  aria-hidden="true"
+                >
                   <AccessibleBarChart
                     data={chartProjects.map((row) => ({ ...row, cost: Number(row.cost) }))}
                     xKey="label"
                     unit="euro"
                     hideXAxis
+                    horizontal
                     series={[{ key: "cost", label: t("costAnalysis.cost"), color: "#6366f1" }]}
                   />
                 </div>

@@ -77,6 +77,16 @@ describe("coerenza visibilità e navigazione per ruolo", () => {
     expect(screen.queryByRole("link", { name: /Amministrazione/i })).not.toBeInTheDocument();
   });
 
+  it("apre il menu account e rende disponibile il logout", async () => {
+    mockSession({ roles: ["fornitore"], can_write: false });
+    renderWithProviders(<AppShell onOpenCommandPalette={vi.fn()} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Menu account" }));
+    expect(screen.getByRole("menuitem", { name: "Esci" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menuitem", { name: "Esci" })).not.toBeInTheDocument();
+  });
+
   it("consente a Admin e Responsabile di vedere il pulsante 'Nuovo progetto'", async () => {
     mockSession({ roles: ["responsabile_bmed"], can_write: true });
     getMock.mockResolvedValue({ results: [], count: 0 });
@@ -135,7 +145,7 @@ describe("coerenza visibilità e navigazione per ruolo", () => {
     );
 
     const user = userEvent.setup();
-    await screen.findByRole("heading", { name: "IM-OWN" });
+    await screen.findByRole("heading", { name: "Progetto proprio" });
     const trigger = screen.getByRole("tab", { name: "Anomalie" });
     await user.click(trigger);
     expect(
@@ -182,7 +192,7 @@ describe("coerenza visibilità e navigazione per ruolo", () => {
     );
 
     const user = userEvent.setup();
-    await screen.findByRole("heading", { name: "IM-OTHER" });
+    await screen.findByRole("heading", { name: "Progetto altrui" });
     const trigger = screen.getByRole("tab", { name: "Anomalie" });
     await user.click(trigger);
     expect(

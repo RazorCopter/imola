@@ -1,3 +1,4 @@
+import { Button, Input } from "@/components/Controls";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -74,8 +75,11 @@ export function DeleteDatabaseDialog({ open, onClose }: DeleteDatabaseDialogProp
         <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm transition-opacity" />
         <Dialog.Content
           aria-describedby="delete-db-dialog-description"
-          className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border-2 border-danger/60 bg-card p-6 shadow-2xl focus:outline-none"
+          className="fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[calc(100vw-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border-2 border-danger/60 bg-card p-6 shadow-2xl focus:outline-none"
         >
+          <Dialog.Description className="sr-only">
+            Eliminazione dei dati operativi. Richiede verifica e conferma esplicita.
+          </Dialog.Description>
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2 text-danger">
               <AlertTriangle className="h-6 w-6" />
@@ -84,13 +88,13 @@ export function DeleteDatabaseDialog({ open, onClose }: DeleteDatabaseDialogProp
               </Dialog.Title>
             </div>
             <Dialog.Close asChild>
-              <button
+              <Button
                 type="button"
                 className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
                 aria-label="Chiudi"
               >
                 <X className="h-5 w-5" />
-              </button>
+              </Button>
             </Dialog.Close>
           </div>
 
@@ -105,13 +109,13 @@ export function DeleteDatabaseDialog({ open, onClose }: DeleteDatabaseDialogProp
                   Gli account utente e i privilegi sono stati conservati. È ora possibile importare
                   un nuovo dataset pulito.
                 </p>
-                <button
+                <Button
                   type="button"
                   onClick={handleClose}
-                  className="bg-primary text-primary-foreground rounded px-4 py-2 text-xs font-semibold"
+                  className="rounded bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
                 >
                   Chiudi e torna all'amministrazione
-                </button>
+                </Button>
               </div>
             ) : (
               <>
@@ -135,7 +139,7 @@ export function DeleteDatabaseDialog({ open, onClose }: DeleteDatabaseDialogProp
                     <span>Calcolo record da eliminare...</span>
                   </div>
                 ) : previewQuery.isError ? (
-                  <div className="border-destructive/40 bg-destructive/10 text-destructive rounded border p-3 text-xs">
+                  <div className="rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
                     Impossibile ottenere l'anteprima dei record. Riprova più tardi.
                   </div>
                 ) : (
@@ -163,7 +167,7 @@ export function DeleteDatabaseDialog({ open, onClose }: DeleteDatabaseDialogProp
                 )}
 
                 {errorMessage && (
-                  <div className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border p-3 text-xs">
+                  <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
                     {errorMessage}
                   </div>
                 )}
@@ -179,7 +183,7 @@ export function DeleteDatabaseDialog({ open, onClose }: DeleteDatabaseDialogProp
                     Per confermare l'eliminazione, digita esattamente <strong>ELIMINA</strong> nel
                     campo seguente:
                   </p>
-                  <input
+                  <Input
                     id="confirm-elimina-input"
                     data-testid="delete-db-confirmation-input"
                     type="text"
@@ -196,14 +200,14 @@ export function DeleteDatabaseDialog({ open, onClose }: DeleteDatabaseDialogProp
                     <Lock className="h-3 w-3" /> Richiede capability data.reset
                   </span>
                   <div className="flex gap-2">
-                    <button
+                    <Button
                       type="button"
                       onClick={handleClose}
                       className="rounded border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
                     >
                       Annulla
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       disabled={!isConfirmed || resetMutation.isPending || previewQuery.isLoading}
                       onClick={() => resetMutation.mutate()}
@@ -211,7 +215,7 @@ export function DeleteDatabaseDialog({ open, onClose }: DeleteDatabaseDialogProp
                       className="inline-flex items-center justify-center rounded bg-danger px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {resetMutation.isPending ? "Eliminazione..." : "Conferma eliminazione DB"}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </>

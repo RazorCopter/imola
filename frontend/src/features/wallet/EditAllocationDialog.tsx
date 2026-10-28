@@ -1,3 +1,4 @@
+import { Button, Input, Select, Textarea } from "@/components/Controls";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -180,7 +181,7 @@ export function EditAllocationDialog({
     return <aside className="rounded-lg border bg-card p-5">Caricamento dettaglio…</aside>;
   if (!detail)
     return (
-      <aside className="text-destructive rounded-lg border bg-card p-5">
+      <aside className="rounded-lg border bg-card p-5 text-destructive">
         Impossibile caricare il dettaglio.
       </aside>
     );
@@ -309,7 +310,7 @@ export function EditAllocationDialog({
       >
         <label className="block text-sm">
           Giornate allocate
-          <input
+          <Input
             className="mt-1 w-full rounded border bg-background p-2 disabled:opacity-60"
             type="number"
             min="0"
@@ -322,7 +323,7 @@ export function EditAllocationDialog({
         </label>
         <label className="block text-sm">
           Giornate consumate totali
-          <input
+          <Input
             aria-label="Giornate consumate totali"
             className="mt-1 w-full rounded border bg-background p-2 disabled:opacity-60"
             type="number"
@@ -346,7 +347,7 @@ export function EditAllocationDialog({
         </label>
         <label className="block text-sm">
           Assegnatario
-          <select
+          <Select
             className="mt-1 w-full rounded border bg-background p-2 disabled:opacity-60"
             disabled={!canEdit}
             value={assigneeId}
@@ -358,11 +359,11 @@ export function EditAllocationDialog({
                 {person.full_name ?? person.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="block text-sm">
           Stato
-          <select
+          <Select
             className="mt-1 w-full rounded border bg-background p-2 disabled:opacity-60"
             disabled={!canEdit}
             value={status}
@@ -370,7 +371,7 @@ export function EditAllocationDialog({
           >
             <option value="APERTA">In corso</option>
             <option value="CHIUSA">Chiusa</option>
-          </select>
+          </Select>
           {status === "CHIUSA" && detail.status !== "CHIUSA" ? (
             <span className="mt-1 block text-xs text-muted-foreground">
               Alla chiusura, le giornate allocate ma non consumate tornano disponibili nel wallet.
@@ -379,7 +380,7 @@ export function EditAllocationDialog({
         </label>
         <label className="block text-sm">
           Note
-          <textarea
+          <Textarea
             className="mt-1 min-h-24 w-full rounded border bg-background p-2 disabled:opacity-60"
             disabled={!canEdit}
             value={notes}
@@ -390,49 +391,49 @@ export function EditAllocationDialog({
         {formError && (
           <div
             role="alert"
-            className="border-destructive/40 bg-destructive/10 text-destructive flex items-start gap-2 rounded border p-3 text-sm"
+            className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
           >
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{formError}</span>
             {conflict && (
-              <button
+              <Button
                 type="button"
                 className="ml-auto inline-flex items-center gap-1 underline"
                 onClick={() => void allocation.refetch()}
               >
                 <RefreshCw className="h-3 w-3" />
                 Ricarica
-              </button>
+              </Button>
             )}
           </div>
         )}
         {canEdit && (
           <>
-            <button
+            <Button
               type="submit"
               disabled={save.isPending}
-              className="w-full rounded bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+              className="w-full rounded bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
             >
               {save.isPending ? "Salvataggio…" : "Salva"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => {
                 setDeleteCode("");
                 setDeleteOpen(true);
               }}
-              className="border-destructive text-destructive hover:bg-destructive/10 flex w-full items-center justify-center gap-2 rounded border px-4 py-2 font-medium"
+              className="flex w-full items-center justify-center gap-2 rounded border border-destructive px-4 py-2 font-medium text-destructive hover:bg-destructive/10"
             >
               <Trash2 className="h-4 w-4" /> Elimina allocazione
-            </button>
+            </Button>
           </>
         )}
       </form>
       <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(30rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-6 shadow-xl">
-            <Dialog.Title className="text-destructive text-lg font-semibold">
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-6 shadow-xl">
+            <Dialog.Title className="text-lg font-semibold text-destructive">
               Elimina allocazione
             </Dialog.Title>
             <Dialog.Description className="mt-2 text-sm text-muted-foreground">
@@ -440,7 +441,7 @@ export function EditAllocationDialog({
               Digita <strong className="font-mono">{detail.activity_code}</strong> per confermare.
               Le giornate torneranno nel residuo spendibile del progetto origine.
             </Dialog.Description>
-            <input
+            <Input
               autoFocus
               value={deleteCode}
               onChange={(event) => setDeleteCode(event.target.value)}
@@ -449,18 +450,18 @@ export function EditAllocationDialog({
             />
             <div className="mt-5 flex justify-end gap-3">
               <Dialog.Close asChild>
-                <button type="button" className="rounded border px-4 py-2 text-sm">
+                <Button type="button" className="rounded border px-4 py-2 text-sm">
                   Annulla
-                </button>
+                </Button>
               </Dialog.Close>
-              <button
+              <Button
                 type="button"
                 disabled={deleteCode !== detail.activity_code || remove.isPending}
                 onClick={() => remove.mutate()}
-                className="bg-destructive text-destructive-foreground rounded px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                className="rounded bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground disabled:opacity-50"
               >
                 {remove.isPending ? "Eliminazione…" : "Elimina definitivamente"}
-              </button>
+              </Button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>

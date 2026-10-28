@@ -22,6 +22,18 @@ export default {
         border: "hsl(var(--border) / <alpha-value>)",
         input: "hsl(var(--input) / <alpha-value>)",
         ring: "hsl(var(--ring) / <alpha-value>)",
+        primary: {
+          DEFAULT: "hsl(var(--accent) / <alpha-value>)",
+          foreground: "hsl(var(--accent-foreground) / <alpha-value>)",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--muted) / <alpha-value>)",
+          foreground: "hsl(var(--foreground) / <alpha-value>)",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--danger) / <alpha-value>)",
+          foreground: "hsl(var(--card-foreground) / <alpha-value>)",
+        },
         accent: {
           DEFAULT: "hsl(var(--accent) / <alpha-value>)",
           foreground: "hsl(var(--accent-foreground) / <alpha-value>)",
@@ -38,6 +50,8 @@ export default {
         danger: {
           DEFAULT: "hsl(var(--danger) / <alpha-value>)",
           subtle: "hsl(var(--danger-subtle) / <alpha-value>)",
+          action: "hsl(var(--danger-action) / <alpha-value>)",
+          foreground: "hsl(var(--danger-foreground) / <alpha-value>)",
         },
       },
       fontFamily: {

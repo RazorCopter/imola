@@ -13,7 +13,7 @@ export interface ChartDatum {
 function EmptyChart() {
   const { t } = useTranslation();
   return (
-    <div className="flex min-h-48 items-center justify-center rounded-md bg-muted/40 p-4 text-sm text-muted-foreground">
+    <div className="flex min-h-32 items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
       {t("dashboard.noChartData")}
     </div>
   );
@@ -32,7 +32,7 @@ function Legend({ data, unit }: { data: ChartDatum[]; unit?: string }) {
             />
             <span className="truncate">{item.label}</span>
           </span>
-          <span className="font-mono tabular-nums">
+          <span className="font-medium tabular-nums">
             {unit === "days" ? formatDays(String(item.value)) : item.value}
           </span>
         </li>
@@ -52,27 +52,28 @@ export function DonutChart({
 }) {
   const visible = data.filter((item) => item.value > 0);
   return (
-    <article className="rounded-lg border border-border bg-card p-4 shadow-subtle">
-      <h2 className="font-semibold">{title}</h2>
+    <article className="rounded-xl border border-border bg-card p-5 shadow-subtle">
+      <h2 className="font-semibold tracking-tight">{title}</h2>
       {visible.length === 0 ? (
         <div className="mt-4">
           <EmptyChart />
         </div>
       ) : (
         <div className="mt-3 grid items-center gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(10rem,1fr)]">
-          <div className="h-52 min-w-0" role="img" aria-label={title}>
+          <div className="h-44 min-w-0" role="img" aria-label={title}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={visible}
                   dataKey="value"
                   nameKey="label"
-                  innerRadius="48%"
-                  outerRadius="78%"
+                  innerRadius="62%"
+                  outerRadius="82%"
                   paddingAngle={2}
+                  isAnimationActive={false}
                 >
                   {visible.map((item) => (
-                    <Cell key={item.key} fill={item.color} />
+                    <Cell key={item.key} fill={item.color} aria-label={item.label} />
                   ))}
                 </Pie>
                 <Tooltip

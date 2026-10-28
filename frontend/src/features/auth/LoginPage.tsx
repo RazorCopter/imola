@@ -1,3 +1,4 @@
+import { Button, Input } from "@/components/Controls";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -53,7 +54,7 @@ export function LoginPage() {
             <label htmlFor="username" className="text-sm font-medium">
               {t("auth.username")}
             </label>
-            <input
+            <Input
               id="username"
               autoComplete="username"
               autoFocus
@@ -66,7 +67,7 @@ export function LoginPage() {
             <label htmlFor="password" className="text-sm font-medium">
               {t("auth.password")}
             </label>
-            <input
+            <Input
               id="password"
               type="password"
               autoComplete="current-password"
@@ -81,7 +82,7 @@ export function LoginPage() {
             </p>
           )}
 
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting}
             className={cn(
@@ -91,7 +92,7 @@ export function LoginPage() {
           >
             {isSubmitting && <Loader2 className="size-4 animate-spin" aria-hidden />}
             {t("auth.signIn")}
-          </button>
+          </Button>
         </form>
       </div>
     </main>

@@ -160,6 +160,30 @@ describe("WalletPage Tranche C", () => {
     vi.clearAllMocks();
   });
 
+  it("non sostituisce con zero una capacita non disponibile", async () => {
+    vi.mocked(api.get).mockImplementation((path: string) => {
+      if (path.endsWith("/flow") || path.endsWith("/assignees"))
+        return Promise.resolve({ results: [] });
+      return Promise.resolve({
+        ...balance,
+        capacita_totale_origini: undefined,
+        capienza_wallet_potenziale: undefined,
+        residuo_wallet_non_allocato: undefined,
+        unallocated_capacity: undefined,
+      });
+    });
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <WalletPage />
+      </QueryClientProvider>,
+    );
+    const capacity = await screen.findByText("Capacità Monte Wallet");
+    expect(capacity.closest("article")).toHaveTextContent("–");
+    expect(capacity.closest("article")).not.toHaveTextContent("0,00 gg");
+  });
+
   it("mostra per default solo in corso e consente di filtrare le chiuse", async () => {
     arrange();
     expect(await screen.findByText("Attività aperta")).toBeInTheDocument();
@@ -179,6 +203,8 @@ describe("WalletPage Tranche C", () => {
     expect(screen.getAllByText("Residuo allocazione").length).toBeGreaterThan(0);
     expect(screen.getByText("IM25-EXP")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Riduci al consumato" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Chiudi dettaglio" }));
+    expect(screen.queryByText("Residuo spendibile origine")).not.toBeInTheDocument();
   });
 
   it("permette il dettaglio read-only senza wallet.edit", async () => {
@@ -208,7 +234,7 @@ describe("WalletPage Tranche C", () => {
     vi.mocked(api.patch).mockResolvedValue({ ...detail, notes: "aggiornata", version: 2 });
     await userEvent.click(await screen.findByTestId("allocation-row-open"));
     const save = await screen.findByRole("button", { name: "Salva" });
-    expect(save).toHaveClass("bg-emerald-600");
+    expect(save).toHaveClass("bg-emerald-700");
     await userEvent.clear(screen.getByLabelText("Note"));
     await userEvent.type(screen.getByLabelText("Note"), "aggiornata");
     await userEvent.click(save);

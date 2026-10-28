@@ -1,3 +1,4 @@
+import { Button, Input, Select } from "@/components/Controls";
 import { useCallback, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -51,13 +52,20 @@ interface ProjectResponse {
 }
 
 const PROJECT_COLUMN_CLASSES: Record<string, DataTableColumnClasses> = {
-  codice: { cell: "font-mono" },
-  titolo: { header: "min-w-64", cell: "min-w-64 whitespace-normal" },
+  titolo: { header: "min-w-64", cell: "min-w-64 max-w-sm whitespace-normal" },
   budget: { header: "text-right", cell: "text-right tabular-nums" },
   consumato_totale: { header: "text-right", cell: "text-right tabular-nums" },
   residuo: { header: "text-right", cell: "text-right tabular-nums" },
   actions: { header: "text-center", cell: "text-center" },
 };
+
+function compareDays(a: unknown, b: unknown) {
+  const left = typeof a === "string" && a.trim() ? Number(a) : NaN;
+  const right = typeof b === "string" && b.trim() ? Number(b) : NaN;
+  if (!Number.isFinite(left)) return Number.isFinite(right) ? 1 : 0;
+  if (!Number.isFinite(right)) return -1;
+  return left - right;
+}
 
 export function ProjectsPage() {
   const navigate = useNavigate();
@@ -65,6 +73,7 @@ export function ProjectsPage() {
   const { session } = useSession();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [order, setOrder] = useState("original");
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 
   const canGlobalEdit = canEditProjects(session);
@@ -86,17 +95,30 @@ export function ProjectsPage() {
   const columns = useMemo<ColumnDef<ProjectBalance>[]>(
     () => [
       {
-        accessorKey: "codice",
-        header: "Codice",
+        accessorKey: "titolo",
+        header: "Progetto",
         cell: ({ row }) => (
-          <span className="font-mono font-medium text-accent">{row.original.codice}</span>
+          <div className="max-w-sm py-1">
+            <div
+              className="line-clamp-2 font-semibold leading-snug text-foreground"
+              title={row.original.titolo}
+            >
+              {row.original.titolo || "Titolo non disponibile"}
+            </div>
+            <div
+              className="mt-1 break-all text-xs text-muted-foreground"
+              title={row.original.codice}
+            >
+              {row.original.codice}
+            </div>
+          </div>
         ),
       },
-      { accessorKey: "titolo", header: "Titolo" },
       { accessorKey: "tipo_contratto", header: "Tipo" },
       {
         accessorKey: "budget",
         header: "Budget",
+        sortingFn: (a, b) => compareDays(a.original.budget, b.original.budget),
         cell: ({ row }) => (
           <DaysValue value={row.original.budget} suffix={false} label="Budget API" />
         ),
@@ -104,13 +126,52 @@ export function ProjectsPage() {
       {
         accessorKey: "consumato_totale",
         header: "Consumato",
-        cell: ({ row }) => (
-          <DaysValue value={row.original.consumato_totale} suffix={false} label="Consumato API" />
-        ),
+        sortingFn: (a, b) => compareDays(a.original.consumato_totale, b.original.consumato_totale),
+        cell: ({ row }) => {
+          const budget = Number(row.original.budget);
+          const consumed = Number(row.original.consumato_totale);
+          const valid =
+            typeof row.original.budget === "string" &&
+            row.original.budget.trim() !== "" &&
+            typeof row.original.consumato_totale === "string" &&
+            row.original.consumato_totale.trim() !== "" &&
+            Number.isFinite(budget) &&
+            Number.isFinite(consumed) &&
+            budget > 0 &&
+            consumed >= 0;
+          const ratio = valid ? (consumed / budget) * 100 : null;
+          return (
+            <div className="ml-auto min-w-24">
+              <DaysValue
+                value={row.original.consumato_totale}
+                suffix={false}
+                label="Consumato API"
+              />
+              {ratio !== null && (
+                <div className="mt-1.5">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+                    <div
+                      className={
+                        ratio > 100
+                          ? "h-full rounded-full bg-danger"
+                          : "h-full rounded-full bg-accent"
+                      }
+                      style={{ width: `${Math.min(ratio, 100)}%` }}
+                    />
+                  </div>
+                  <span className="mt-1 block text-[11px] text-muted-foreground">
+                    {ratio.toLocaleString("it-IT", { maximumFractionDigits: 1 })}% del budget
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "residuo",
         header: "Residuo",
+        sortingFn: (a, b) => compareDays(a.original.residuo, b.original.residuo),
         cell: ({ row }) => (
           <DaysValue
             value={row.original.residuo}
@@ -150,7 +211,7 @@ export function ProjectsPage() {
           return (
             <div className="flex items-center justify-center gap-2">
               {showValidate ? (
-                <button
+                <Button
                   type="button"
                   disabled={validateClosure.isPending}
                   onClick={(event) => {
@@ -167,10 +228,10 @@ export function ProjectsPage() {
                   className="inline-flex items-center justify-center rounded bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
                 >
                   Valida chiusura
-                </button>
+                </Button>
               ) : null}
               {showEdit ? (
-                <button
+                <Button
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -180,7 +241,7 @@ export function ProjectsPage() {
                   className="inline-flex items-center justify-center rounded bg-amber-500 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-slate-950 shadow-sm transition-colors hover:bg-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
                 >
                   EDIT
-                </button>
+                </Button>
               ) : null}
             </div>
           );
@@ -195,40 +256,51 @@ export function ProjectsPage() {
   });
   const filtered = useMemo(
     () =>
-      (query.data?.results ?? []).filter((project) => {
-        const needle = search.toLocaleLowerCase("it");
-        return (
-          (!needle ||
-            `${project.codice} ${project.titolo}`.toLocaleLowerCase("it").includes(needle)) &&
-          (!status || (project.stato_operativo ?? project.stato_consuntivazione) === status)
-        );
-      }),
-    [query.data, search, status],
+      (query.data?.results ?? [])
+        .filter((project) => {
+          const needle = search.toLocaleLowerCase("it");
+          return (
+            (!needle ||
+              `${project.codice} ${project.titolo}`.toLocaleLowerCase("it").includes(needle)) &&
+            (!status || (project.stato_operativo ?? project.stato_consuntivazione) === status)
+          );
+        })
+        .sort((a, b) =>
+          order === "code"
+            ? a.codice.localeCompare(b.codice, "it")
+            : order === "title"
+              ? a.titolo.localeCompare(b.titolo, "it")
+              : 0,
+        ),
+    [query.data, search, status, order],
   );
 
   return (
     <section className="space-y-4">
-      <header className="flex items-start justify-between gap-3">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
         <div>
-          <h1 className="text-xl font-semibold">Progetti</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+            Gestione · Portafoglio
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">Progetti</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
             Budget, consumi e residui calcolati dal ledger.
           </p>
         </div>
         {canCreateProjects(session) && <NewProjectDialog />}
       </header>
-      <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-card p-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
         <label className="flex min-w-64 flex-1 items-center gap-2 rounded-md border border-input px-3">
           <Search className="size-4 text-muted-foreground" aria-hidden />
           <span className="sr-only">Cerca progetti</span>
-          <input
+          <Input
             className="h-9 w-full bg-transparent text-sm outline-none"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Codice o titolo"
           />
         </label>
-        <select
+        <Select
           className="h-9 rounded-md border border-input bg-background px-3 text-sm"
           value={status}
           onChange={(event) => setStatus(event.target.value)}
@@ -243,10 +315,32 @@ export function ProjectsPage() {
           <option value="CHIUSURA_DA_VALIDARE">Chiusura da validare</option>
           <option value="CHIUSO">Chiuso</option>
           <option value="DA_VERIFICARE">Da verificare</option>
-        </select>
+        </Select>
+        <Select
+          aria-label="Ordina progetti"
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          value={order}
+          onChange={(event) => setOrder(event.target.value)}
+        >
+          <option value="original">Ordine originale</option>
+          <option value="title">Titolo A–Z</option>
+          <option value="code">Codice A–Z</option>
+        </Select>
         <span className="self-center text-sm text-muted-foreground">
           {filtered.length} risultati
         </span>
+        {(search || status) && (
+          <Button
+            type="button"
+            className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={() => {
+              setSearch("");
+              setStatus("");
+            }}
+          >
+            Azzera filtri
+          </Button>
+        )}
       </div>
       {query.isLoading ? (
         <LoadingState />
@@ -254,21 +348,24 @@ export function ProjectsPage() {
         <ErrorState
           title="Impossibile caricare i progetti"
           action={
-            <button
+            <Button
               className="text-sm font-medium text-accent"
               onClick={() => void query.refetch()}
             >
               Riprova
-            </button>
+            </Button>
           }
         />
       ) : (
         <DataTable
+          key={order}
           data={filtered}
           columns={columns}
           emptyLabel="Nessun progetto corrisponde ai filtri."
           onRowClick={(project) => navigate(`/progetti/${project.id}`)}
           getColumnClasses={getProjectColumnClasses}
+          fitWidth
+          rowHeight={72}
         />
       )}
 

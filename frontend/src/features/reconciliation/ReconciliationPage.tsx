@@ -1,4 +1,7 @@
+import { Input, Select } from "@/components/Controls";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 
 import { DaysValue } from "@/components/DaysValue";
 import { KpiCard } from "@/components/KpiCard";
@@ -59,6 +62,8 @@ function OutcomeBadge({ outcome }: { outcome: string }) {
 }
 
 export function ReconciliationPage() {
+  const [search, setSearch] = useState("");
+  const [outcome, setOutcome] = useState("");
   const query = useQuery({
     queryKey: ["reconciliation", "latest", "page"],
     queryFn: () => api.get<Response>("/reconciliation/latest"),
@@ -67,7 +72,13 @@ export function ReconciliationPage() {
   if (query.isError || !query.data)
     return <ErrorState title="Impossibile caricare la riconciliazione" />;
   const { riepilogo } = query.data;
-  const rows = query.data.results ?? query.data.risultati ?? [];
+  const rows = (query.data.results ?? query.data.risultati ?? []).filter(
+    (row) =>
+      (!outcome || row.esito === outcome) &&
+      `${row.codice_progetto} ${row.nome_progetto ?? ""}`
+        .toLocaleLowerCase("it")
+        .includes(search.trim().toLocaleLowerCase("it")),
+  );
   const dataMessage =
     riepilogo.stato_dati === "SNAPSHOT_ASSENTE"
       ? "Snapshot PPM assente: la riconciliazione non può essere eseguita."
@@ -77,12 +88,15 @@ export function ReconciliationPage() {
   return (
     <section className="space-y-5">
       <header>
-        <h1 className="text-xl font-semibold">Riconciliazione PPM</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+          Controllo · Confronto fornitore
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight">Riconciliazione PPM</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
           Confronto fra ledger interno e ultimo snapshot del fornitore · tolleranza{" "}
           <DaysValue value={query.data.tolleranza} />
         </p>
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
           <StatusBadge status={riepilogo.stato} />
           {dataMessage && <span className="text-sm text-muted-foreground">{dataMessage}</span>}
         </div>
@@ -112,20 +126,45 @@ export function ReconciliationPage() {
         />
         <KpiCard
           label="Assenti in PPM"
-          value={riepilogo.assenti_in_ppm}
+          value={
+            riepilogo.stato_dati === "SNAPSHOT_ASSENTE"
+              ? "Non disponibile"
+              : riepilogo.assenti_in_ppm
+          }
           tone={riepilogo.assenti_in_ppm > 0 ? "warn" : "neutral"}
           tooltip="Progetti con consuntivi interni che non trovano una riga corrispondente nell’ultimo snapshot PPM."
         />
+      </div>
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3">
+        <Input
+          type="search"
+          aria-label="Cerca progetto nella riconciliazione"
+          placeholder="Cerca codice o progetto"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          className="h-9 min-w-48 flex-1 rounded-md border border-input bg-background px-3 text-sm"
+        />
+        <Select
+          aria-label="Filtra esito riconciliazione"
+          value={outcome}
+          onChange={(event) => setOutcome(event.target.value)}
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+        >
+          <option value="">Tutti gli esiti</option>
+          <option value="OK">Allineati</option>
+          <option value="KO">Discrepanze</option>
+          <option value="ASSENTE_IN_PPM">Assenti in PPM</option>
+        </Select>
+        <span className="text-sm text-muted-foreground">{rows.length} risultati</span>
       </div>
       <div className="overflow-auto rounded-lg border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
             <tr>
-              <th className="p-3">Codice progetto</th>
-              <th className="p-3">Nome progetto</th>
-              <th className="p-3">Interno</th>
-              <th className="p-3">PPM</th>
-              <th className="p-3">Delta</th>
+              <th className="p-3">Progetto</th>
+              <th className="p-3 text-right">Interno</th>
+              <th className="p-3 text-right">PPM</th>
+              <th className="p-3 text-right">Delta</th>
               <th className="p-3 text-center">Esito</th>
               <th className="p-3">Azione</th>
             </tr>
@@ -133,15 +172,24 @@ export function ReconciliationPage() {
           <tbody>
             {rows.map((row) => (
               <tr key={row.progetto_id} className="border-t border-border">
-                <td className="p-3 font-mono">{row.codice_progetto}</td>
-                <td className="p-3">{row.nome_progetto ?? "Progetto non associato"}</td>
-                <td className="p-3">
+                <td className="max-w-xs p-3">
+                  <div className="font-medium" title={row.nome_progetto ?? undefined}>
+                    {row.nome_progetto ?? "Progetto non associato"}
+                  </div>
+                  <Link
+                    to={`/progetti/${row.progetto_id}`}
+                    className="break-all text-xs text-accent underline-offset-4 hover:underline dark:text-indigo-300"
+                  >
+                    {row.codice_progetto}
+                  </Link>
+                </td>
+                <td className="p-3 text-right">
                   <DaysValue value={row.interno} />
                 </td>
-                <td className="p-3">
+                <td className="p-3 text-right">
                   <DaysValue value={row.ppm} />
                 </td>
-                <td className="p-3">
+                <td className="p-3 text-right">
                   <DaysValue value={row.delta} />
                 </td>
                 <td className="p-3 text-center">
@@ -154,8 +202,11 @@ export function ReconciliationPage() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td className="p-6 text-center text-muted-foreground" colSpan={7}>
-                  {dataMessage ?? "Nessun dato disponibile."}
+                <td className="p-6 text-center text-muted-foreground" colSpan={6}>
+                  {dataMessage ??
+                    (search || outcome
+                      ? "Nessun progetto corrisponde ai filtri."
+                      : "Nessun dato disponibile.")}
                 </td>
               </tr>
             )}
