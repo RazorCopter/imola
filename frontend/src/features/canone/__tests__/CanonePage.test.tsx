@@ -184,6 +184,11 @@ describe("CanonePage", () => {
   it("modifica l'attività inline ed evidenzia l'eliminazione", async () => {
     const user = userEvent.setup();
     renderPage(["canone.manage"]);
+    await user.click(await screen.findByRole("button", { name: /Analisi/ }));
+    expect(screen.getByRole("tab", { name: "Panoramica" })).toHaveAttribute("data-state", "active");
+    await user.click(screen.getByRole("tab", { name: "Consuntivi" }));
+    expect(screen.getByText("Nessun consuntivo registrato.")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Panoramica" }));
     const editButtons = await screen.findAllByRole("button", { name: "Modifica attività" });
     expect(editButtons.length).toBeGreaterThan(0);
     await user.click(editButtons[0]!);
