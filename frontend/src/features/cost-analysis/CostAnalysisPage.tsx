@@ -14,22 +14,29 @@ import { formatDays } from "@/lib/format";
 
 interface Row {
   label: string;
-  days: string;
+  days: string | null;
   cost: string;
 }
 interface SourceRow {
   source: string;
-  days: string;
+  days: string | null;
   cost: string;
 }
 interface TrendRow {
   month: string;
-  days: string;
+  days: string | null;
   cost: string;
 }
 interface CostAnalysis {
   policy: string;
-  kpi: { total_days: string; total_cost: string; daily_person_cost: string };
+  kpi: {
+    total_days: string;
+    total_cost: string;
+    daily_person_cost: string;
+    canone_total_cost?: string;
+    canone_count?: number;
+    canone_fixed_cost?: string;
+  };
   by_project: Row[];
   by_supplier: Row[];
   by_source: SourceRow[];
@@ -86,7 +93,8 @@ export function CostAnalysisPage() {
   const { t } = useTranslation();
   const [draftFrom, setDraftFrom] = useState("");
   const [draftTo, setDraftTo] = useState("");
-  const [filters, setFilters] = useState({ from: "", to: "" });
+  const [draftIncludeCanone, setDraftIncludeCanone] = useState(false);
+  const [filters, setFilters] = useState({ from: "", to: "", includeCanone: false });
   const [projectSearch, setProjectSearch] = useState("");
   const [projectLimit, setProjectLimit] = useState(10);
   const query = useQuery({
@@ -95,12 +103,13 @@ export function CostAnalysisPage() {
       const params = new URLSearchParams();
       if (filters.from) params.set("from", filters.from);
       if (filters.to) params.set("to", filters.to);
+      if (filters.includeCanone) params.set("include_canone", "true");
       return api.get<CostAnalysis>(`/cost-analysis${params.size ? `?${params}` : ""}`);
     },
   });
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    setFilters({ from: draftFrom, to: draftTo });
+    setFilters({ from: draftFrom, to: draftTo, includeCanone: draftIncludeCanone });
   };
   if (query.isLoading) return <LoadingState />;
   if (query.isError || !query.data)
@@ -152,10 +161,42 @@ export function CostAnalysisPage() {
             className="mt-1 block rounded-md border border-input bg-background px-3 py-2"
           />
         </label>
+        <label className="flex items-center gap-2 py-2 text-sm">
+          <input
+            type="checkbox"
+            checked={draftIncludeCanone}
+            onChange={(event) => setDraftIncludeCanone(event.target.checked)}
+            aria-describedby="canone-cost-policy"
+            className="h-4 w-4 accent-primary"
+          />
+          Considera i costi del canone
+        </label>
         <Button className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">
           {t("costAnalysis.apply")}
         </Button>
       </form>
+      <p id="canone-cost-policy" className="text-sm text-muted-foreground">
+        Le giornate del canone sono escluse dai costi a giornata. Applica i filtri per includere il
+        forfait completo dei canoni la cui attivazione rientra nel periodo selezionato. In assenza
+        di una data di inizio viene usato l'inizio del periodo contrattuale.
+      </p>
+      {filters.includeCanone && (
+        <div role="status" className="rounded-lg border border-border bg-card p-4 text-sm">
+          <span className="font-semibold">
+            Canone: {money.format(Number(data.kpi.canone_total_cost ?? 0))}
+          </span>
+          <span className="text-muted-foreground">
+            {" "}
+            - {data.kpi.canone_count ?? 0} contratti attivati nel periodo, forfait per contratto{" "}
+            {money.format(Number(data.kpi.canone_fixed_cost ?? 0))}.
+          </span>
+          {Number(data.kpi.canone_fixed_cost ?? 0) === 0 && (
+            <p className="mt-1 text-amber-700 dark:text-amber-300">
+              Configura il costo forfettario del canone in Amministrazione / Configurazione.
+            </p>
+          )}
+        </div>
+      )}
       {Number(data.kpi.daily_person_cost) === 0 && (
         <div
           role="alert"
@@ -169,19 +210,19 @@ export function CostAnalysisPage() {
         {(
           [
             [
-              t("costAnalysis.totalDays"),
+              "Giornate a tariffa giornaliera",
               formatDays(data.kpi.total_days),
-              "Somma delle giornate dei consuntivi compresi nel periodo selezionato.",
+              "Giornate di progetti e wallet nel periodo selezionato. I consuntivi del canone sono esclusi.",
             ],
             [
               t("costAnalysis.totalCost"),
               money.format(Number(data.kpi.total_cost)),
-              "Costo complessivo del periodo: giornate filtrate moltiplicate per il costo giornaliero configurato.",
+              "Costo delle giornate di progetti e wallet, più il forfait completo dei canoni se il flag è attivo.",
             ],
             [
-              t("costAnalysis.dailyCost"),
+              "Tariffa giornaliera progetti e wallet",
               money.format(Number(data.kpi.daily_person_cost)),
-              "Tariffa applicata a ogni giornata per calcolare i costi delle aggregazioni.",
+              "Tariffa applicata alle giornate di progetti e wallet. Il canone ha un costo forfettario separato.",
             ],
           ] satisfies Array<[string, string, string]>
         ).map(([label, value, description]) => (
@@ -193,7 +234,7 @@ export function CostAnalysisPage() {
       </section>
       {empty ? (
         <p className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
-          {t("costAnalysis.empty")}
+          Nessun costo o giornata a tariffa giornaliera nel periodo selezionato.
         </p>
       ) : (
         <>
@@ -205,7 +246,9 @@ export function CostAnalysisPage() {
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h2 id="project-cost-chart-title" className="font-semibold">
-                  {t("costAnalysis.projectChart")}
+                  {filters.includeCanone
+                    ? "Costi per progetto e canone"
+                    : t("costAnalysis.projectChart")}
                 </h2>
                 <p id="project-cost-chart-description" className="text-sm text-muted-foreground">
                   {t("costAnalysis.projectChartDescription")}
@@ -279,12 +322,22 @@ export function CostAnalysisPage() {
             )}
           </section>
           <div className="grid gap-5 xl:grid-cols-2">
-            <AggregationTable title={t("costAnalysis.byProject")} rows={data.by_project} />
+            <AggregationTable
+              title={
+                filters.includeCanone
+                  ? "Dettaglio per progetto e canone"
+                  : t("costAnalysis.byProject")
+              }
+              rows={data.by_project}
+            />
             <AggregationTable title={t("costAnalysis.bySupplier")} rows={data.by_supplier} />
           </div>
           <AggregationTable
             title={t("costAnalysis.bySource")}
-            rows={data.by_source.map((row) => ({ ...row, label: row.source }))}
+            rows={data.by_source.map((row) => ({
+              ...row,
+              label: row.source === "CANONE" ? "Canone" : row.source,
+            }))}
           />
           <AggregationTable
             title={t("costAnalysis.monthlyTrend")}

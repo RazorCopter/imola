@@ -70,6 +70,7 @@ interface WorkbookDatasetDetail extends WorkbookDatasetSummary {
   rows: { source_row: number; values: Record<string, unknown> }[];
 }
 interface AppSettingsPayload {
+  costo_forfettario_canone: string;
   costo_giornata_uomo: string;
   politica_costo: string;
   version: number;
@@ -570,6 +571,7 @@ function UsersPanel({ data }: { data: UsersPayload }) {
 function ConfigurationPanel() {
   const queryClient = useQueryClient();
   const [cost, setCost] = useState<string | null>(null);
+  const [canoneCost, setCanoneCost] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const settings = useQuery({
     queryKey: ["settings"],
@@ -579,10 +581,12 @@ function ConfigurationPanel() {
     mutationFn: () =>
       api.patch<AppSettingsPayload>("/settings", {
         costo_giornata_uomo: cost ?? settings.data?.costo_giornata_uomo,
+        costo_forfettario_canone: canoneCost ?? settings.data?.costo_forfettario_canone ?? "0.00",
         expected_version: settings.data?.version,
       }),
     onSuccess: async (result) => {
       setCost(result.costo_giornata_uomo);
+      setCanoneCost(result.costo_forfettario_canone);
       setMessage("Configurazione salvata.");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["settings"] }),
@@ -591,7 +595,10 @@ function ConfigurationPanel() {
     },
   });
   const shownCost = cost ?? settings.data?.costo_giornata_uomo ?? "";
-  const valid = shownCost !== "" && Number.isFinite(Number(shownCost)) && Number(shownCost) >= 0;
+  const shownCanoneCost = canoneCost ?? settings.data?.costo_forfettario_canone ?? "0.00";
+  const valid = [shownCost, shownCanoneCost].every(
+    (value) => value !== "" && Number.isFinite(Number(value)) && Number(value) >= 0,
+  );
   if (settings.isLoading) return <LoadingState />;
   if (settings.isError)
     return (
@@ -616,6 +623,26 @@ function ConfigurationPanel() {
         }}
         className="w-full rounded-md border border-input bg-background px-3 py-2"
       />
+      <label className="block text-sm font-medium" htmlFor="canone-fixed-cost">
+        Costo forfettario per canone (EUR)
+      </label>
+      <Input
+        id="canone-fixed-cost"
+        type="number"
+        min="0"
+        step="0.01"
+        value={shownCanoneCost}
+        onChange={(event) => {
+          setCanoneCost(event.target.value);
+          setMessage("");
+        }}
+        aria-describedby="canone-fixed-cost-help"
+        className="w-full rounded-md border border-input bg-background px-3 py-2"
+      />
+      <p id="canone-fixed-cost-help" className="text-sm text-muted-foreground">
+        Importo intero pagato all'attivazione di ciascun canone di Organico Allargato, indipendente
+        dalle giornate previste e consuntivate. Valore corrente, non storicizzato.
+      </p>
       {!valid && <p className="text-sm text-destructive">Inserire un importo non negativo.</p>}
       {message && (
         <p role="status" className="text-sm text-ok">

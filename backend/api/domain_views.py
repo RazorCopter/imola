@@ -104,6 +104,7 @@ class SettingsView(DocumentedAPIView):
             {
                 "ore_per_giornata": settings_obj.hours_per_day,
                 "costo_giornata_uomo": settings_obj.daily_person_cost,
+                "costo_forfettario_canone": settings_obj.canone_fixed_cost,
                 "politica_costo": (
                     "Valore globale corrente, non storicizzato e non differenziato per fornitore."
                 ),
@@ -126,12 +127,14 @@ class SettingsView(DocumentedAPIView):
         mapping = {
             "ore_per_giornata": "hours_per_day",
             "costo_giornata_uomo": "daily_person_cost",
+            "costo_forfettario_canone": "canone_fixed_cost",
             "granularita_ppm_gg": "ppm_granularity_days",
             "tolleranza_riconciliazione_gg": "reconciliation_tolerance_days",
             "anni_validita_dopo_chiusura": "residual_years_after_closure",
             "finestra_scadenza_giorni": "residual_expiring_window_days",
         }
         old_cost = settings_obj.daily_person_cost
+        old_canone_cost = settings_obj.canone_fixed_cost
         for key, attr in mapping.items():
             if key in request.data:
                 setattr(settings_obj, attr, request.data[key])
@@ -150,11 +153,21 @@ class SettingsView(DocumentedAPIView):
                 target_label="Impostazioni globali",
                 details={"old": str(old_cost), "new": str(settings_obj.daily_person_cost)},
             )
+        if old_canone_cost != settings_obj.canone_fixed_cost:
+            AdminAuditEvent.objects.create(
+                actor=request.user,
+                actor_username=request.user.get_username(),
+                action="settings.canone_fixed_cost.update",
+                target_type="app_settings",
+                target_id=str(settings_obj.id),
+                target_label="Costo forfettario canone",
+                details={"old": str(old_canone_cost), "new": str(settings_obj.canone_fixed_cost)},
+            )
         return self.get(request)
 
 
 class CostAnalysisView(DocumentedAPIView):
-    """Costi dei consuntivi: costo globale corrente moltiplicato per giornate nette."""
+    """Costi a giornata e inclusione opzionale del forfait pagato dei canoni."""
 
     permission_classes = [IsAuthenticated]
 
@@ -173,9 +186,14 @@ class CostAnalysisView(DocumentedAPIView):
         if parsed["from"] and parsed["to"] and parsed["from"] > parsed["to"]:
             raise serializers.ValidationError({"from": "Deve essere precedente o uguale a to."})
         settings_obj = current_settings()
+        raw_include_canone = request.query_params.get("include_canone", "false").lower()
+        if raw_include_canone not in ("true", "false", "1", "0"):
+            raise serializers.ValidationError({"include_canone": "Usare true o false."})
         return Response(
             build_cost_analysis(
                 daily_cost=settings_obj.daily_person_cost,
+                canone_fixed_cost=settings_obj.canone_fixed_cost,
+                include_canone=raw_include_canone in ("true", "1"),
                 date_from=parsed["from"],
                 date_to=parsed["to"],
             )

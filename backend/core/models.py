@@ -134,6 +134,13 @@ class AppSettings(TrackedModel):
         verbose_name="costo globale per giornata uomo",
         help_text="Valore globale corrente; non è storicizzato per periodo o fornitore.",
     )
+    canone_fixed_cost = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name="costo forfettario per canone",
+        help_text="Importo intero pagato all'attivazione di ciascun canone, indipendente dai consuntivi.",
+    )
     residual_years_after_closure = models.PositiveSmallIntegerField(
         default=1,
         verbose_name="anni di validità del residuo dopo la chiusura",
@@ -156,6 +163,8 @@ class AppSettings(TrackedModel):
             raise ValidationError({"hours_per_day": "Deve essere maggiore di zero."})
         if self.daily_person_cost is None or self.daily_person_cost < 0:
             raise ValidationError({"daily_person_cost": "Deve essere maggiore o uguale a zero."})
+        if self.canone_fixed_cost is None or self.canone_fixed_cost < 0:
+            raise ValidationError({"canone_fixed_cost": "Deve essere maggiore o uguale a zero."})
 
     @classmethod
     def get_solo(cls) -> AppSettings:
