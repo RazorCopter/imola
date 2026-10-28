@@ -188,6 +188,6 @@ class CanoneSubactivity(TrackedModel, ImportedRecordMixin):
             raise ValidationError({"end_date": "La data fine precede la data inizio."})
 
     def save(self, *args, **kwargs) -> None:
-        if not self.redmine_ref:
+        if self._state.adding and not self.redmine_ref:
             self.redmine_ref = extract_redmine_ref(self.title)
         super().save(*args, **kwargs)

@@ -67,6 +67,7 @@ def test_lista_aggregata_filtri_e_dettaglio():
     assert response.status_code == 200
     body = response.json()
     assert body["status"]["consuntivato"] == "3.0000"
+    assert body["status"]["forecast"] == "7.0000"
     assert len(body["subactivities"]) == 2
     assert body["reserved_days"] == "7.0000"
     assert body["available_days"] == "3.0000"

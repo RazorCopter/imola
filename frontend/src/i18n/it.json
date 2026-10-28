@@ -101,7 +101,7 @@
     "delta": "Delta",
     "deltaTooltip": "Target alla data meno consuntivato: positivo indica consumo inferiore al target.",
     "forecast": "Forecast",
-    "forecastTooltip": "Consuntivato più forecast residuo dichiarato sulle attività.",
+    "forecastTooltip": "Somma delle giornate previste sulle attività: le giornate riservate, oppure quelle consuntivate se superiori.",
     "unusedForecast": "Giornate non usate previste",
     "unusedForecastTooltip": "Giornate del monte che la proiezione prevede resteranno inutilizzate.",
     "plannedTotal": "Monte canoni",

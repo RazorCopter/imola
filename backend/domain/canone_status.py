@@ -160,7 +160,7 @@ def canone_status(canone, *, today: date | None = None) -> CanoneStatus:
     rows = list(subactivity_balance_qs(canone))
     consumed = quantize_days(sum((row.consumed_days for row in rows), ZERO))
     forecast_remaining = quantize_days(
-        sum((row.forecast_remaining_days or ZERO for row in rows), ZERO)
+        sum((max(row.reserved_days - row.consumed_days, ZERO) for row in rows), ZERO)
     )
 
     target = target_days(
@@ -208,7 +208,7 @@ def canone_status(canone, *, today: date | None = None) -> CanoneStatus:
             breakdown.quarter_estimate_days + (row.quarter_estimate_days or ZERO)
         )
         breakdown.forecast_remaining_days = quantize_days(
-            breakdown.forecast_remaining_days + (row.forecast_remaining_days or ZERO)
+            breakdown.forecast_remaining_days + max(row.reserved_days - row.consumed_days, ZERO)
         )
         breakdown.subactivities += 1
 

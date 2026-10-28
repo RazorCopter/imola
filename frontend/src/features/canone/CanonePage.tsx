@@ -105,13 +105,6 @@ function message(error: unknown): string {
   return error.message;
 }
 
-function deltaTone(value: string): "neutral" | "ok" | "danger" {
-  const delta = Number(value);
-  if (delta > 0) return "ok";
-  if (delta < 0) return "danger";
-  return "neutral";
-}
-
 function projectionStatus(value: string): string {
   if (value === "Sotto-utilizzo previsto") return "CANONE_SOTTO_UTILIZZO";
   if (value === "Sovra-utilizzo previsto") return "CANONE_SOVRA_UTILIZZO";
@@ -153,6 +146,7 @@ export function CanonePage() {
   const [subForm, setSubForm] = useState({
     office: "",
     title: "",
+    redmine_ref: "",
     reserved_days: "",
     start_date: "",
     end_date: "",
@@ -293,6 +287,7 @@ export function CanonePage() {
       setSubForm({
         office: "",
         title: "",
+        redmine_ref: "",
         reserved_days: "",
         start_date: "",
         end_date: "",
@@ -672,22 +667,11 @@ export function CanonePage() {
               )}
               {!creating && detail.data && (
                 <div className="space-y-3">
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                  <div className="grid gap-3 sm:grid-cols-3">
                     <KpiCard
                       label={t("canone.consumed")}
                       value={<DaysValue value={detail.data.status.consuntivato} />}
                       tooltip={t("canone.consumedTooltip")}
-                    />
-                    <KpiCard
-                      label={t("canone.target")}
-                      value={<DaysValue value={detail.data.status.target_alla_data} />}
-                      tooltip={t("canone.targetTooltip")}
-                    />
-                    <KpiCard
-                      label={t("canone.delta")}
-                      value={<DaysValue value={detail.data.status.delta} />}
-                      tone={deltaTone(detail.data.status.delta)}
-                      tooltip={t("canone.deltaTooltip")}
                     />
                     <KpiCard
                       label={t("canone.forecast")}
@@ -805,6 +789,7 @@ export function CanonePage() {
                                       value={<DaysValue value={row.remaining_reserved_days} />}
                                     />
                                   </div>
+                                  <p className="text-sm">Redmine: {row.redmine_ref || "\u2014"}</p>
                                   {row.notes && <p className="text-sm">{row.notes}</p>}
                                   {editable && detailIsCurrent && (
                                     <div className="flex gap-2">
@@ -815,6 +800,7 @@ export function CanonePage() {
                                           setSubForm({
                                             office: row.office,
                                             title: row.title,
+                                            redmine_ref: row.redmine_ref,
                                             reserved_days: row.reserved_days,
                                             start_date: row.start_date ?? "",
                                             end_date: row.end_date ?? "",
@@ -846,6 +832,7 @@ export function CanonePage() {
                                             setSubForm({
                                               office: "",
                                               title: "",
+                                              redmine_ref: "",
                                               reserved_days: "",
                                               start_date: "",
                                               end_date: "",
@@ -864,6 +851,15 @@ export function CanonePage() {
                                         value={subForm.title}
                                         onChange={(e) =>
                                           setSubForm({ ...subForm, title: e.target.value })
+                                        }
+                                      />
+                                      <input
+                                        className={fieldClass}
+                                        aria-label="Redmine in modifica"
+                                        placeholder="Redmine"
+                                        value={subForm.redmine_ref}
+                                        onChange={(e) =>
+                                          setSubForm({ ...subForm, redmine_ref: e.target.value })
                                         }
                                       />
                                       <select
@@ -1071,6 +1067,13 @@ export function CanonePage() {
                         placeholder="Titolo attività"
                         value={subForm.title}
                         onChange={(e) => setSubForm({ ...subForm, title: e.target.value })}
+                      />
+                      <input
+                        className={fieldClass}
+                        aria-label="Redmine"
+                        placeholder="Redmine"
+                        value={subForm.redmine_ref}
+                        onChange={(e) => setSubForm({ ...subForm, redmine_ref: e.target.value })}
                       />
                       <select
                         className={fieldClass}

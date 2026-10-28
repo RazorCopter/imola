@@ -100,25 +100,25 @@ class TestStatoCanone:
         assert status.target == Decimal("102.3500")
         assert status.delta == Decimal("2.0800")  # positivo: sotto target, a favore di BMED
 
-    def test_il_forecast_somma_i_residui_delle_sottoattivita(self):
-        canone = self.build_s2(["60.0000", "40.2700"], forecast=["30.0000", "-5.0000"])
+    def test_il_forecast_usa_le_riserve_senza_contare_due_volte_il_consuntivato(self):
+        canone = self.build_s2(["3", "2"], forecast=["100", "100"])
+        rows = list(canone.subactivities.order_by("title"))
+        rows[0].reserved_days = Decimal("5")
+        rows[0].save()
+        rows[1].reserved_days = Decimal("4")
+        rows[1].save()
         status = canone_status(canone, today=date(2026, 10, 16))
-        assert status.forecast == Decimal("125.2700")
-        assert status.unused_days == Decimal("47.7300")
-
-    def test_sotto_utilizzo_previsto(self):
-        canone = self.build_s2(["100.2700"], forecast=["10.0000"])
-        status = canone_status(canone, today=date(2026, 10, 16))
-        assert status.forecast == Decimal("110.2700")
-        assert status.forecast < canone.total_days * UNDERUSE_THRESHOLD
+        assert status.forecast == Decimal("9")
+        assert status.unused_days == Decimal("164")
         assert status.is_underused
         assert status.projection == "Sotto-utilizzo previsto"
 
-    def test_sovra_utilizzo_previsto(self):
-        canone = self.build_s2(["170.0000"], forecast=["20.0000"])
+    def test_forecast_tiene_conto_di_consuntivi_oltre_la_riserva(self):
+        canone = self.build_s2(["180"])
         status = canone_status(canone, today=date(2026, 10, 16))
+        assert status.forecast == Decimal("180")
         assert status.projection == "Sovra-utilizzo previsto"
-        assert not status.is_overused  # consuntivato ancora sotto il monte
+        assert status.is_overused
 
     def test_sforamento_del_monte(self):
         canone = self.build_s2(["180.0000"])
@@ -160,3 +160,20 @@ class TestStatoCanone:
         assert payload["target_alla_data"] == Decimal("102.3500")
         assert payload["delta"] == Decimal("2.0800")
         assert "formula_target" in payload
+
+
+@pytest.mark.django_db
+def test_redmine_puo_essere_modificato_e_cancellato():
+    from api.canone_serializers import CanoneSubactivityWriteSerializer
+
+    canone = CanoneFactory()
+    row = CanoneSubactivityFactory(canone=canone, title="300123 test", reserved_days=Decimal("5"))
+    assert row.redmine_ref == "300123"
+    for ref in ("456789", ""):
+        serializer = CanoneSubactivityWriteSerializer(
+            row, data={"redmine_ref": ref}, partial=True, context={"canone": canone}
+        )
+        assert serializer.is_valid(), serializer.errors
+        row = serializer.save()
+        row.refresh_from_db()
+        assert row.redmine_ref == ref
