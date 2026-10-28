@@ -1,0 +1,1091 @@
+[
+  {
+    "file": "admin-Configurazione-dark-1024.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "4bc8b550fda977003f81e3f4812879ed1de2654e323e351e787069e5b35aba5c",
+    "mtime": 1793203173.7712178
+  },
+  {
+    "file": "admin-Configurazione-light-1024.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "20bdfaaf63c201edc01d90cc69e4c680060a598807936bd5c0110b2ef6b6d6f5",
+    "mtime": 1793203179.5696342
+  },
+  {
+    "file": "admin-import-result.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "06c287fbd6727729c006aeee0606829c393c8d63f18030f41f36ce2ac9412006",
+    "mtime": 1793203159.350396
+  },
+  {
+    "file": "admin-preview-enabled.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "344543b297dca99a15885c0aa2b83b4437bb2850d281d3f5217d0bf22f74c176",
+    "mtime": 1793203159.239356
+  },
+  {
+    "file": "admin-Referenti-dark-1024.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "b69a460dd13d5ea3c4249d2796aa6f967ce481fd3f95a31bbf4a3b878a52859b",
+    "mtime": 1793203172.4368393
+  },
+  {
+    "file": "admin-Referenti-light-1024.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "94fafdf92fa3d2b970f5302a289a0b622cafb5af93c8c8383245bc8ec0d16cfc",
+    "mtime": 1793203178.2201304
+  },
+  {
+    "file": "admin-reset-dark.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "93009dc9cd6a83e7d7f03223227512cf9577a10ae5daa026663292204e04b6b6",
+    "mtime": 1793203174.4112499
+  },
+  {
+    "file": "admin-reset-light.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "4695dc6b1276c8acb62b32e88e111541c843e3ddbab18ecc85397c037b1d86a9",
+    "mtime": 1793203180.1084673
+  },
+  {
+    "file": "admin-Ruoli e privilegi-dark-1024.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "dd91eac36636c4ad5a45e5ffcd4bb9ca6ca2ccbd5829204b0a34b32330495510",
+    "mtime": 1793203173.1035318
+  },
+  {
+    "file": "admin-Ruoli e privilegi-light-1024.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "5fcc42637654a81a266dddc348a8de39b7b0d4d3cfff0373b58adbc655cd8cbc",
+    "mtime": 1793203178.8873053
+  },
+  {
+    "file": "admin-utente-dialog.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "f572272b246aea6e828dbc42305b65005413bac2f10ad9ed6ca4471e0ea7c989",
+    "mtime": 1793203159.5509913
+  },
+  {
+    "file": "admin-Utenti-dark-1024.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "b47a500583afae9d2398e349a013914554977b7d4fd76aa92b29c3a58a065f28",
+    "mtime": 1793203171.786709
+  },
+  {
+    "file": "admin-Utenti-light-1024.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "e4e1eb5f6d44de4f5e38071455460083d86341b0cd480e2d6b79619b573132ea",
+    "mtime": 1793203177.5858645
+  },
+  {
+    "file": "amministrazione-dark-1024x768.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "cbda4d5bde57e3c84dfa109cf895759d19475eef41c02dff57b7bedfd4746fe1",
+    "mtime": 1793203128.2748737
+  },
+  {
+    "file": "amministrazione-dark-1366x768.png",
+    "dimensions": [
+      1366,
+      768
+    ],
+    "sha256": "30362b4bb17c49d9d540cbdfccfbb81a47ed37c0821469d991798e8d9a265ca7",
+    "mtime": 1793203127.5144496
+  },
+  {
+    "file": "amministrazione-dark-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "799e1366260f0a8f58828805e39278871b7f7cbb5d9459668a7294c19b3de869",
+    "mtime": 1793203126.1017148
+  },
+  {
+    "file": "amministrazione-dark-1600x900.png",
+    "dimensions": [
+      1600,
+      900
+    ],
+    "sha256": "10d6c6042c4074513888233c9b82e54e462a7aa32ce64cdd71fa6f09d4baf2a6",
+    "mtime": 1793203125.3212934
+  },
+  {
+    "file": "amministrazione-dark-1920x1080.png",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "sha256": "318f150eb999e81f0e9d985ef1427395fed2236c0b43ca20fe862c0e566a0b62",
+    "mtime": 1793203124.5563872
+  },
+  {
+    "file": "amministrazione-dark-bottom.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "3f3c643f36410d7e03fceee3fa994c25032d4ca975e711e0ad0dd08f7a294a34",
+    "mtime": 1793203126.7680256
+  },
+  {
+    "file": "amministrazione-empty.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "799e1366260f0a8f58828805e39278871b7f7cbb5d9459668a7294c19b3de869",
+    "mtime": 1793203138.6177142
+  },
+  {
+    "file": "amministrazione-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "60c0e4dea17e7844ee056b813bc31fcc7deb4e4c91ed765e3ce3c70296a2eee8",
+    "mtime": 1793203147.181664
+  },
+  {
+    "file": "amministrazione-light-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "f288418b93fc1348108d3a16c301647c38fafd1f36b15d1179acdcd59ba79dbf",
+    "mtime": 1793203129.334095
+  },
+  {
+    "file": "amministrazione-light-bottom.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "2330f043f459c969a8460085e32d44306d19f1d200b4e5c1e109f1f1a858698f",
+    "mtime": 1793203129.9333854
+  },
+  {
+    "file": "anomalie-dark-1024x768.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "ee92b21b430ea3178599c42a204080926935a94c28b6b2d2925f4db7604fcef6",
+    "mtime": 1793203116.2567587
+  },
+  {
+    "file": "anomalie-dark-1366x768.png",
+    "dimensions": [
+      1366,
+      768
+    ],
+    "sha256": "4909d6a77e90993eb2a196e1135fd63fe434cafd9ef126b5e503d83164059d2c",
+    "mtime": 1793203115.5291142
+  },
+  {
+    "file": "anomalie-dark-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "2991694c50a9c7a5d2723d4e792730e152e3dfbf9f2540cb4ccbb23feb8fc146",
+    "mtime": 1793203114.2845988
+  },
+  {
+    "file": "anomalie-dark-1600x900.png",
+    "dimensions": [
+      1600,
+      900
+    ],
+    "sha256": "875299f4ecfe360457a60ebfc512fc02ba4fbe692831091de727e22245c7d3e0",
+    "mtime": 1793203113.5554502
+  },
+  {
+    "file": "anomalie-dark-1920x1080.png",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "sha256": "a4b4f3ad2d56edceb36f231e88643b5b097ae5a9f463fd6010c64e5523214376",
+    "mtime": 1793203112.831761
+  },
+  {
+    "file": "anomalie-deroga.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "324c86353592b9a3e13013c11f01cdd0e0106a52f40d30b578861ff0b01f060a",
+    "mtime": 1793203157.134172
+  },
+  {
+    "file": "anomalie-empty.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "3578612eef089c3865a4745ca1b4b38710ea99c120fd17a313fbfeb32e263072",
+    "mtime": 1793203136.8144872
+  },
+  {
+    "file": "anomalie-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "e17b47ce5055d602e426255910951655124245aecce59710bf83726a20b2e7aa",
+    "mtime": 1793203145.330478
+  },
+  {
+    "file": "anomalie-light-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "57b006594ba2437eb66a2106f80c10d98ec0e1459648777deb1673559cf46570",
+    "mtime": 1793203117.0001607
+  },
+  {
+    "file": "anomalie-mutation-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "870acf4c3baf8e5771656325d0e8c1d8cc89105082989dc4f9252f72fdf1a3e2",
+    "mtime": 1793203162.864951
+  },
+  {
+    "file": "costi-aggregazione-vuota.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "8ef487fb07b096ceba5ba09b4df2098a0022cab5c8b46b8ee2f2c9f0885a2187",
+    "mtime": 1793203374.8796866
+  },
+  {
+    "file": "costi-dark-1024x768.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "10e3ca645dac7c122568147e0809c0baebf89605bbf5cd7466bc697c8056a008",
+    "mtime": 1793203102.7915998
+  },
+  {
+    "file": "costi-dark-1366x768.png",
+    "dimensions": [
+      1366,
+      768
+    ],
+    "sha256": "0182d5167a63147419ded8a9d27ea1094709d8f38cd4dd8c08a9736c1525c69f",
+    "mtime": 1793203101.9797304
+  },
+  {
+    "file": "costi-dark-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "d9f71377d46dfc9c9d540597d291dca8db08a1722be6b2fe615422837065e1d6",
+    "mtime": 1793203100.4527
+  },
+  {
+    "file": "costi-dark-1600x900.png",
+    "dimensions": [
+      1600,
+      900
+    ],
+    "sha256": "9b9917d1f9030e37521d04f9a7e8dfb073f3ff41898147add25afd6d14d30ef9",
+    "mtime": 1793203099.640306
+  },
+  {
+    "file": "costi-dark-1920x1080.png",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "sha256": "0c57986040b706bbc6460117d7c8815df15c508f61d7e2547dc064bcce9fc194",
+    "mtime": 1793203098.8209596
+  },
+  {
+    "file": "costi-dark-bottom.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "32f055fc128f505f38dc7b3766f555d4628cebb779e0cbdd99629ed0eb76e08b",
+    "mtime": 1793203101.1546474
+  },
+  {
+    "file": "costi-empty.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "2be8bd614cd08454c6494539701ec5d31b97c105a25d994ffc32e8cf19d1026c",
+    "mtime": 1793203135.0156765
+  },
+  {
+    "file": "costi-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "24ffa3f041efac3f4584512c62048b93240604b3970b2d7d9a7447a1661e1c3a",
+    "mtime": 1793203143.4641345
+  },
+  {
+    "file": "costi-light-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "d6d6175a27a7da03e1c8a4ff1ea1e7441f5e64374a6bd37e83afe00b79028bb2",
+    "mtime": 1793203103.6534586
+  },
+  {
+    "file": "costi-light-bottom.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "187f1c1793f449acc82b4522d64c1f408c3348c1fcfa58ab87a170a47c5466c7",
+    "mtime": 1793203104.351518
+  },
+  {
+    "file": "costi-top5.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "77247d87b647327fef75842c417c661576e9ada3f220a6222be70000620580d1",
+    "mtime": 1793203184.0167074
+  },
+  {
+    "file": "dashboard-dark-1024x768.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "4ce5d1256424411dcf44070ddf3854c69bb7634b5235e0a3db373cdc2d73e707",
+    "mtime": 1793203076.2594225
+  },
+  {
+    "file": "dashboard-dark-1366x768.png",
+    "dimensions": [
+      1366,
+      768
+    ],
+    "sha256": "e3a46308d09b420c329a47830167c7e886cc8070b2a93fc40c3b6b768012ed1e",
+    "mtime": 1793203075.4304948
+  },
+  {
+    "file": "dashboard-dark-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "0b6c2f6a65c8388cd52d5abd7a9e4af4666c36ade35e17ef0ef83d2247740268",
+    "mtime": 1793203073.8086567
+  },
+  {
+    "file": "dashboard-dark-1600x900.png",
+    "dimensions": [
+      1600,
+      900
+    ],
+    "sha256": "bbe3a0790407b1f4304a44fcfa703d99d7b70378385096777fd3ab15da76e47e",
+    "mtime": 1793203072.9256406
+  },
+  {
+    "file": "dashboard-dark-1920x1080.png",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "sha256": "aa8c6a6e1478d3f53ffc1de7bfd3cb99a431e9f8f5cb8df9b1b7d2f1bf967283",
+    "mtime": 1793203072.0303047
+  },
+  {
+    "file": "dashboard-dark-bottom.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "9123ac7e1bde72d50c464c4188ceff3c67d872afab67d3bff03d3c41bc2c793c",
+    "mtime": 1793203074.588037
+  },
+  {
+    "file": "dashboard-empty.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "2e2bbb509546ebaa208f897aa8673e2b440208c2309d4735ade0a8dd8a80de19",
+    "mtime": 1793203131.1540172
+  },
+  {
+    "file": "dashboard-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "6416bdc651c5e99999ddaff7c37f77d83456fb66d6995dd64dadc04fe49aecd5",
+    "mtime": 1793203139.6220827
+  },
+  {
+    "file": "dashboard-light-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "67002a22cc72b03c4ce600334e74465233488a70cafecad451976c549588be77",
+    "mtime": 1793203077.0872102
+  },
+  {
+    "file": "dashboard-light-bottom.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "58390ca77d184fcceb4e5d793764a7930641d1cd93e795eaa19f8b4341dca0d4",
+    "mtime": 1793203077.7866144
+  },
+  {
+    "file": "dashboard-source-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "722020797904031ede9d30bb68847952c3618edd962d349c5a3fca678260bce4",
+    "mtime": 1793203164.250726
+  },
+  {
+    "file": "organico-cambio-selezione.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "c2e44d41b7719d147840206e4cffbbe2e7086736bd1a34c1cf87ae385bf0ae18",
+    "mtime": 1793203373.4924622
+  },
+  {
+    "file": "organico-conferma-eliminazione.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "8fbbe568877c9933993aab339f58cc9a9166e9f13878e16eb91c66a5289e8e7f",
+    "mtime": 1793203165.801361
+  },
+  {
+    "file": "organico-consuntivo.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "1a47690e02cbb9a2059fa3f0256f9044291dd287e3811a486b3471cfa38d5247",
+    "mtime": 1793203155.185387
+  },
+  {
+    "file": "organico-dark-1024x768.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "c95048a398a8b12fad4489feaa54ba1a3ee71516c826f5f4742e4b18b7cd726a",
+    "mtime": 1793203095.9931765
+  },
+  {
+    "file": "organico-dark-1366x768.png",
+    "dimensions": [
+      1366,
+      768
+    ],
+    "sha256": "46dbe0ff7ca2a647ffb37d3f47726848c26896996a5bca5a51440530a72d2ddc",
+    "mtime": 1793203095.1307576
+  },
+  {
+    "file": "organico-dark-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "f9195c56226af0b5ab8465397347844678be6bf26537e30e3db26ac93957b0e8",
+    "mtime": 1793203093.571059
+  },
+  {
+    "file": "organico-dark-1600x900.png",
+    "dimensions": [
+      1600,
+      900
+    ],
+    "sha256": "39880a87119cad9ea2bf2b57bba62557862efc2ed8856b8974493572dbfb839d",
+    "mtime": 1793203092.707182
+  },
+  {
+    "file": "organico-dark-1920x1080.png",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "sha256": "c725f49501e7ac8a9e7def30cc182b73485a6e15f2fb0588213ac42398dce03a",
+    "mtime": 1793203091.856282
+  },
+  {
+    "file": "organico-dark-bottom.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "5bd578cd62d411d2bf2786a51e7c6f34249608f68d75b0cfc6b42117e66aaaf5",
+    "mtime": 1793203094.2868927
+  },
+  {
+    "file": "organico-detail-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "15a9922a4298a2e2241eb05facee8beb1d8ddbc83fad3259ab5a700bc7c84295",
+    "mtime": 1793203373.3094325
+  },
+  {
+    "file": "organico-empty.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "cf6a6a0c566f1699233efa0fe68ea94a20fe7a701c1f6866990f987316093246",
+    "mtime": 1793203134.0674288
+  },
+  {
+    "file": "organico-entire-page.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "f9195c56226af0b5ab8465397347844678be6bf26537e30e3db26ac93957b0e8",
+    "mtime": 1793203185.4827762
+  },
+  {
+    "file": "organico-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "bffa9a6928cfc8dd614faa91bdb8a8f5353c203b5ea429711fe474428ac6b775",
+    "mtime": 1793203142.4801922
+  },
+  {
+    "file": "organico-light-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "3d2e66078dacbc46d103a336572c75bba92834061084582da7be73c20e36d1bb",
+    "mtime": 1793203096.8549364
+  },
+  {
+    "file": "organico-light-bottom.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "f1691737a8e3bbaf068ae439ddba56a07c562d6c2751a999e23d6eeba00c8c31",
+    "mtime": 1793203097.5213294
+  },
+  {
+    "file": "progetti-consuntivi.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "89269c7a8e3f19a25923c9d88d9afe8c947b507f371f585c993d15cc5ad8aac9",
+    "mtime": 1793203150.5205834
+  },
+  {
+    "file": "progetti-dark-1024x768.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "cb7d9e92bd165d54c7cd71272b4673a7b9bbd8ccbb2b3b104770afd5ab074392",
+    "mtime": 1793203082.7582548
+  },
+  {
+    "file": "progetti-dark-1366x768.png",
+    "dimensions": [
+      1366,
+      768
+    ],
+    "sha256": "0640621f98e9bebfab3ac73c571f902008f794e87e6b07c4bbaa61b2a1ec087b",
+    "mtime": 1793203082.0154693
+  },
+  {
+    "file": "progetti-dark-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "86215cc1269b829b85b65da3c06e2a84d020ed6147f46b195a9e76fe23645761",
+    "mtime": 1793203080.6188364
+  },
+  {
+    "file": "progetti-dark-1600x900.png",
+    "dimensions": [
+      1600,
+      900
+    ],
+    "sha256": "46f3927da7ae9fdb50c5bb72a6fce3ea488feee1a10f4f9c1a2774f572678729",
+    "mtime": 1793203079.8210492
+  },
+  {
+    "file": "progetti-dark-1920x1080.png",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "sha256": "285b80572a0e461fbdae53645ed656c0decf04fd01cae9412f304f1c5a52e7e8",
+    "mtime": 1793203079.0358212
+  },
+  {
+    "file": "progetti-edit-dark-1024.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "f8e809b326f21df7b3d4d483e2610b2659732262ed44143190ef5c7087d18b97",
+    "mtime": 1793203169.557892
+  },
+  {
+    "file": "progetti-edit-light-1024.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "9cdec9214aae33ed636b911ca86407250a677659c6accccf83944f8e5e977870",
+    "mtime": 1793203175.462308
+  },
+  {
+    "file": "progetti-empty.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "712477efcc299675253fe106bbfe84b0ce9d04eca5dd94b627b58b75d6dbe399",
+    "mtime": 1793203132.1005056
+  },
+  {
+    "file": "progetti-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "457988dc648cf67c8710de9b7c86c244627e8ab10ce4a7a19431cf4c25e33579",
+    "mtime": 1793203140.5815167
+  },
+  {
+    "file": "progetti-ledger-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "d730925b55c308774ca46b4da779edd63795be67c3e939759ada1889f1d9ba31",
+    "mtime": 1793203164.597009
+  },
+  {
+    "file": "progetti-light-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "a7cef42d3f9bad2cd41ddd177f411ee13e0ba64dd092fd331b3eebd37a72732c",
+    "mtime": 1793203083.5180917
+  },
+  {
+    "file": "progetti-modifica-dialog.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "48d8d2f0cc5b026fa5b83c919f60286bf6d911f864f886f654b00cb092a54cfa",
+    "mtime": 1793203148.2805374
+  },
+  {
+    "file": "progetti-stress-scroll.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "9a839edec5ecbfdf08bd766d9aaebaf46dffedc6438f52f02a311df992e4de02",
+    "mtime": 1793203183.142137
+  },
+  {
+    "file": "progetti-validazione.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "97245905f55eb7c31892277d021e0d21767723ef893a62e64aa30c902a93c512",
+    "mtime": 1793203147.8528926
+  },
+  {
+    "file": "revisione-dark-1024x768.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "34530af4f9c8fe2fe4417dfed8492336a74484df0c59163c1a86a344bcd486af",
+    "mtime": 1793203122.1726656
+  },
+  {
+    "file": "revisione-dark-1366x768.png",
+    "dimensions": [
+      1366,
+      768
+    ],
+    "sha256": "c744067486532fe33ded61127d0cfeacfc4a2fa79f13551df506b36bfb86f042",
+    "mtime": 1793203121.4441063
+  },
+  {
+    "file": "revisione-dark-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "bcfe0d08dc19e247457b12d128242c0ae6725cb25517c18aee104ff77c3091a5",
+    "mtime": 1793203120.1829305
+  },
+  {
+    "file": "revisione-dark-1600x900.png",
+    "dimensions": [
+      1600,
+      900
+    ],
+    "sha256": "c6ab9d12613b2ba749e1f0f815488494c328408c7eb7735c7bb74d5f16d3f29e",
+    "mtime": 1793203119.404922
+  },
+  {
+    "file": "revisione-dark-1920x1080.png",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "sha256": "6f7e1cdfd56c88f705616b71691398b8bad8144ecebcf9c76ceb6175ba57a47b",
+    "mtime": 1793203118.634886
+  },
+  {
+    "file": "revisione-empty.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "e69a8c994f8c38dac8f994fa72901ce96d4c939783ca9074168ff2071016af70",
+    "mtime": 1793203137.7160187
+  },
+  {
+    "file": "revisione-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "733745028fdd14c837e374e7588a39edee1cf295d824b1abbe780695ea9a32db",
+    "mtime": 1793203146.230962
+  },
+  {
+    "file": "revisione-form.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "67c26101bb1dc17da91498a30a33bc92f17c33c0880f42f69d85485389a0edc6",
+    "mtime": 1793203157.5006647
+  },
+  {
+    "file": "revisione-light-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "fdebe5099e3ae9c32ae7f58db02822a80a306ee219e058f568636eaf40dd2d6e",
+    "mtime": 1793203122.9318943
+  },
+  {
+    "file": "ricerca-globale.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "c220dc66a8e97a6ca37465c5cdf73d203017a34b1c8f9680cd083645301b3bde",
+    "mtime": 1793203181.2705767
+  },
+  {
+    "file": "riconciliazione-dark-1024x768.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "27f695218aa134fdc4844133b0c81082d968049a0bf6a5acb5a6253b00609e6c",
+    "mtime": 1793203110.3913097
+  },
+  {
+    "file": "riconciliazione-dark-1366x768.png",
+    "dimensions": [
+      1366,
+      768
+    ],
+    "sha256": "a5c49bd3781aadeec03db3814ad7b29981cdd46c2194969c7d7533cf20e6d7e2",
+    "mtime": 1793203109.6307125
+  },
+  {
+    "file": "riconciliazione-dark-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "209991db208d4e83a643e15bac59a07344f107c11a429198a9c6fd0f6a37ae83",
+    "mtime": 1793203107.2372077
+  },
+  {
+    "file": "riconciliazione-dark-1600x900.png",
+    "dimensions": [
+      1600,
+      900
+    ],
+    "sha256": "0bf88206b27a0d9f1f7405a02f1cc390c3a34e244c3963996c90e4e39266b1a8",
+    "mtime": 1793203106.4378474
+  },
+  {
+    "file": "riconciliazione-dark-1920x1080.png",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "sha256": "2c6ab0e6f9db17c88958792780935e088bced2e42053ea235020be6a220a4cac",
+    "mtime": 1793203105.6202161
+  },
+  {
+    "file": "riconciliazione-empty.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "73226c3319fb97da406a747a2e93c4cd5cc1d575603ccacff34aabb3c86d250f",
+    "mtime": 1793203135.9345245
+  },
+  {
+    "file": "riconciliazione-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "d02239b3b8de7c092f7b92426a73cc77f51ea397325ec9046903742b86bb7690",
+    "mtime": 1793203144.413007
+  },
+  {
+    "file": "riconciliazione-light-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "9dd484ee7d15443d819a8fe2e9a5ce13162d3ceee8e0cebf2fae846cf55fb05b",
+    "mtime": 1793203111.1844492
+  },
+  {
+    "file": "wallet-dark-1024x768.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "6856ba7ca7b1f9eedbd18cf822c8800be41ddf125cd0ed26eea36acd319c3c5e",
+    "mtime": 1793203089.0679595
+  },
+  {
+    "file": "wallet-dark-1366x768.png",
+    "dimensions": [
+      1366,
+      768
+    ],
+    "sha256": "94415bfc07c14dd76fd3b808d57b7655ccfffe4eef0d454b3d250edd054c293e",
+    "mtime": 1793203088.2838862
+  },
+  {
+    "file": "wallet-dark-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "ce7521057e9fe5f7d850f7528d5b28fdd604117d1c3d7226817f051e046c3cdb",
+    "mtime": 1793203086.8046649
+  },
+  {
+    "file": "wallet-dark-1600x900.png",
+    "dimensions": [
+      1600,
+      900
+    ],
+    "sha256": "df487f81decd38c9e905930ad267490c9e3a33da5c6ed63188abb7c4b244b9ba",
+    "mtime": 1793203086.042833
+  },
+  {
+    "file": "wallet-dark-1920x1080.png",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "sha256": "944f2241c7b85e82fb27f8d3ddc6a57f8e9629981957f2f123202f894f51ef5e",
+    "mtime": 1793203085.254948
+  },
+  {
+    "file": "wallet-dark-bottom.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "33e4430806d3be23605d27c952b5d9b9f1b4d782512708ddf1f78e35eff42f6e",
+    "mtime": 1793203087.4694316
+  },
+  {
+    "file": "wallet-drawer-dark-1024-bottom.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "0546189fc913583547f3120c0e08ccc312c56488e05b14212ece6712b25fcd2d",
+    "mtime": 1793203170.5725446
+  },
+  {
+    "file": "wallet-drawer-dark-1024.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "23e6b8e39516ad094ae3934ee257bbffecbf1b029b4cab07107208d1dfe1e165",
+    "mtime": 1793203170.5080206
+  },
+  {
+    "file": "wallet-drawer-light-1024-bottom.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "4db3d6ba8a5d6818cdfda639fed507f09d7ec2bec4a272e1ae5e630ffd42ded9",
+    "mtime": 1793203176.37147
+  },
+  {
+    "file": "wallet-drawer-light-1024.png",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "sha256": "d7546dee8cb7cd729bc993a71bfad88126e9d003cf9703a3e70a4440b32c7520",
+    "mtime": 1793203176.3049078
+  },
+  {
+    "file": "wallet-drawer.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "c5506e38f02f7e5b4df632f1f0835e819345052c9fba87b101097520884180b0",
+    "mtime": 1793203151.5391536
+  },
+  {
+    "file": "wallet-empty.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "08e84f1029ef1af5dfdf07bde338fb5ea06621da341132eba85680be71908f58",
+    "mtime": 1793203133.069534
+  },
+  {
+    "file": "wallet-error.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "1cab40070400ad476dc419235f3bacf39da0cb2b8165fbe55f434c8433ba5054",
+    "mtime": 1793203141.499043
+  },
+  {
+    "file": "wallet-light-1440x900.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "1ff4108caee983d5bee1057c01dde3dc1cad82e19d805307f25eb0229de63ebd",
+    "mtime": 1793203089.8531518
+  },
+  {
+    "file": "wallet-light-bottom.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "cd48a8f5e8244ea734f73ea518f542253706d208e214d0f9c8cc00b1fe8f942b",
+    "mtime": 1793203090.4859228
+  },
+  {
+    "file": "wallet-nuovo-dialog.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "5c1d24154d9b5e17afb916cca06684cecdc21d970173dc44472b432a7112d4b7",
+    "mtime": 1793203152.5685718
+  },
+  {
+    "file": "wallet-reopened.png",
+    "dimensions": [
+      1440,
+      900
+    ],
+    "sha256": "fca4d913295d109abce15ff35ccb8a28d7c56240348d55b3dbee204b4641b8bf",
+    "mtime": 1793203152.3044293
+  }
+]

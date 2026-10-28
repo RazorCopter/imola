@@ -1,0 +1,418 @@
+[
+  {
+    "name": "wallet",
+    "theme": "dark",
+    "width": 1920,
+    "height": 1080,
+    "errors": [],
+    "viewport": 1920,
+    "regions": [
+      {
+        "scroll": 1566,
+        "client": 1566
+      }
+    ]
+  },
+  {
+    "name": "wallet",
+    "theme": "dark",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": [
+      {
+        "scroll": 1094,
+        "client": 1094
+      }
+    ]
+  },
+  {
+    "name": "wallet",
+    "theme": "light",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": [
+      {
+        "scroll": 1094,
+        "client": 1094
+      }
+    ]
+  },
+  {
+    "name": "wallet",
+    "theme": "dark",
+    "width": 1024,
+    "height": 768,
+    "errors": [],
+    "viewport": 1024,
+    "regions": [
+      {
+        "scroll": 678,
+        "client": 678
+      }
+    ]
+  },
+  {
+    "name": "organico",
+    "theme": "dark",
+    "width": 1920,
+    "height": 1080,
+    "errors": [],
+    "viewport": 1920,
+    "regions": [
+      {
+        "scroll": 1598,
+        "client": 1598
+      }
+    ]
+  },
+  {
+    "name": "organico",
+    "theme": "dark",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": [
+      {
+        "scroll": 1126,
+        "client": 1126
+      }
+    ]
+  },
+  {
+    "name": "organico",
+    "theme": "light",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": [
+      {
+        "scroll": 1126,
+        "client": 1126
+      }
+    ]
+  },
+  {
+    "name": "organico",
+    "theme": "dark",
+    "width": 1024,
+    "height": 768,
+    "errors": [],
+    "viewport": 1024,
+    "regions": [
+      {
+        "scroll": 710,
+        "client": 710
+      }
+    ]
+  },
+  {
+    "name": "costi",
+    "theme": "dark",
+    "width": 1920,
+    "height": 1080,
+    "errors": [],
+    "viewport": 1920,
+    "regions": [
+      {
+        "scroll": 1598,
+        "client": 1598
+      },
+      {
+        "scroll": 788,
+        "client": 788
+      },
+      {
+        "scroll": 788,
+        "client": 788
+      },
+      {
+        "scroll": 1598,
+        "client": 1598
+      },
+      {
+        "scroll": 1598,
+        "client": 1598
+      }
+    ]
+  },
+  {
+    "name": "costi",
+    "theme": "dark",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": [
+      {
+        "scroll": 1126,
+        "client": 1126
+      },
+      {
+        "scroll": 552,
+        "client": 552
+      },
+      {
+        "scroll": 552,
+        "client": 552
+      },
+      {
+        "scroll": 1126,
+        "client": 1126
+      },
+      {
+        "scroll": 1126,
+        "client": 1126
+      }
+    ]
+  },
+  {
+    "name": "costi",
+    "theme": "light",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": [
+      {
+        "scroll": 1126,
+        "client": 1126
+      },
+      {
+        "scroll": 552,
+        "client": 552
+      },
+      {
+        "scroll": 552,
+        "client": 552
+      },
+      {
+        "scroll": 1126,
+        "client": 1126
+      },
+      {
+        "scroll": 1126,
+        "client": 1126
+      }
+    ]
+  },
+  {
+    "name": "costi",
+    "theme": "dark",
+    "width": 1024,
+    "height": 768,
+    "errors": [],
+    "viewport": 1024,
+    "regions": [
+      {
+        "scroll": 710,
+        "client": 710
+      },
+      {
+        "scroll": 710,
+        "client": 710
+      },
+      {
+        "scroll": 710,
+        "client": 710
+      },
+      {
+        "scroll": 710,
+        "client": 710
+      },
+      {
+        "scroll": 710,
+        "client": 710
+      }
+    ]
+  },
+  {
+    "name": "riconciliazione",
+    "theme": "dark",
+    "width": 1920,
+    "height": 1080,
+    "errors": [],
+    "viewport": 1920,
+    "regions": [
+      {
+        "scroll": 1598,
+        "client": 1598
+      }
+    ]
+  },
+  {
+    "name": "riconciliazione",
+    "theme": "dark",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": [
+      {
+        "scroll": 1126,
+        "client": 1126
+      }
+    ]
+  },
+  {
+    "name": "riconciliazione",
+    "theme": "light",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": [
+      {
+        "scroll": 1126,
+        "client": 1126
+      }
+    ]
+  },
+  {
+    "name": "riconciliazione",
+    "theme": "dark",
+    "width": 1024,
+    "height": 768,
+    "errors": [],
+    "viewport": 1024,
+    "regions": [
+      {
+        "scroll": 710,
+        "client": 710
+      }
+    ]
+  },
+  {
+    "name": "anomalie",
+    "theme": "dark",
+    "width": 1920,
+    "height": 1080,
+    "errors": [],
+    "viewport": 1920,
+    "regions": []
+  },
+  {
+    "name": "anomalie",
+    "theme": "dark",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": []
+  },
+  {
+    "name": "anomalie",
+    "theme": "light",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": []
+  },
+  {
+    "name": "anomalie",
+    "theme": "dark",
+    "width": 1024,
+    "height": 768,
+    "errors": [],
+    "viewport": 1024,
+    "regions": []
+  },
+  {
+    "name": "revisione",
+    "theme": "dark",
+    "width": 1920,
+    "height": 1080,
+    "errors": [],
+    "viewport": 1920,
+    "regions": [
+      {
+        "scroll": 1598,
+        "client": 1598
+      }
+    ]
+  },
+  {
+    "name": "revisione",
+    "theme": "dark",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": [
+      {
+        "scroll": 1126,
+        "client": 1126
+      }
+    ]
+  },
+  {
+    "name": "revisione",
+    "theme": "light",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": [
+      {
+        "scroll": 1126,
+        "client": 1126
+      }
+    ]
+  },
+  {
+    "name": "revisione",
+    "theme": "dark",
+    "width": 1024,
+    "height": 768,
+    "errors": [],
+    "viewport": 1024,
+    "regions": [
+      {
+        "scroll": 710,
+        "client": 710
+      }
+    ]
+  },
+  {
+    "name": "amministrazione",
+    "theme": "dark",
+    "width": 1920,
+    "height": 1080,
+    "errors": [],
+    "viewport": 1920,
+    "regions": []
+  },
+  {
+    "name": "amministrazione",
+    "theme": "dark",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": []
+  },
+  {
+    "name": "amministrazione",
+    "theme": "light",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": []
+  },
+  {
+    "name": "amministrazione",
+    "theme": "dark",
+    "width": 1024,
+    "height": 768,
+    "errors": [],
+    "viewport": 1024,
+    "regions": []
+  }
+]

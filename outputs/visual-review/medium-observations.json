@@ -1,0 +1,210 @@
+[
+  {
+    "name": "wallet",
+    "theme": "dark",
+    "width": 1600,
+    "height": 900,
+    "errors": [],
+    "viewport": 1600,
+    "regions": [
+      {
+        "scroll": 1254,
+        "client": 1254
+      }
+    ]
+  },
+  {
+    "name": "wallet",
+    "theme": "dark",
+    "width": 1366,
+    "height": 768,
+    "errors": [],
+    "viewport": 1366,
+    "regions": [
+      {
+        "scroll": 1020,
+        "client": 1020
+      }
+    ]
+  },
+  {
+    "name": "organico",
+    "theme": "dark",
+    "width": 1600,
+    "height": 900,
+    "errors": [],
+    "viewport": 1600,
+    "regions": [
+      {
+        "scroll": 1286,
+        "client": 1286
+      }
+    ]
+  },
+  {
+    "name": "organico",
+    "theme": "dark",
+    "width": 1366,
+    "height": 768,
+    "errors": [],
+    "viewport": 1366,
+    "regions": [
+      {
+        "scroll": 1052,
+        "client": 1052
+      }
+    ]
+  },
+  {
+    "name": "costi",
+    "theme": "dark",
+    "width": 1600,
+    "height": 900,
+    "errors": [],
+    "viewport": 1600,
+    "regions": [
+      {
+        "scroll": 1286,
+        "client": 1286
+      },
+      {
+        "scroll": 632,
+        "client": 632
+      },
+      {
+        "scroll": 632,
+        "client": 632
+      },
+      {
+        "scroll": 1286,
+        "client": 1286
+      },
+      {
+        "scroll": 1286,
+        "client": 1286
+      }
+    ]
+  },
+  {
+    "name": "costi",
+    "theme": "dark",
+    "width": 1366,
+    "height": 768,
+    "errors": [],
+    "viewport": 1366,
+    "regions": [
+      {
+        "scroll": 1052,
+        "client": 1052
+      },
+      {
+        "scroll": 515,
+        "client": 515
+      },
+      {
+        "scroll": 515,
+        "client": 515
+      },
+      {
+        "scroll": 1052,
+        "client": 1052
+      },
+      {
+        "scroll": 1052,
+        "client": 1052
+      }
+    ]
+  },
+  {
+    "name": "riconciliazione",
+    "theme": "dark",
+    "width": 1600,
+    "height": 900,
+    "errors": [],
+    "viewport": 1600,
+    "regions": [
+      {
+        "scroll": 1286,
+        "client": 1286
+      }
+    ]
+  },
+  {
+    "name": "riconciliazione",
+    "theme": "dark",
+    "width": 1366,
+    "height": 768,
+    "errors": [],
+    "viewport": 1366,
+    "regions": [
+      {
+        "scroll": 1052,
+        "client": 1052
+      }
+    ]
+  },
+  {
+    "name": "anomalie",
+    "theme": "dark",
+    "width": 1600,
+    "height": 900,
+    "errors": [],
+    "viewport": 1600,
+    "regions": []
+  },
+  {
+    "name": "anomalie",
+    "theme": "dark",
+    "width": 1366,
+    "height": 768,
+    "errors": [],
+    "viewport": 1366,
+    "regions": []
+  },
+  {
+    "name": "revisione",
+    "theme": "dark",
+    "width": 1600,
+    "height": 900,
+    "errors": [],
+    "viewport": 1600,
+    "regions": [
+      {
+        "scroll": 1286,
+        "client": 1286
+      }
+    ]
+  },
+  {
+    "name": "revisione",
+    "theme": "dark",
+    "width": 1366,
+    "height": 768,
+    "errors": [],
+    "viewport": 1366,
+    "regions": [
+      {
+        "scroll": 1052,
+        "client": 1052
+      }
+    ]
+  },
+  {
+    "name": "amministrazione",
+    "theme": "dark",
+    "width": 1600,
+    "height": 900,
+    "errors": [],
+    "viewport": 1600,
+    "regions": []
+  },
+  {
+    "name": "amministrazione",
+    "theme": "dark",
+    "width": 1366,
+    "height": 768,
+    "errors": [],
+    "viewport": 1366,
+    "regions": []
+  }
+]

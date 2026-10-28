@@ -1,9 +1,11 @@
+import { PageHeader } from "@/components/PageHeader";
 import { Button, Input, Select } from "@/components/Controls";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { AccessibleBarChart, CHART_PALETTE } from "@/components/AccessibleBarChart";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { DaysValue } from "@/components/DaysValue";
 import { KpiCard } from "@/components/KpiCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -119,6 +121,12 @@ export function CanonePage() {
   const editable = canManageCanone(session);
   const canConsuntiva = canCreateTimesheets(session);
   const isAdmin = Boolean(session?.is_admin);
+  const deleteOpener = useRef<HTMLButtonElement | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    title: string;
+    description: string;
+    confirm: () => void;
+  } | null>(null);
   const [semester, setSemester] = useState("");
   const [search, setSearch] = useState("");
   const [state, setState] = useState("");
@@ -355,36 +363,48 @@ export function CanonePage() {
 
   return (
     <section className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-            Gestione · Capacità
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">{t("canone.title")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{t("canone.description")}</p>
-        </div>
-        {editable && (
-          <Button
-            className={buttonClass}
-            onClick={() => {
-              setCreating(true);
-              setEditing(true);
-              setForm({
-                name: "",
-                semester: "",
-                periodicity: "SEMESTRALE",
-                total_days: "",
-                target_base_days: "2",
-                target_days_per_week: "0",
-                start_date: "",
-                end_date: "",
-              });
-            }}
-          >
-            Nuovo canone
-          </Button>
-        )}
-      </header>
+      <ConfirmActionDialog
+        open={Boolean(deleteConfirmation)}
+        title={deleteConfirmation?.title ?? "Conferma eliminazione"}
+        description={deleteConfirmation?.description ?? ""}
+        pending={remove.isPending || removeSub.isPending || removeTimesheet.isPending}
+        error={formError}
+        onConfirm={() => deleteConfirmation?.confirm()}
+        onOpenChange={(open) => {
+          if (!open) setDeleteConfirmation(null);
+        }}
+        returnFocusTo={deleteOpener.current}
+      />
+      <PageHeader
+        eyebrow="Gestione · Capacità"
+        title={t("canone.title")}
+        description={t("canone.description")}
+        actions={
+          <>
+            {editable && (
+              <Button
+                className={buttonClass}
+                onClick={() => {
+                  setCreating(true);
+                  setEditing(true);
+                  setForm({
+                    name: "",
+                    semester: "",
+                    periodicity: "SEMESTRALE",
+                    total_days: "",
+                    target_base_days: "2",
+                    target_days_per_week: "0",
+                    start_date: "",
+                    end_date: "",
+                  });
+                }}
+              >
+                Nuovo canone
+              </Button>
+            )}
+          </>
+        }
+      />
       <div className="grid gap-3 sm:grid-cols-4">
         <KpiCard
           label={t("canone.plannedTotal")}
@@ -617,7 +637,22 @@ export function CanonePage() {
                     <Button className={buttonClass} onClick={() => setEditing(!editing)}>
                       {editing ? "Annulla" : "Modifica"}
                     </Button>
-                    <Button className={buttonClass} onClick={() => remove.mutate()}>
+                    <Button
+                      className={buttonClass}
+                      disabled={remove.isPending}
+                      onClick={(event) => {
+                        deleteOpener.current = event.currentTarget;
+                        setFormError("");
+                        setDeleteConfirmation({
+                          title: "Elimina canone",
+                          description: `Confermi l'eliminazione di ${detail.data?.name}? L'operazione non pu\u00f2 essere annullata.`,
+                          confirm: () =>
+                            remove.mutate(undefined, {
+                              onSuccess: () => setDeleteConfirmation(null),
+                            }),
+                        });
+                      }}
+                    >
                       Elimina
                     </Button>
                   </div>
@@ -751,7 +786,7 @@ export function CanonePage() {
                         <div key={row.id} className="space-y-3 rounded border p-3">
                           {!selectedActivity ? (
                             <Button
-                              className="w-full rounded text-left hover:bg-muted/50 focus-visible:outline focus-visible:outline-2"
+                              className="w-full flex-col items-start justify-start gap-1 rounded p-2 text-left hover:bg-muted/50 focus-visible:outline focus-visible:outline-2"
                               onClick={() => {
                                 setSelectedActivity(row.id);
                                 setActivityTab("Panoramica");
@@ -841,7 +876,18 @@ export function CanonePage() {
                                       </Button>
                                       <Button
                                         className={dangerButtonClass}
-                                        onClick={() => removeSub.mutate(row)}
+                                        onClick={(event) => {
+                                          deleteOpener.current = event.currentTarget;
+                                          setFormError("");
+                                          setDeleteConfirmation({
+                                            title: "Elimina attivit\u00e0",
+                                            description: `Confermi l'eliminazione di ${row.title}?`,
+                                            confirm: () =>
+                                              removeSub.mutate(row, {
+                                                onSuccess: () => setDeleteConfirmation(null),
+                                              }),
+                                          });
+                                        }}
                                       >
                                         ELIMINA
                                       </Button>
@@ -1057,12 +1103,25 @@ export function CanonePage() {
                                                   </Button>
                                                   <Button
                                                     className={buttonClass}
-                                                    onClick={() =>
-                                                      removeTimesheet.mutate({
-                                                        activityId: row.id,
-                                                        entryId: entry.id,
-                                                      })
-                                                    }
+                                                    onClick={(event) => {
+                                                      deleteOpener.current = event.currentTarget;
+                                                      setFormError("");
+                                                      setDeleteConfirmation({
+                                                        title: "Elimina consuntivo",
+                                                        description: `Confermi l'eliminazione del consuntivo del ${entry.data}?`,
+                                                        confirm: () =>
+                                                          removeTimesheet.mutate(
+                                                            {
+                                                              activityId: row.id,
+                                                              entryId: entry.id,
+                                                            },
+                                                            {
+                                                              onSuccess: () =>
+                                                                setDeleteConfirmation(null),
+                                                            },
+                                                          ),
+                                                      });
+                                                    }}
                                                   >
                                                     Elimina
                                                   </Button>

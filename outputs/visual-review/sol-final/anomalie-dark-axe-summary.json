@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-28T15:58:34.782Z",
+  "url": "http://127.0.0.1:5176/anomalie",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "axe": {
+    "name": "axe-core",
+    "version": "4.10.3"
+  },
+  "violations": 0,
+  "passes": 22,
+  "incomplete": [],
+  "tags": [
+    "wcag2a",
+    "wcag2aa",
+    "wcag21a",
+    "wcag21aa",
+    "wcag22aa"
+  ]
+}

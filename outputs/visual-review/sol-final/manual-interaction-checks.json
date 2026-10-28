@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-28T15:59:06.568Z",
+  "passed": 4,
+  "checks": [
+    "Resizer: ArrowRight e Home",
+    "Resizer: trascinamento puntatore",
+    "Dialog: focus trap con 22 Tab, Escape e ritorno",
+    "Reduced motion: animazione dialog <= 0.02 ms"
+  ],
+  "writes": [],
+  "unhandled": []
+}

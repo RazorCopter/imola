@@ -11,7 +11,8 @@
     "format": "eslint --fix . && prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:ux": "playwright test --config e2e/sol.config.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "1.1.2",

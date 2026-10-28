@@ -157,7 +157,7 @@ export function AppShell({ onOpenCommandPalette }: { onOpenCommandPalette: () =>
           >
             <Search className="size-4" aria-hidden />
             <span className="truncate">{t("app.commandPalette")}</span>
-            <kbd className="ml-auto hidden rounded border border-border px-1.5 font-mono text-2xs md:inline">
+            <kbd className="ml-auto hidden shrink-0 whitespace-nowrap rounded border border-border px-1.5 font-mono text-2xs md:inline">
               Ctrl K
             </kbd>
           </button>

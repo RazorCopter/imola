@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/PageHeader";
 import { Button, Input, Select } from "@/components/Controls";
 import { useEffect, useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -136,30 +137,28 @@ export function WalletPage() {
 
   return (
     <section className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-            Gestione · Capacità
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">Wallet {year}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Disponibilità, allocazioni e consumi delle attività.
-          </p>
-        </div>
-        {canMutate && (
-          <NewAllocationDialog
-            year={year}
-            unallocatedCapacity={
-              balance.data?.residuo_wallet_non_allocato ?? balance.data?.unallocated_capacity
-            }
-            onCreated={async (id) => {
-              setSelectedId(id);
-              await refreshWallet();
-              await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-            }}
-          />
-        )}
-      </header>
+      <PageHeader
+        eyebrow="Gestione · Capacità"
+        title={<>Wallet {year}</>}
+        description="Disponibilità, allocazioni e consumi delle attività."
+        actions={
+          <>
+            {canMutate && (
+              <NewAllocationDialog
+                year={year}
+                unallocatedCapacity={
+                  balance.data?.residuo_wallet_non_allocato ?? balance.data?.unallocated_capacity
+                }
+                onCreated={async (id) => {
+                  setSelectedId(id);
+                  await refreshWallet();
+                  await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+                }}
+              />
+            )}
+          </>
+        }
+      />
 
       <section aria-label="Situazione del wallet" className="space-y-3">
         <div>

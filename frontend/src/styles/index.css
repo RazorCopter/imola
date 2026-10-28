@@ -20,11 +20,11 @@
     --accent: 243 75% 59%;
     --accent-foreground: 0 0% 100%;
     --accent-subtle: 243 100% 97%;
-    --ok: 142 71% 36%;
+    --ok: 142 71% 28%;
     --ok-subtle: 142 76% 95%;
-    --warn: 32 95% 44%;
+    --warn: 32 95% 32%;
     --warn-subtle: 48 96% 94%;
-    --danger: 0 72% 51%;
+    --danger: 0 72% 42%;
     --danger-subtle: 0 86% 97%;
     --danger-action: 0 74% 40%;
     --danger-foreground: 0 0% 100%;
@@ -50,7 +50,7 @@
       --ok-subtle: 142 35% 16%;
       --warn: 38 92% 58%;
       --warn-subtle: 32 40% 17%;
-      --danger: 0 72% 62%;
+      --danger: 0 72% 70%;
       --danger-subtle: 0 40% 18%;
       --shadow: 0 0% 0%;
     }
@@ -74,7 +74,7 @@
     --ok-subtle: 142 35% 16%;
     --warn: 38 92% 58%;
     --warn-subtle: 32 40% 17%;
-    --danger: 0 72% 62%;
+    --danger: 0 72% 70%;
     --danger-subtle: 0 40% 18%;
     --shadow: 0 0% 0%;
   }

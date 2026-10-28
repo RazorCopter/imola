@@ -1,3 +1,4 @@
+import { useDialogFocusReturn } from "@/lib/useDialogFocusReturn";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { Command } from "cmdk";
@@ -33,6 +34,7 @@ interface Props {
 export function CommandPalette({ open, onOpenChange }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const dialogFocus = useDialogFocusReturn();
   const [search, setSearch] = useState("");
   const query = useQuery({
     queryKey: ["command-search", search],
@@ -48,8 +50,14 @@ export function CommandPalette({ open, onOpenChange }: Props) {
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 animate-fade-in bg-black/40" />
-        <Dialog.Content className="fixed left-1/2 top-24 z-50 w-[min(34rem,calc(100vw-2rem))] -translate-x-1/2 animate-slide-up overflow-hidden rounded-lg border border-border bg-card shadow-raised">
+        <Dialog.Content
+          {...dialogFocus}
+          className="fixed left-1/2 top-24 z-50 w-[min(34rem,calc(100vw-2rem))] -translate-x-1/2 animate-slide-up overflow-hidden rounded-lg border border-border bg-card shadow-raised"
+        >
           <Dialog.Title className="sr-only">{t("app.commandPalette")}</Dialog.Title>
+          <Dialog.Description className="sr-only">
+            Cerca una voce e premi Invio per aprirla. Escape chiude la ricerca.
+          </Dialog.Description>
           <Command label={t("app.commandPalette")} shouldFilter={false}>
             <Command.Input
               autoFocus
@@ -59,6 +67,16 @@ export function CommandPalette({ open, onOpenChange }: Props) {
               className="h-12 w-full border-b border-border bg-transparent px-4 text-sm outline-none"
             />
             <Command.List className="max-h-80 overflow-y-auto p-2">
+              {query.isError && (
+                <p role="alert" className="rounded bg-danger-subtle p-3 text-sm text-danger">
+                  Ricerca non disponibile. Riprova modificando il testo.
+                </p>
+              )}
+              {query.isFetching && (
+                <p role="status" className="p-3 text-sm text-muted-foreground">
+                  Ricerca in corso...
+                </p>
+              )}
               <Command.Empty className="p-4 text-center text-sm text-muted-foreground">
                 {search.length < 2 ? "Digita almeno due caratteri" : t("app.empty")}
               </Command.Empty>

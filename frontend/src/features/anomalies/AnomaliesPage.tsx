@@ -1,3 +1,4 @@
+import { PageHeader, FilterBar } from "@/components/PageHeader";
 import { Button, Input, Select } from "@/components/Controls";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Play } from "lucide-react";
@@ -6,7 +7,7 @@ import { useState } from "react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { canWriteLedger } from "@/lib/permissions";
 
 interface Anomaly {
@@ -64,28 +65,26 @@ export function AnomaliesPage() {
   if (query.isError) return <ErrorState title="Impossibile caricare le anomalie" />;
   return (
     <section className="space-y-4">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-            Controllo · Eccezioni
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">Inbox anomalie</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Rilievi automatici deduplicati e anomalie seed storicizzate.
-          </p>
-        </div>
-        {canWriteLedger(session) && (
-          <Button
-            className="flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground"
-            onClick={() => run.mutate()}
-            disabled={run.isPending}
-          >
-            <Play className="size-4" />
-            Esegui controlli
-          </Button>
-        )}
-      </header>
-      <div className="flex flex-wrap gap-3 rounded-xl border border-border bg-card p-3">
+      <PageHeader
+        eyebrow="Controllo · Eccezioni"
+        title="Inbox anomalie"
+        description="Rilievi automatici deduplicati e anomalie seed storicizzate."
+        actions={
+          <>
+            {canWriteLedger(session) && (
+              <Button
+                className="flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground"
+                onClick={() => run.mutate()}
+                disabled={run.isPending}
+              >
+                <Play className="size-4" />
+                Esegui controlli
+              </Button>
+            )}
+          </>
+        }
+      />
+      <FilterBar>
         <Select
           aria-label="Filtra anomalie per stato"
           value={status}
@@ -101,13 +100,23 @@ export function AnomaliesPage() {
         <span className="self-center text-sm text-muted-foreground">
           {query.data?.results.length ?? 0} elementi
         </span>
-      </div>
+      </FilterBar>
+      {(run.isSuccess || act.isSuccess) && (
+        <p
+          role="status"
+          className="rounded-lg border border-ok/30 bg-ok-subtle p-3 text-sm text-ok"
+        >
+          {act.isSuccess ? "Anomalia aggiornata." : "Controlli completati."}
+        </p>
+      )}
       {(run.isError || act.isError) && (
         <p
           role="alert"
           className="rounded-lg border border-danger/30 bg-danger-subtle p-3 text-sm text-danger"
         >
-          Operazione non riuscita. Riprova.
+          {(act.error ?? run.error) instanceof ApiError
+            ? (act.error ?? run.error)?.message
+            : "Operazione non riuscita. Riprova."}
         </p>
       )}
       {query.data?.results.length === 0 && (
@@ -149,15 +158,17 @@ export function AnomaliesPage() {
                 </div>
               </div>
               {canWriteLedger(session) && item.stato === "APERTA" && (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     className="rounded border border-border px-2 py-1 text-xs"
+                    disabled={act.isPending}
                     onClick={() => act.mutate({ id: item.id, action: "take" })}
                   >
                     Prendi in carico
                   </Button>
                   <Button
                     className="rounded border border-ok/40 px-2 py-1 text-xs text-ok"
+                    disabled={act.isPending}
                     onClick={() =>
                       act.mutate({ id: item.id, action: "resolve", nota: "Verificata e risolta" })
                     }
@@ -167,6 +178,7 @@ export function AnomaliesPage() {
                   <Button
                     className="rounded border border-accent/40 px-2 py-1 text-xs text-accent"
                     onClick={() => {
+                      act.reset();
                       setAcceptingId(item.id);
                       setExceptionDate("");
                     }}

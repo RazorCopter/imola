@@ -1,3 +1,4 @@
+import { useDialogFocusReturn } from "@/lib/useDialogFocusReturn";
 import { PageHeader } from "@/components/PageHeader";
 import { Button, Input, Select } from "@/components/Controls";
 import { FormEvent, useState } from "react";
@@ -129,6 +130,7 @@ function DatabaseBackupPanel() {
         </p>
         <Input
           aria-label="File backup database"
+          disabled={restore.isPending}
           type="file"
           accept=".dump"
           onChange={(e) => {
@@ -142,6 +144,7 @@ function DatabaseBackupPanel() {
           <Input
             className="ml-2 rounded border bg-background px-2 py-1"
             value={confirmation}
+            disabled={restore.isPending}
             onChange={(e) => setConfirmation(e.target.value)}
           />
         </label>
@@ -229,7 +232,7 @@ function ImportPanel({
           Valida e simula
         </Button>
         <Button
-          className="rounded border border-emerald-800 bg-emerald-600 px-3 py-2 text-sm text-white disabled:opacity-50"
+          className="rounded border border-emerald-800 bg-emerald-700 px-3 py-2 text-sm text-white disabled:opacity-50"
           disabled={!file || !hasValidPreview || upload.isPending}
           onClick={() => upload.mutate(true)}
         >
@@ -288,6 +291,7 @@ function UserForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const dialogFocus = useDialogFocusReturn();
   const [username, setUsername] = useState(initial?.username ?? "");
   const [firstName, setFirstName] = useState(initial?.first_name ?? "");
   const [lastName, setLastName] = useState(initial?.last_name ?? "");
@@ -325,7 +329,10 @@ function UserForm({
     >
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-raised">
+        <Dialog.Content
+          {...dialogFocus}
+          className="fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-raised"
+        >
           <form onSubmit={submit} className="space-y-3">
             <Dialog.Title className="text-lg font-semibold">
               {initial ? "Modifica utente" : "Crea utente"}
@@ -469,7 +476,7 @@ function UsersPanel({ data }: { data: UsersPayload }) {
         </Button>
       </div>
       {message && (
-        <p role="status" className="text-sm text-emerald-700">
+        <p role="status" className="text-sm text-ok">
           {message}
         </p>
       )}
@@ -611,7 +618,7 @@ function ConfigurationPanel() {
       />
       {!valid && <p className="text-sm text-destructive">Inserire un importo non negativo.</p>}
       {message && (
-        <p role="status" className="text-sm text-emerald-700">
+        <p role="status" className="text-sm text-ok">
           {message}
         </p>
       )}
@@ -665,7 +672,7 @@ function RolesPanel({ data }: { data: RolesPayload }) {
         ruoli.
       </p>
       {message && (
-        <p role="status" className="text-sm text-emerald-700">
+        <p role="status" className="text-sm text-ok">
           {message}
         </p>
       )}
@@ -1013,7 +1020,7 @@ export function AdminPage() {
       <PageHeader
         eyebrow="Sistema · Configurazione"
         title="Amministrazione"
-        description={<>Import, utenti, referenti, ruoli e configurazione.</>}
+        description="Import, utenti, referenti, ruoli e configurazione."
       />
       <div
         role="tablist"
@@ -1148,7 +1155,7 @@ export function AdminPage() {
                 type="button"
                 onClick={() => setShowDeleteDbDialog(true)}
                 data-testid="open-delete-db-dialog-btn"
-                className="inline-flex shrink-0 items-center justify-center rounded-md border-2 border-danger bg-danger px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-danger/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+                className="inline-flex shrink-0 items-center justify-center rounded-md border-2 border-danger-action bg-danger-action px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-danger-action/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
               >
                 ELIMINA DB
               </Button>

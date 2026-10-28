@@ -59,6 +59,13 @@ function AggregationTable({ title, rows }: { title: string; rows: Row[] }) {
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={3} className="p-4 text-center text-muted-foreground">
+                  Nessun dato per questa aggregazione.
+                </td>
+              </tr>
+            )}
             {rows.map((row) => (
               <tr key={row.label} className="border-t border-border">
                 <td className="truncate p-3" title={row.label}>

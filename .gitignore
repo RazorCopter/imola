@@ -45,3 +45,11 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# one-off visual review scripts; maintained suite is frontend/e2e/sol/
+frontend/ux_preview*.mjs
+frontend/visual_*temp*.mjs
+outputs/sol-git-status-final.txt
+outputs/visual-review/sol-final/initial-harness-attempt/
+outputs/visual-review/sol-final/changed-screenshots.json
+outputs/visual-review/sol-final/review-sheets/changes-*.png

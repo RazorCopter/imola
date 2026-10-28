@@ -1,11 +1,12 @@
 import { Button, Input, Select, Textarea } from "@/components/Controls";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useId } from "react";
 import { useForm } from "react-hook-form";
 import { AlertCircle, Lock, Trash2 } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api";
+import { useDialogFocusReturn } from "@/lib/useDialogFocusReturn";
 import { useSession } from "@/features/auth/session";
 import { canEditProjects } from "@/lib/permissions";
 
@@ -84,6 +85,11 @@ export function EditProjectDialog({
   onDeleted,
 }: EditProjectDialogProps) {
   const queryClient = useQueryClient();
+  const formId = useId();
+  const dialogFocus = useDialogFocusReturn(
+    `[data-testid="edit-project-${projectId}"], [data-testid="edit-project-detail-button"]`,
+  );
+  const deleteFocus = useDialogFocusReturn();
   const { session } = useSession();
   const [genericError, setGenericError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -255,7 +261,10 @@ export function EditProjectDialog({
       {trigger && <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>}
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[calc(100vw-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-xl">
+        <Dialog.Content
+          {...dialogFocus}
+          className="fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[calc(100vw-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-xl"
+        >
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div>
               <Dialog.Title className="text-lg font-semibold text-foreground">
@@ -290,7 +299,10 @@ export function EditProjectDialog({
               className="mt-4 space-y-4"
             >
               {genericError && (
-                <div className="flex items-center gap-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+                <div
+                  role="alert"
+                  className="flex items-center gap-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive"
+                >
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   <span>{genericError}</span>
                 </div>
@@ -302,7 +314,7 @@ export function EditProjectDialog({
                   <label className="text-xs font-semibold uppercase text-muted-foreground">
                     Codice Progetto (Read-only)
                   </label>
-                  <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                  <span className="flex items-center gap-1 text-xs text-warn">
                     <Lock className="h-3 w-3" /> Bloccato
                   </span>
                 </div>
@@ -318,8 +330,14 @@ export function EditProjectDialog({
               {/* Dati Generali */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
-                  <label className="text-xs font-medium text-foreground">Titolo</label>
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-title`}
+                  >
+                    Titolo
+                  </label>
                   <Input
+                    id={`${formId}-title`}
                     {...register("title")}
                     disabled={!isFullEdit}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
@@ -330,8 +348,14 @@ export function EditProjectDialog({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-foreground">Tipo Contratto</label>
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-contract_type`}
+                  >
+                    Tipo Contratto
+                  </label>
                   <Select
+                    id={`${formId}-contract_type`}
                     {...register("contract_type")}
                     disabled={!isFullEdit}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
@@ -350,8 +374,14 @@ export function EditProjectDialog({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-foreground">Budget (giornate)</label>
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-budget_days`}
+                  >
+                    Budget (giornate)
+                  </label>
                   <Input
+                    id={`${formId}-budget_days`}
                     {...register("budget_days")}
                     disabled={!isFullEdit}
                     step="0.0001"
@@ -363,8 +393,14 @@ export function EditProjectDialog({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-foreground">Codice ARO</label>
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-aro_code`}
+                  >
+                    Codice ARO
+                  </label>
                   <Input
+                    id={`${formId}-aro_code`}
                     {...register("aro_code")}
                     disabled={!isFullEdit}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
@@ -372,8 +408,14 @@ export function EditProjectDialog({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-foreground">Codice RDA</label>
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-rda_code`}
+                  >
+                    Codice RDA
+                  </label>
                   <Input
+                    id={`${formId}-rda_code`}
                     {...register("rda_code")}
                     disabled={!isFullEdit}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
@@ -381,8 +423,14 @@ export function EditProjectDialog({
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="text-xs font-medium text-foreground">Deliverable</label>
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-deliverable`}
+                  >
+                    Deliverable
+                  </label>
                   <Input
+                    id={`${formId}-deliverable`}
                     {...register("deliverable")}
                     disabled={!isFullEdit}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
@@ -393,10 +441,14 @@ export function EditProjectDialog({
               {/* Referenti */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="text-xs font-medium text-foreground">
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-client_owner`}
+                  >
                     Referente Cliente (BMED)
                   </label>
                   <Select
+                    id={`${formId}-client_owner`}
                     {...register("client_owner")}
                     disabled={!isFullEdit}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
@@ -414,10 +466,14 @@ export function EditProjectDialog({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-foreground">
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-supplier_owner`}
+                  >
                     Referente Fornitore (Imola)
                   </label>
                   <Select
+                    id={`${formId}-supplier_owner`}
                     {...register("supplier_owner")}
                     disabled={!isFullEdit}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
@@ -440,8 +496,14 @@ export function EditProjectDialog({
               {/* Stati */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <label className="text-xs font-medium text-foreground">Stato Offerta</label>
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-offer_status`}
+                  >
+                    Stato Offerta
+                  </label>
                   <Select
+                    id={`${formId}-offer_status`}
                     {...register("offer_status")}
                     disabled={!isFullEdit}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
@@ -458,10 +520,14 @@ export function EditProjectDialog({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-foreground">
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-timesheet_status`}
+                  >
                     Stato Consuntivazione
                   </label>
                   <Select
+                    id={`${formId}-timesheet_status`}
                     {...register("timesheet_status")}
                     disabled={!isFullEdit}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
@@ -480,8 +546,14 @@ export function EditProjectDialog({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-foreground">Stato Fatturazione</label>
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-billing_status`}
+                  >
+                    Stato Fatturazione
+                  </label>
                   <Select
+                    id={`${formId}-billing_status`}
                     {...register("billing_status")}
                     disabled={!isFullEdit}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
@@ -503,9 +575,15 @@ export function EditProjectDialog({
               {/* Date */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <label className="text-xs font-medium text-foreground">Data Inizio</label>
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-start_date`}
+                  >
+                    Data Inizio
+                  </label>
                   <Input
                     type="date"
+                    id={`${formId}-start_date`}
                     {...register("start_date")}
                     disabled={!isFullEdit}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
@@ -516,9 +594,15 @@ export function EditProjectDialog({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-foreground">Fine Prevista</label>
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-planned_end_date`}
+                  >
+                    Fine Prevista
+                  </label>
                   <Input
                     type="date"
+                    id={`${formId}-planned_end_date`}
                     {...register("planned_end_date")}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm"
                   />
@@ -530,7 +614,10 @@ export function EditProjectDialog({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-foreground">
+                  <label
+                    className="text-xs font-medium text-foreground"
+                    htmlFor={`${formId}-actual_closure_date`}
+                  >
                     Data Chiusura Effettiva
                     {watchedTimesheetStatus === "CHIUSO" && (
                       <span className="ml-1 font-bold text-destructive">*</span>
@@ -538,6 +625,7 @@ export function EditProjectDialog({
                   </label>
                   <Input
                     type="date"
+                    id={`${formId}-actual_closure_date`}
                     {...register("actual_closure_date")}
                     disabled={!isFullEdit}
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
@@ -548,7 +636,7 @@ export function EditProjectDialog({
                     </p>
                   )}
                   {watchedTimesheetStatus === "CHIUSO" && (
-                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    <p className="mt-1 text-xs text-warn">
                       Obbligatoria per progetti CHIUSO (D-03/D-14).
                     </p>
                   )}
@@ -557,8 +645,11 @@ export function EditProjectDialog({
 
               {/* Note */}
               <div>
-                <label className="text-xs font-medium text-foreground">Note & Annotazioni</label>
+                <label className="text-xs font-medium text-foreground" htmlFor={`${formId}-notes`}>
+                  Note & Annotazioni
+                </label>
                 <Textarea
+                  id={`${formId}-notes`}
                   {...register("notes")}
                   rows={3}
                   className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm"
@@ -607,7 +698,10 @@ export function EditProjectDialog({
       <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/60" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-[60] w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-6 shadow-xl">
+          <Dialog.Content
+            {...deleteFocus}
+            className="fixed left-1/2 top-1/2 z-[60] w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-6 shadow-xl"
+          >
             <Dialog.Title className="text-lg font-semibold text-destructive">
               Elimina progetto
             </Dialog.Title>
@@ -642,7 +736,7 @@ export function EditProjectDialog({
                 type="button"
                 disabled={deleteCode !== project?.code || deleteMutation.isPending}
                 onClick={() => deleteMutation.mutate()}
-                className="rounded bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground disabled:opacity-50"
+                className="rounded bg-danger-action px-4 py-2 text-sm font-semibold text-danger-foreground disabled:opacity-50"
               >
                 {deleteMutation.isPending ? "Eliminazione…" : "Elimina definitivamente"}
               </Button>

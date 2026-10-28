@@ -1,3 +1,4 @@
+import { FilterBar } from "@/components/PageHeader";
 import { Input, Select } from "@/components/Controls";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -135,7 +136,7 @@ export function ReconciliationPage() {
           tooltip="Progetti con consuntivi interni che non trovano una riga corrispondente nell’ultimo snapshot PPM."
         />
       </div>
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3">
+      <FilterBar>
         <Input
           type="search"
           aria-label="Cerca progetto nella riconciliazione"
@@ -156,7 +157,7 @@ export function ReconciliationPage() {
           <option value="ASSENTE_IN_PPM">Assenti in PPM</option>
         </Select>
         <span className="text-sm text-muted-foreground">{rows.length} risultati</span>
-      </div>
+      </FilterBar>
       <div className="overflow-auto rounded-lg border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">

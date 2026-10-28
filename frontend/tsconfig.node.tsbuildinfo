@@ -1,1 +1,0 @@
-{"root":["./vite.config.ts","./playwright.config.ts","./tailwind.config.ts","./e2e/phase3.spec.ts","./e2e/phase4.spec.ts","./e2e/phase6.spec.ts","./e2e/phase7_admin_delete_db.spec.ts","./e2e/phase7_projects_edit.spec.ts","./e2e/phase7_wallet_edit.spec.ts","./e2e/post_feedback_corrections.spec.ts"],"version":"5.6.3"}

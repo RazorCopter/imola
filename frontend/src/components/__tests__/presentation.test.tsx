@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -26,12 +27,15 @@ describe("StatusBadge", () => {
 });
 
 describe("KpiCard", () => {
-  it("espone una descrizione funzionale tramite il pulsante informazioni", () => {
+  it("espone una descrizione funzionale tramite il pulsante informazioni", async () => {
+    const user = userEvent.setup();
     render(<KpiCard label="Residuo" value="3 gg" tooltip="Budget meno giornate consumate." />);
 
     expect(screen.getByRole("button", { name: "Informazioni su Residuo" })).toBeInTheDocument();
-    const tooltip = screen.getByRole("tooltip");
+    await user.tab();
+    const tooltip = await screen.findByRole("tooltip");
     expect(tooltip).toHaveTextContent("Budget meno giornate consumate.");
-    expect(tooltip).toHaveClass("bg-slate-950", "text-slate-50", "opacity-100", "shadow-2xl");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 });

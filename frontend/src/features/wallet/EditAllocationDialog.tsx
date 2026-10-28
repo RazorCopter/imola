@@ -381,6 +381,7 @@ export function EditAllocationDialog({
         <label className="block text-sm">
           Note
           <Textarea
+            aria-label="Note"
             className="mt-1 min-h-24 w-full rounded border bg-background p-2 disabled:opacity-60"
             disabled={!canEdit}
             value={notes}
@@ -458,7 +459,7 @@ export function EditAllocationDialog({
                 type="button"
                 disabled={deleteCode !== detail.activity_code || remove.isPending}
                 onClick={() => remove.mutate()}
-                className="rounded bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground disabled:opacity-50"
+                className="rounded bg-danger-action px-4 py-2 text-sm font-semibold text-danger-foreground disabled:opacity-50"
               >
                 {remove.isPending ? "Eliminazione…" : "Elimina definitivamente"}
               </Button>

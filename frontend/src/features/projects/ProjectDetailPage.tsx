@@ -330,7 +330,16 @@ export function ProjectDetailPage() {
               Impossibile registrare il consuntivo. Verifica giornate e descrizione.
             </p>
           )}
-          {ledger.isLoading ? (
+          {ledger.isError ? (
+            <ErrorState
+              title="Impossibile caricare i movimenti del progetto"
+              action={
+                <Button variant="secondary" onClick={() => void ledger.refetch()}>
+                  Riprova
+                </Button>
+              }
+            />
+          ) : ledger.isLoading ? (
             <LoadingState />
           ) : timesheets.length ? (
             <div className="overflow-x-auto rounded-lg border border-border bg-card">
@@ -395,7 +404,16 @@ export function ProjectDetailPage() {
         </Tabs.Content>
 
         <Tabs.Content value="Wallet" className="pt-4">
-          {ledger.isLoading ? (
+          {ledger.isError ? (
+            <ErrorState
+              title="Impossibile caricare i movimenti del progetto"
+              action={
+                <Button variant="secondary" onClick={() => void ledger.refetch()}>
+                  Riprova
+                </Button>
+              }
+            />
+          ) : ledger.isLoading ? (
             <LoadingState />
           ) : walletActivities.length ? (
             <div className="overflow-x-auto rounded-lg border border-border bg-card">
@@ -471,7 +489,9 @@ export function ProjectDetailPage() {
         </Tabs.Content>
 
         <Tabs.Content value="Storico modifiche" className="pt-4">
-          {audit.isLoading ? (
+          {audit.isError ? (
+            <ErrorState title="Impossibile caricare lo storico del progetto" />
+          ) : audit.isLoading ? (
             <LoadingState />
           ) : audit.data?.results.length ? (
             <div className="space-y-2">

@@ -1,0 +1,38 @@
+[
+  {
+    "name": "anomalie",
+    "theme": "dark",
+    "width": 1920,
+    "height": 1080,
+    "errors": [],
+    "viewport": 1920,
+    "regions": []
+  },
+  {
+    "name": "anomalie",
+    "theme": "dark",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": []
+  },
+  {
+    "name": "anomalie",
+    "theme": "light",
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "viewport": 1440,
+    "regions": []
+  },
+  {
+    "name": "anomalie",
+    "theme": "dark",
+    "width": 1024,
+    "height": 768,
+    "errors": [],
+    "viewport": 1024,
+    "regions": []
+  }
+]

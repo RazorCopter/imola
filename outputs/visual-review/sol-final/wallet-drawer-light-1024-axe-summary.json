@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-28T15:59:36.249Z",
+  "url": "http://127.0.0.1:5176/wallet",
+  "viewport": {
+    "width": 1024,
+    "height": 768
+  },
+  "axe": {
+    "name": "axe-core",
+    "version": "4.10.3"
+  },
+  "violations": 0,
+  "passes": 27,
+  "incomplete": [
+    {
+      "id": "aria-hidden-focus",
+      "nodes": 3
+    }
+  ],
+  "tags": [
+    "wcag2a",
+    "wcag2aa",
+    "wcag21a",
+    "wcag21aa",
+    "wcag22aa"
+  ]
+}

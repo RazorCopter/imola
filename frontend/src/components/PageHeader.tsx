@@ -28,6 +28,7 @@ export function PageHeader({
 export function FilterBar({ children, label = "Filtri" }: { children: ReactNode; label?: string }) {
   return (
     <div
+      role="group"
       aria-label={label}
       className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3"
     >

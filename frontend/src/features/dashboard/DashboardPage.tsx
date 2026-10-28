@@ -255,14 +255,14 @@ export function DashboardPage() {
           <h2 className="text-lg font-semibold tracking-tight">Portafoglio e wallet</h2>
           <p className="text-sm text-muted-foreground">Composizione dei dati disponibili</p>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-2">
           {dashboard.isLoading ? (
             <>
               <SkeletonCard />
               <SkeletonCard />
             </>
           ) : dashboard.isError ? (
-            <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-sm text-danger lg:col-span-2">
+            <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-sm text-danger xl:col-span-2">
               {t("dashboard.dataError")}
             </div>
           ) : (

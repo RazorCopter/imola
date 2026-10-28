@@ -1,3 +1,4 @@
+import { PageHeader, FilterBar } from "@/components/PageHeader";
 import { Button, Input, Select } from "@/components/Controls";
 import { useCallback, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -225,7 +226,7 @@ export function ProjectsPage() {
                     }
                   }}
                   data-testid={`validate-closure-${item.id}`}
-                  className="inline-flex items-center justify-center rounded bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                  className="inline-flex items-center justify-center rounded bg-emerald-700 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
                 >
                   Valida chiusura
                 </Button>
@@ -277,24 +278,18 @@ export function ProjectsPage() {
 
   return (
     <section className="space-y-4">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-            Gestione · Portafoglio
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">Progetti</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Budget, consumi e residui calcolati dal ledger.
-          </p>
-        </div>
-        {canCreateProjects(session) && <NewProjectDialog />}
-      </header>
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
+      <PageHeader
+        eyebrow="Gestione · Portafoglio"
+        title="Progetti"
+        description="Budget, consumi e residui calcolati dal ledger."
+        actions={<>{canCreateProjects(session) && <NewProjectDialog />}</>}
+      />
+      <FilterBar>
         <label className="flex min-w-64 flex-1 items-center gap-2 rounded-md border border-input px-3">
           <Search className="size-4 text-muted-foreground" aria-hidden />
           <span className="sr-only">Cerca progetti</span>
           <Input
-            className="h-9 w-full bg-transparent text-sm outline-none"
+            className="h-9 w-full border-0 bg-transparent px-0 text-sm outline-none"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Codice o titolo"
@@ -341,7 +336,7 @@ export function ProjectsPage() {
             Azzera filtri
           </Button>
         )}
-      </div>
+      </FilterBar>
       {query.isLoading ? (
         <LoadingState />
       ) : query.isError ? (

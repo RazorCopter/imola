@@ -145,7 +145,10 @@ export function AccessibleBarChart({
           />
         )}
         <Tooltip content={<ChartTooltip unit={unit} />} cursor={{ fill: "transparent" }} />
-        <Legend wrapperStyle={{ color: "hsl(var(--foreground))", fontSize: 12 }} />
+        <Legend
+          wrapperStyle={{ color: "hsl(var(--foreground))", fontSize: 12 }}
+          formatter={(value: string) => <span className="text-foreground">{value}</span>}
+        />
         {series.map((item) => (
           <Bar
             key={item.key}

@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader, FilterBar } from "@/components/PageHeader";
 import { Button, Input, Select } from "@/components/Controls";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2 } from "lucide-react";
@@ -7,7 +7,7 @@ import { useState } from "react";
 import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { ResizableTableHeader } from "@/components/ResizableTableHeader";
 import { useSession } from "@/features/auth/session";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { canWriteLedger } from "@/lib/permissions";
 
 interface ReviewProject {
@@ -41,7 +41,7 @@ export function ReviewQueuePage() {
     }: {
       id: string;
       timesheet_status: string;
-      actual_closure_date: string;
+      actual_closure_date: string | null;
     }) =>
       api.post(`/projects/${id}/confirm-review`, {
         timesheet_status,
@@ -77,7 +77,7 @@ export function ReviewQueuePage() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3">
+      <FilterBar>
         <label className="min-w-0 flex-1 text-sm">
           <span className="sr-only">Cerca nella coda di revisione</span>
           <Input
@@ -90,14 +90,24 @@ export function ReviewQueuePage() {
           />
         </label>
         <span className="text-sm text-muted-foreground">{projects.length} risultati</span>
-      </div>
+      </FilterBar>
 
+      {confirm.isSuccess && (
+        <p
+          role="status"
+          className="rounded-lg border border-ok/30 bg-ok-subtle p-3 text-sm text-ok"
+        >
+          Revisione confermata.
+        </p>
+      )}
       {confirm.isError && (
         <p
           role="alert"
           className="rounded-lg border border-danger/30 bg-danger-subtle p-3 text-sm text-danger"
         >
-          Impossibile salvare la revisione. Riprova.
+          {confirm.error instanceof ApiError
+            ? confirm.error.message
+            : "Impossibile salvare la revisione. Riprova."}
         </p>
       )}
       {projects.length === 0 ? (
@@ -127,16 +137,16 @@ export function ReviewQueuePage() {
             <tbody>
               {projects.map((p) => (
                 <tr key={p.id} className="border-t border-border">
-                  <td className="max-w-sm truncate p-3" title={p.titolo}>
+                  <td className="break-words p-3 align-top" title={p.titolo}>
                     {p.titolo}
                     <span
-                      className="block truncate text-xs font-medium text-muted-foreground"
+                      className="block break-words text-xs font-medium text-muted-foreground"
                       title={p.codice}
                     >
                       {p.codice}
                     </span>
                     <span
-                      className="block truncate text-xs font-normal text-muted-foreground"
+                      className="block break-words text-xs font-normal text-muted-foreground"
                       title={p.motivo_revisione}
                     >
                       {p.motivo_revisione}
@@ -168,13 +178,13 @@ export function ReviewQueuePage() {
                           className="rounded border border-input bg-background px-2 py-1 text-xs"
                         />
                         <Button
-                          disabled={confirm.isPending || !closureDate}
+                          disabled={confirm.isPending || (status === "CHIUSO" && !closureDate)}
                           className="rounded bg-accent px-2 py-1 text-xs font-medium text-accent-foreground"
                           onClick={() =>
                             confirm.mutate({
                               id: p.id,
                               timesheet_status: status,
-                              actual_closure_date: closureDate,
+                              actual_closure_date: closureDate || null,
                             })
                           }
                         >
@@ -191,6 +201,7 @@ export function ReviewQueuePage() {
                       <Button
                         className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-xs hover:bg-muted"
                         onClick={() => {
+                          confirm.reset();
                           setSelectedId(p.id);
                           setStatus(p.stato_consuntivazione === "CHIUSO" ? "CHIUSO" : "ATTIVO");
                           setClosureDate(p.data_chiusura ?? p.data_fine_prevista ?? "");

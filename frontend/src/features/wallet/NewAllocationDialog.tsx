@@ -152,6 +152,7 @@ export function NewAllocationDialog({ year, unallocatedCapacity, onCreated }: Pr
             <label className="block text-sm">
               Assegnatario *
               <Select
+                aria-label="Assegnatario *"
                 required
                 value={assignee}
                 onChange={(event) => setAssignee(event.target.value)}
@@ -168,6 +169,7 @@ export function NewAllocationDialog({ year, unallocatedCapacity, onCreated }: Pr
             <label className="block text-sm">
               Giornate da riservare *
               <Input
+                aria-label="Giornate da riservare *"
                 required
                 type="number"
                 min="0.0001"

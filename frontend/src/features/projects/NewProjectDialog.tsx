@@ -1,7 +1,7 @@
 import { Button, Input, Select } from "@/components/Controls";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useId, isValidElement, cloneElement, type ReactElement } from "react";
 import { useForm } from "react-hook-form";
 
 import { api, ApiError } from "@/lib/api";
@@ -179,11 +179,24 @@ function Field({
   error?: string;
   children: React.ReactNode;
 }) {
+  const errorId = useId();
+  const field = isValidElement(children)
+    ? cloneElement(
+        children as ReactElement<{ "aria-invalid"?: boolean; "aria-describedby"?: string }>,
+        { "aria-invalid": Boolean(error), "aria-describedby": error ? errorId : undefined },
+      )
+    : children;
   return (
-    <label className="grid gap-1 text-sm">
-      <span className="font-medium">{label}</span>
-      {children}
-      {error && <span className="text-xs text-danger">{error}</span>}
-    </label>
+    <div className="grid gap-1 text-sm">
+      <label className="grid gap-1">
+        <span className="font-medium">{label}</span>
+        {field}
+      </label>
+      {error && (
+        <span id={errorId} role="alert" className="text-xs text-danger">
+          {error}
+        </span>
+      )}
+    </div>
   );
 }

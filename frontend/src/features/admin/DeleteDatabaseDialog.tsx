@@ -1,3 +1,4 @@
+import { useDialogFocusReturn } from "@/lib/useDialogFocusReturn";
 import { Button, Input } from "@/components/Controls";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +21,7 @@ interface DeleteDatabaseDialogProps {
 
 export function DeleteDatabaseDialog({ open, onClose }: DeleteDatabaseDialogProps) {
   const queryClient = useQueryClient();
+  const dialogFocus = useDialogFocusReturn('[data-testid="open-delete-db-dialog-btn"]');
   const [confirmationInput, setConfirmationInput] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -74,10 +76,11 @@ export function DeleteDatabaseDialog({ open, onClose }: DeleteDatabaseDialogProp
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm transition-opacity" />
         <Dialog.Content
-          aria-describedby="delete-db-dialog-description"
+          {...dialogFocus}
+          aria-describedby="delete-db-summary"
           className="fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[calc(100vw-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border-2 border-danger/60 bg-card p-6 shadow-2xl focus:outline-none"
         >
-          <Dialog.Description className="sr-only">
+          <Dialog.Description id="delete-db-summary" className="sr-only">
             Eliminazione dei dati operativi. Richiede verifica e conferma esplicita.
           </Dialog.Description>
           <div className="flex items-center justify-between border-b border-border pb-3">
@@ -101,7 +104,7 @@ export function DeleteDatabaseDialog({ open, onClose }: DeleteDatabaseDialogProp
           <div id="delete-db-dialog-description" className="mt-4 space-y-4 text-sm">
             {successMessage ? (
               <div className="space-y-4 py-4 text-center">
-                <div className="flex items-center justify-center gap-2 text-base font-semibold text-emerald-500">
+                <div className="flex items-center justify-center gap-2 text-base font-semibold text-ok">
                   <CheckCircle className="h-6 w-6" />
                   <span>{successMessage}</span>
                 </div>
@@ -212,7 +215,7 @@ export function DeleteDatabaseDialog({ open, onClose }: DeleteDatabaseDialogProp
                       disabled={!isConfirmed || resetMutation.isPending || previewQuery.isLoading}
                       onClick={() => resetMutation.mutate()}
                       data-testid="confirm-delete-db-btn"
-                      className="inline-flex items-center justify-center rounded bg-danger px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="inline-flex items-center justify-center rounded bg-danger-action px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-danger-action/90 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {resetMutation.isPending ? "Eliminazione..." : "Conferma eliminazione DB"}
                     </Button>
