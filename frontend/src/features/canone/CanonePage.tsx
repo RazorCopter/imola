@@ -12,6 +12,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { ApiError, api } from "@/lib/api";
+import { formatDays, formatPercent, parseDays } from "@/lib/format";
 import { canCreateTimesheets, canManageCanone } from "@/lib/permissions";
 
 interface CanoneRow {
@@ -92,6 +93,50 @@ interface Detail {
     giornate_non_usate_previste: string;
   };
   subactivities: Subactivity[];
+}
+
+function ActivityProgress({ activity }: { activity: Subactivity }) {
+  const planned = parseDays(activity.reserved_days);
+  const consumed = parseDays(activity.consuntivato);
+  // Visual utilisation only: accounting totals and remaining days still come from the API.
+  const ratio = planned !== null && planned > 0 && consumed !== null ? consumed / planned : null;
+  const percent = ratio !== null && Number.isFinite(ratio) ? ratio * 100 : null;
+  const exceeded = planned !== null && consumed !== null && consumed > planned;
+  const width = percent === null ? 0 : Math.min(100, Math.max(0, percent));
+  const description = `${formatDays(activity.consuntivato)} consuntivate su ${formatDays(activity.reserved_days)} previste`;
+
+  return (
+    <span className="block w-full space-y-1">
+      <span className="flex items-center justify-between gap-3 text-xs tabular-nums">
+        <span className="text-muted-foreground">
+          Consuntivate <DaysValue value={activity.consuntivato} suffix={false} /> /{" "}
+          <DaysValue value={activity.reserved_days} />
+        </span>
+        <span className={exceeded ? "font-semibold text-danger" : "font-medium"}>
+          {percent === null
+            ? planned === 0
+              ? "Senza previsione"
+              : "Non disponibile"
+            : formatPercent(percent)}
+        </span>
+      </span>
+      <span
+        role={percent === null ? "img" : "progressbar"}
+        aria-label={`${activity.title}: ${description}${percent === null ? ". Avanzamento non calcolabile" : ""}`}
+        aria-valuemin={percent === null ? undefined : 0}
+        aria-valuemax={percent === null ? undefined : 100}
+        aria-valuenow={percent === null ? undefined : width}
+        aria-valuetext={percent === null ? undefined : `${formatPercent(percent)}. ${description}`}
+        className="block h-1.5 overflow-hidden rounded-full bg-muted"
+        title={description}
+      >
+        <span
+          className={`block h-full rounded-full ${exceeded ? "bg-danger" : percent !== null && percent >= 100 ? "bg-ok" : "bg-accent"}`}
+          style={{ width: `${width}%` }}
+        />
+      </span>
+    </span>
+  );
 }
 
 const fieldClass = "h-9 rounded-md border border-input bg-background px-3 text-sm";
@@ -783,23 +828,29 @@ export function CanonePage() {
                     filteredSubactivities
                       .filter((row) => !selectedActivity || row.id === selectedActivity)
                       .map((row) => (
-                        <div key={row.id} className="space-y-3 rounded border p-3">
+                        <div
+                          key={row.id}
+                          className={
+                            selectedActivity ? "space-y-3 rounded border p-3" : "rounded border p-2"
+                          }
+                        >
                           {!selectedActivity ? (
                             <Button
-                              className="w-full flex-col items-start justify-start gap-1 rounded p-2 text-left hover:bg-muted/50 focus-visible:outline focus-visible:outline-2"
+                              className="grid w-full min-w-0 justify-stretch gap-x-5 gap-y-2 rounded px-1 py-0.5 text-left hover:bg-muted/50 focus-visible:outline focus-visible:outline-2 lg:grid-cols-[minmax(0,1fr)_18rem]"
                               onClick={() => {
                                 setSelectedActivity(row.id);
                                 setActivityTab("Panoramica");
                                 setFormError("");
                               }}
                             >
-                              <strong>{row.title}</strong>
-                              <p className="text-sm text-muted-foreground">
-                                Dominio {row.office} · riservato{" "}
-                                <DaysValue value={row.reserved_days} /> · consuntivato{" "}
-                                <DaysValue value={row.consuntivato} /> · residuo{" "}
-                                <DaysValue value={row.remaining_reserved_days} />
-                              </p>
+                              <span className="min-w-0">
+                                <strong className="block text-sm leading-snug">{row.title}</strong>
+                                <span className="mt-0.5 block text-xs text-muted-foreground">
+                                  Dominio {row.office} · residuo{" "}
+                                  <DaysValue value={row.remaining_reserved_days} />
+                                </span>
+                              </span>
+                              <ActivityProgress activity={row} />
                             </Button>
                           ) : (
                             <>
@@ -816,6 +867,9 @@ export function CanonePage() {
                                 ← Tutte le attività
                               </Button>
                               <h3 className="text-lg font-semibold">{row.title}</h3>
+                              <div className="max-w-md">
+                                <ActivityProgress activity={row} />
+                              </div>
                               <Tabs.Root value={activityTab} onValueChange={setActivityTab}>
                                 <Tabs.List
                                   aria-label="Dettaglio attività"
