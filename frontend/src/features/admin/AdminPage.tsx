@@ -89,6 +89,81 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Operazione non riuscita.";
 }
 
+function DatabaseBackupPanel() {
+  const [file, setFile] = useState<File | null>(null);
+  const [confirmation, setConfirmation] = useState("");
+  const restore = useMutation({
+    mutationFn: async () => {
+      if (!file) throw new Error("Seleziona un backup.");
+      const form = new FormData();
+      form.append("file", file);
+      form.append("confirm", confirmation);
+      return api.post<{ detail: string; backup_preventivo: string }>(
+        "/admin/database/restore",
+        form,
+      );
+    },
+  });
+  return (
+    <section className="space-y-3 rounded-lg border p-4">
+      <h2 className="font-medium">Backup e ripristino database</h2>
+      <p className="text-sm text-muted-foreground">
+        Il backup contiene il database completo, inclusi utenti e configurazione. Gli allegati e i
+        file media non sono inclusi.
+      </p>
+      <a
+        className="inline-block rounded border px-3 py-2 text-sm"
+        href={`${API_BASE}/admin/database/backup`}
+      >
+        Scarica backup database
+      </a>
+      <div className="space-y-2 border-t pt-3">
+        <h3 className="font-medium">Ripristina database</h3>
+        <p className="text-sm text-muted-foreground">
+          Il ripristino accetta file fino a 28 MB e sostituisce i dati attuali. Viene creata una
+          copia preventiva sul server. Durante il ripristino sospendi le altre operazioni; potrebbe
+          essere necessario accedere di nuovo.
+        </p>
+        <input
+          aria-label="File backup database"
+          type="file"
+          accept=".dump"
+          onChange={(e) => {
+            setFile(e.target.files?.[0] ?? null);
+            setConfirmation("");
+            restore.reset();
+          }}
+        />
+        <label className="block text-sm">
+          Scrivi RIPRISTINA per confermare{" "}
+          <input
+            className="ml-2 rounded border bg-background px-2 py-1"
+            value={confirmation}
+            onChange={(e) => setConfirmation(e.target.value)}
+          />
+        </label>
+        <button
+          className="rounded bg-red-700 px-3 py-2 text-sm text-white disabled:opacity-50"
+          disabled={!file || confirmation !== "RIPRISTINA" || restore.isPending}
+          onClick={() => restore.mutate()}
+        >
+          Ripristina database
+        </button>
+        {restore.isError && (
+          <p role="alert" className="text-destructive text-sm">
+            {errorMessage(restore.error)}
+          </p>
+        )}
+        {restore.data && (
+          <p role="status" className="text-sm">
+            {restore.data.detail} Copia preventiva: {restore.data.backup_preventivo}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function ImportPanel({
   kind,
   title,
@@ -951,6 +1026,7 @@ export function AdminPage() {
             />
             <ImportPanel kind="ppm" title="Import PPM" accept=".xlsx,.pdf" />
           </div>
+          {session?.is_admin && <DatabaseBackupPanel />}
           <section className="rounded-lg border p-4">
             <h2 className="mb-3 font-medium">Export</h2>
             <div className="flex gap-2">

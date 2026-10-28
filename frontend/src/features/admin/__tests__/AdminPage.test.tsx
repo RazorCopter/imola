@@ -115,6 +115,32 @@ describe("AdminPage", () => {
     );
   });
 
+  it("richiede conferma esplicita per ripristinare un backup", async () => {
+    const user = userEvent.setup();
+    postMock.mockResolvedValueOnce({
+      detail: "Ripristino completato",
+      backup_preventivo: "prima.dump",
+    });
+    renderPage();
+    expect(await screen.findByRole("link", { name: "Scarica backup database" })).toHaveAttribute(
+      "href",
+      "/api/v1/admin/database/backup",
+    );
+    const button = screen.getByRole("button", { name: "Ripristina database" });
+    expect(button).toBeDisabled();
+    await user.upload(
+      screen.getByLabelText("File backup database"),
+      new File(["dump"], "backup.dump"),
+    );
+    expect(button).toBeDisabled();
+    await user.type(screen.getByLabelText(/Scrivi RIPRISTINA/), "RIPRISTINA");
+    await user.click(button);
+    await waitFor(() =>
+      expect(postMock).toHaveBeenCalledWith("/admin/database/restore", expect.any(FormData)),
+    );
+    expect(await screen.findByText(/Copia preventiva: prima.dump/)).toBeInTheDocument();
+  });
+
   it("carica e salva la configurazione invalidando i dati dipendenti", async () => {
     patchMock.mockResolvedValue({ ...settings, costo_giornata_uomo: "125.50", version: 2 });
     const user = userEvent.setup();

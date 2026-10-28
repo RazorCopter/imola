@@ -10,7 +10,7 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
-from api import admin_views, auth_views, domain_views
+from api import admin_views, auth_views, database_backup, domain_views
 
 router = DefaultRouter()
 
@@ -20,6 +20,8 @@ urlpatterns = [
     path("auth/session", auth_views.SessionView.as_view(), name="session"),
     path("settings", domain_views.SettingsView.as_view(), name="settings"),
     path("cost-analysis", domain_views.CostAnalysisView.as_view(), name="cost-analysis"),
+    path("admin/database/backup", database_backup.DatabaseBackupView.as_view(), name="database-backup"),
+    path("admin/database/restore", database_backup.DatabaseRestoreView.as_view(), name="database-restore"),
     path("admin/imports/seed", admin_views.SeedImportView.as_view(), name="admin-seed-import"),
     path("admin/imports/ppm", admin_views.PpmImportView.as_view(), name="admin-ppm-import"),
     path("admin/imports", admin_views.ImportHistoryView.as_view(), name="admin-import-history"),
