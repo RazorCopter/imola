@@ -134,7 +134,7 @@ sequenceDiagram
 
     User->>UI: Modifica budget_days e note
     UI->>API: PATCH /api/v1/projects/{id}<br/>Payload: { budget_days, notes, expected_version: 3 }<br/>Header: If-Match: W/"{id}-3"
-
+    
     activate API
     API->>API: get_object(pk)
     API->>Lock: check_expected_version(request, project)
@@ -385,7 +385,7 @@ sequenceDiagram
     UI->>API: PATCH /api/v1/wallet/allocations/{id}/<br/>Payload: { adjust_consumed_to: 5.00, expected_version: 2 }
     activate API
     API->>API: check_expected_version & check capability (accounting.adjust)
-
+    
     rect rgb(240, 248, 255)
         Note over API,TM: Fase 1: Storno Contabile Append-Only (Regola R5)
         API->>TM: Trova entry attive e genera storno
@@ -459,7 +459,7 @@ sequenceDiagram
     activate API
     API->>API: get_entry(pk, entry_pk)
     API->>API: parse_payload & check residuo disponibile
-
+    
     rect rgb(255, 235, 235)
         Note over API,DB: Tentativo di UPDATE fisico intercettato dal trigger
         API--xDB: UPDATE timesheets_timesheetentry (BLOCCATO dal trigger SQL)
@@ -758,7 +758,7 @@ sequenceDiagram
     API->>Engine: reconcile(tolerance=0.01)
     Engine->>DB: latest_rows_by_project() [Ultima riga per data snapshot]
     Engine->>Balance: project_balance_qs() [Totale consuntivato interno]
-
+    
     loop Per ogni progetto censito
         alt Progetto assente nell'estratto PPM
             Engine->>Engine: Outcome = ASSENTE_IN_PPM<br/>missing_in_ppm = True<br/>Azione: "Verificare con Imola"
@@ -829,7 +829,7 @@ sequenceDiagram
     API->>Runner: run_checks()
     Runner->>Engine: Esegue 18 detector CHK_* su DB
     Engine-->>Runner: List[Finding] (rule_code, entity_ref, context)
-
+    
     loop Per ogni Finding rilevato
         Runner->>Runner: fingerprint = SHA256(rule_code + ":" + entity_ref)
         Runner->>DB: get_or_create(fingerprint)
@@ -841,7 +841,7 @@ sequenceDiagram
             Runner->>DB: UPDATE Anomaly (status = APERTA, reset resolution_note)
         end
     end
-
+    
     Runner->>DB: Risolve anomalie non più rilevate (status = RISOLTA)
     Runner-->>API: RunReport (rilevate, create, risolte)
     API-->>UI: HTTP 200 OK + Report esecuzione
