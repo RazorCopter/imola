@@ -277,7 +277,7 @@ export function DashboardPage() {
             </div>
           ) : (
             <>
-              <DonutChart title={t("dashboard.projectsByStatus")} data={projectChart} />
+              <DonutChart title={t("dashboard.projectsByStatus")} data={projectChart} premium />
               {walletChart.some((item) => !Number.isFinite(item.value) || item.value < 0) ? (
                 <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
                   <h2 className="font-semibold text-foreground">
@@ -301,10 +301,10 @@ export function DashboardPage() {
       </section>
 
       <section
-        className="rounded-xl border border-border bg-card p-5 shadow-subtle"
+        className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-subtle sm:p-6"
         aria-labelledby="referent-distribution-title"
       >
-        <h2 id="referent-distribution-title" className="font-semibold">
+        <h2 id="referent-distribution-title" className="text-lg font-semibold tracking-tight">
           Distribuzione per referente BMED
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -320,18 +320,24 @@ export function DashboardPage() {
             Nessun progetto o attività wallet disponibile.
           </p>
         ) : (
-          <div className="mt-5 space-y-5">
+          <div className="mt-6 space-y-5">
             <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
               <span className="flex items-center gap-2">
-                <span className="size-2.5 rounded-sm bg-indigo-500" aria-hidden="true" />
+                <span
+                  className="size-2.5 rounded-full bg-gradient-to-r from-indigo-600 to-blue-400"
+                  aria-hidden="true"
+                />
                 Progetti
               </span>
               <span className="flex items-center gap-2">
-                <span className="size-2.5 rounded-sm bg-cyan-500" aria-hidden="true" />
+                <span
+                  className="size-2.5 rounded-full bg-gradient-to-r from-cyan-600 to-sky-400"
+                  aria-hidden="true"
+                />
                 Attività wallet
               </span>
             </div>
-            <ul className="space-y-4">
+            <ul className="divide-y divide-border/70">
               {dashboard.data.distribuzione_referenti.map((row) => {
                 const max = Math.max(
                   ...dashboard.data.distribuzione_referenti.flatMap((item) => [
@@ -343,33 +349,41 @@ export function DashboardPage() {
                 return (
                   <li
                     key={row.referente_id ?? "unassigned"}
-                    className="grid gap-2 sm:grid-cols-[minmax(10rem,15rem)_minmax(0,1fr)] sm:items-center"
+                    className="grid gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(10rem,15rem)_minmax(0,1fr)] sm:items-center"
                   >
-                    <span className="break-words text-sm font-medium">{row.referente}</span>
+                    <span className="break-words text-sm font-semibold">{row.referente}</span>
                     <div className="space-y-2">
                       {[
-                        ["Progetti", row.progetti, "bg-indigo-500"],
-                        ["Attività wallet", row.attivita_wallet, "bg-cyan-500"],
+                        [
+                          "Progetti",
+                          row.progetti,
+                          "bg-gradient-to-r from-indigo-600 via-blue-500 to-sky-400",
+                        ],
+                        [
+                          "Attività wallet",
+                          row.attivita_wallet,
+                          "bg-gradient-to-r from-cyan-600 via-cyan-500 to-teal-300",
+                        ],
                       ].map(([label, count, color]) => (
                         <Tooltip.Provider key={label} delayDuration={150}>
                           <Tooltip.Root>
                             <Tooltip.Trigger asChild>
                               <button
                                 type="button"
-                                className="flex w-full items-center gap-2 rounded text-left"
+                                className="group flex min-h-6 w-full items-center gap-3 rounded-md text-left"
                                 aria-label={`${row.referente}: ${label}, ${count}. Mostra dettaglio`}
                               >
                                 <span className="sr-only">{label}: </span>
                                 <div
-                                  className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted"
+                                  className="h-3 flex-1 overflow-hidden rounded-full bg-muted shadow-inner"
                                   aria-hidden="true"
                                 >
                                   <div
-                                    className={`h-full rounded-full ${color}`}
+                                    className={`h-full rounded-full shadow-sm transition-[filter] duration-200 group-hover:brightness-110 ${color}`}
                                     style={{ width: `${(Number(count) / max) * 100}%` }}
                                   />
                                 </div>
-                                <span className="w-8 text-right text-xs font-medium tabular-nums">
+                                <span className="w-9 text-right text-sm font-semibold tabular-nums text-foreground">
                                   {count}
                                 </span>
                               </button>
@@ -378,9 +392,11 @@ export function DashboardPage() {
                               <Tooltip.Content
                                 sideOffset={8}
                                 collisionPadding={12}
-                                className="z-[100] w-64 rounded-lg border border-slate-700 bg-slate-950 p-4 text-sm text-white shadow-xl"
+                                className="z-[100] w-64 rounded-xl border border-sky-300/20 bg-[#101d38] p-4 text-sm text-white shadow-[0_16px_40px_rgba(0,0,0,0.3)]"
                               >
-                                <p className="mb-3 font-semibold">{row.referente}</p>
+                                <p className="mb-3 border-b border-white/10 pb-3 text-sm font-semibold tracking-tight">
+                                  {row.referente}
+                                </p>
                                 <dl className="space-y-2">
                                   <div className="flex justify-between gap-3">
                                     <dt>Progetti</dt>
@@ -395,7 +411,7 @@ export function DashboardPage() {
                                     <dd>{formatDays(row.monte_giornate)}</dd>
                                   </div>
                                 </dl>
-                                <Tooltip.Arrow className="fill-slate-950" />
+                                <Tooltip.Arrow className="fill-[#101d38]" />
                               </Tooltip.Content>
                             </Tooltip.Portal>
                           </Tooltip.Root>

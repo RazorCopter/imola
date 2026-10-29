@@ -11,7 +11,7 @@ import { api } from "@/lib/api";
 vi.mock("@/lib/api", () => ({ api: { get: vi.fn() } }));
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  PieChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  PieChart: ({ children }: { children: React.ReactNode }) => <svg>{children}</svg>,
   Pie: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Cell: () => null,
   Tooltip: () => null,
