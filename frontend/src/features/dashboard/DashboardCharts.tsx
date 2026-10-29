@@ -56,11 +56,13 @@ export function DonutChart({
   data,
   unit,
   premium = false,
+  caption,
 }: {
   title: string;
   data: ChartDatum[];
   unit?: "days";
   premium?: boolean;
+  caption?: string;
 }) {
   const chartId = useId().replaceAll(":", "");
   const total = data.reduce((sum, item) => sum + item.value, 0);
@@ -154,6 +156,7 @@ export function DonutChart({
           <Legend data={data} unit={unit} premium={premium} />
         </div>
       )}
+      {caption && <p className="dash-caption mt-3">{caption}</p>}
     </article>
   );
 }

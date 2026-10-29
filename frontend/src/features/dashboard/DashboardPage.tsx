@@ -625,10 +625,12 @@ export function DashboardPage() {
       </section>
       <div className="dash-bottom-grid">
         <section aria-label="Stati dei progetti">
-          <DonutChart title={t("dashboard.projectsByStatus")} data={projectChart} premium />
-          <p className="dash-caption mt-2">
-            Portafoglio complessivo, tutti gli stati e tutti gli anni.
-          </p>
+          <DonutChart
+            title={t("dashboard.projectsByStatus")}
+            data={projectChart}
+            premium
+            caption="Portafoglio complessivo, tutti gli stati e tutti gli anni."
+          />
         </section>
         <section className="dash-panel">
           <div className="dash-section-heading">

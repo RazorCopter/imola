@@ -1,4 +1,4 @@
-﻿.dash-page {
+.dash-page {
   display: grid;
   gap: 24px;
 }
@@ -219,7 +219,26 @@
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
+}
+@media (min-width: 901px) {
+  #dashboard-billings {
+    display: flex;
+    flex-direction: column;
+    height: 0;
+    min-height: 100%;
+  }
+  #dashboard-billings .dash-billing-list {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+  }
+  #dashboard-billings .dash-section-heading,
+  #dashboard-billings .dash-tabs,
+  #dashboard-billings .dash-caption {
+    flex-shrink: 0;
+  }
 }
 .dash-panel {
   min-width: 0;
@@ -440,9 +459,28 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 18px;
+  align-items: stretch;
+}
+.dash-bottom-grid > section:first-child {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.dash-bottom-grid > section:first-child article {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+.dash-bottom-grid > section:last-child {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
 }
 .dash-reconciliation {
-  margin: 28px 0 16px;
+  margin: 16px 0 10px;
 }
 .dash-reconciliation strong {
   display: block;
@@ -456,7 +494,7 @@
 .dash-recon-counts {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  margin: 22px 0;
+  margin: 14px 0;
   gap: 12px;
 }
 .dash-recon-counts strong {
