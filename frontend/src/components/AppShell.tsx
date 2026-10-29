@@ -165,7 +165,7 @@ export function AppShell({ onOpenCommandPalette }: { onOpenCommandPalette: () =>
           <button
             type="button"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="flex size-9 items-center justify-center rounded-md border border-input hover:bg-muted"
+            className="ml-auto flex size-9 shrink-0 items-center justify-center rounded-md border border-input hover:bg-muted"
             aria-label={theme === "dark" ? t("app.theme.light") : t("app.theme.dark")}
           >
             {theme === "dark" ? (

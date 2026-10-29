@@ -8,6 +8,9 @@ import userEvent from "@testing-library/user-event";
 import { DashboardPage } from "../DashboardPage";
 import { api } from "@/lib/api";
 
+vi.mock("@/features/auth/session", () => ({
+  useSession: () => ({ session: { is_admin: false, roles: [] } }),
+}));
 vi.mock("@/lib/api", () => ({ api: { get: vi.fn() } }));
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -130,7 +133,9 @@ describe("DashboardPage", () => {
     expect(await screen.findByText("Distribuzione progetti per stato")).toBeInTheDocument();
     expect(screen.getByText("Mario Rossi")).toBeInTheDocument();
     expect(screen.getByText("Senza referente")).toBeInTheDocument();
-    await userEvent.setup().hover(screen.getByRole("button", { name: /Mario Rossi: Progetti/ }));
+    await userEvent
+      .setup()
+      .hover(screen.getByRole("button", { name: /Mario Rossi: Progetti e attivita wallet/ }));
     expect((await screen.findAllByText("Monte GG gestite")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("30,00 gg").length).toBeGreaterThan(0);
     expect(screen.getByText("Distribuzione per referente BMED")).toBeInTheDocument();

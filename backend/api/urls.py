@@ -10,7 +10,7 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
-from api import admin_views, auth_views, database_backup, domain_views
+from api import admin_views, auth_views, database_backup, domain_views, management_report
 
 router = DefaultRouter()
 
@@ -72,6 +72,7 @@ urlpatterns = [
         name="admin-reset-data-slash",
     ),
     path("dashboard", domain_views.DashboardView.as_view(), name="dashboard"),
+    path("admin/management-report", management_report.ManagementReportView.as_view(), name="management-report"),
     path("search", domain_views.CommandSearchView.as_view(), name="command-search"),
     path("checks/run", domain_views.ChecksRunView.as_view(), name="checks-run"),
     path("anomalies", domain_views.AnomalyListView.as_view(), name="anomaly-list"),

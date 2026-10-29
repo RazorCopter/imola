@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { DonutChart, type ChartDatum } from "./DashboardCharts";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { api } from "@/lib/api";
+import { useSession } from "@/features/auth/session";
 import { formatDays, formatDelta, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -94,6 +95,7 @@ function SkeletonCard() {
 
 export function DashboardPage() {
   const { t } = useTranslation();
+  const { session } = useSession();
   const year = new Date().getFullYear();
 
   const wallet = useQuery({
@@ -154,9 +156,19 @@ export function DashboardPage() {
               Controllo economico e operativo del portafoglio
             </p>
           </div>
-          <span className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground">
-            Anno {year}
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              Anno {year}
+            </span>
+            {(session?.is_admin || session?.roles.includes("admin")) && (
+              <Link
+                to="/report-gestionale"
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:opacity-90"
+              >
+                Report gestionale
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
@@ -308,8 +320,8 @@ export function DashboardPage() {
           Distribuzione per referente BMED
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Numero di progetti e attività wallet per referente, considerando tutti gli stati e tutti
-          gli anni. Le attività tecniche sono escluse.
+          La barra mostra il totale di progetti e attività wallet per referente, considerando tutti
+          gli stati e tutti gli anni. Le attività tecniche sono escluse.
         </p>
         {dashboard.isLoading ? (
           <div className="skeleton mt-4 h-32 w-full" />
@@ -320,49 +332,27 @@ export function DashboardPage() {
             Nessun progetto o attività wallet disponibile.
           </p>
         ) : (
-          <div className="mt-6 space-y-5">
-            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
-              <span className="flex items-center gap-2">
-                <span
-                  className="size-2.5 rounded-full bg-gradient-to-r from-indigo-600 to-blue-400"
-                  aria-hidden="true"
-                />
-                Progetti
-              </span>
-              <span className="flex items-center gap-2">
-                <span
-                  className="size-2.5 rounded-full bg-gradient-to-r from-cyan-600 to-sky-400"
-                  aria-hidden="true"
-                />
-                Attività wallet
-              </span>
-            </div>
+          <div className="mt-4">
             <ul className="divide-y divide-border/70">
               {dashboard.data.distribuzione_referenti.map((row) => {
                 const max = Math.max(
-                  ...dashboard.data.distribuzione_referenti.flatMap((item) => [
-                    item.progetti,
-                    item.attivita_wallet,
-                  ]),
+                  ...dashboard.data.distribuzione_referenti.map(
+                    (item) => item.progetti + item.attivita_wallet,
+                  ),
                   1,
                 );
                 return (
                   <li
                     key={row.referente_id ?? "unassigned"}
-                    className="grid gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(10rem,15rem)_minmax(0,1fr)] sm:items-center"
+                    className="grid gap-2 py-2 first:pt-0 last:pb-0 sm:grid-cols-[minmax(10rem,15rem)_minmax(0,1fr)] sm:items-center"
                   >
                     <span className="break-words text-sm font-semibold">{row.referente}</span>
                     <div className="space-y-2">
                       {[
                         [
-                          "Progetti",
-                          row.progetti,
+                          "Progetti e attivita wallet",
+                          row.progetti + row.attivita_wallet,
                           "bg-gradient-to-r from-indigo-600 via-blue-500 to-sky-400",
-                        ],
-                        [
-                          "Attività wallet",
-                          row.attivita_wallet,
-                          "bg-gradient-to-r from-cyan-600 via-cyan-500 to-teal-300",
                         ],
                       ].map(([label, count, color]) => (
                         <Tooltip.Provider key={label} delayDuration={150}>

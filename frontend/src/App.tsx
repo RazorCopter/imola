@@ -10,6 +10,12 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { SessionExpiredDialog } from "@/features/auth/SessionExpiredDialog";
 import { useSession } from "@/features/auth/session";
 
+const ManagementReportPage = lazy(() =>
+  import("@/features/report/ManagementReportPage").then((m) => ({
+    default: m.ManagementReportPage,
+  })),
+);
+
 const DashboardPage = lazy(() =>
   import("@/features/dashboard/DashboardPage").then((m) => ({ default: m.DashboardPage })),
 );
@@ -77,6 +83,16 @@ export default function App() {
     <>
       <Suspense fallback={<LoadingState />}>
         <Routes>
+          <Route
+            path="/report-gestionale"
+            element={
+              session?.is_admin || session?.roles.includes("admin") ? (
+                <ManagementReportPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
           <Route element={<AppShell onOpenCommandPalette={() => setPaletteOpen(true)} />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/progetti" element={<ProjectsPage />} />
