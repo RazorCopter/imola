@@ -1188,6 +1188,8 @@ class CanoneDetailView(DocumentedAPIView):
 
 
 def _canone_detail(canone, office: str = "", search: str = "") -> dict:
+    from domain.canone_status import subactivity_state
+
     balance = canone_status(canone).as_dict()
     all_subactivities = list(
         canone.subactivities.annotate(
@@ -1220,6 +1222,7 @@ def _canone_detail(canone, office: str = "", search: str = "") -> dict:
                 "start_date": row.start_date,
                 "end_date": row.end_date,
                 "remaining_reserved_days": row.reserved_days - row.consumed_days,
+                "stato": subactivity_state(row.reserved_days, row.consumed_days),
                 "redmine_ref": row.redmine_ref,
                 "quarter_estimate_days": row.quarter_estimate_days,
                 "forecast_remaining_days": row.forecast_remaining_days,

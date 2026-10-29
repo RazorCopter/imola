@@ -65,6 +65,7 @@ interface Subactivity {
   notes: string;
   needs_review: boolean;
   consuntivato: string;
+  stato: "IN_CORSO" | "CHIUSO";
   timesheet_count: number;
   consuntivi: TimesheetRow[];
 }
@@ -450,7 +451,7 @@ export function CanonePage() {
           </>
         }
       />
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard
           label={t("canone.plannedTotal")}
           value={<DaysValue value={data.summary.pianificato} />}
@@ -466,6 +467,18 @@ export function CanonePage() {
           value={<DaysValue value={data.summary.disponibile} />}
           tooltip={t("canone.availableToReserveTooltip")}
           tone="ok"
+        />
+        <KpiCard
+          label="Consumo del monte"
+          value={
+            Number(data.summary.pianificato) > 0
+              ? formatPercent(
+                  (Number(data.summary.consuntivato) / Number(data.summary.pianificato)) * 100,
+                )
+              : "Non calcolabile"
+          }
+          hint={`${formatDays(data.summary.consuntivato)} su ${formatDays(data.summary.pianificato)}`}
+          tooltip="Giornate consuntivate divise per il monte complessivo dei canoni visualizzati."
         />
         <KpiCard
           label={t("canone.activities")}
@@ -844,7 +857,17 @@ export function CanonePage() {
                               }}
                             >
                               <span className="min-w-0">
-                                <strong className="block text-sm leading-snug">{row.title}</strong>
+                                <span className="flex flex-wrap items-center gap-2">
+                                  <strong className="text-sm leading-snug">{row.title}</strong>
+                                  <StatusBadge
+                                    status={
+                                      row.stato ??
+                                      (Number(row.consuntivato) < Number(row.reserved_days)
+                                        ? "IN_CORSO"
+                                        : "CHIUSO")
+                                    }
+                                  />
+                                </span>
                                 <span className="mt-0.5 block text-xs text-muted-foreground">
                                   Dominio {row.office} · residuo{" "}
                                   <DaysValue value={row.remaining_reserved_days} />
@@ -866,7 +889,17 @@ export function CanonePage() {
                               >
                                 ← Tutte le attività
                               </Button>
-                              <h3 className="text-lg font-semibold">{row.title}</h3>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-lg font-semibold">{row.title}</h3>
+                                <StatusBadge
+                                  status={
+                                    row.stato ??
+                                    (Number(row.consuntivato) < Number(row.reserved_days)
+                                      ? "IN_CORSO"
+                                      : "CHIUSO")
+                                  }
+                                />
+                              </div>
                               <div className="max-w-md">
                                 <ActivityProgress activity={row} />
                               </div>

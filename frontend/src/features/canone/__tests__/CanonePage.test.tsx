@@ -156,6 +156,8 @@ describe("CanonePage", () => {
     expect(
       screen.getByLabelText("Confronto pianificato, consuntivato e residuo per voce"),
     ).toBeInTheDocument();
+    expect(screen.getByText("Consumo del monte")).toBeInTheDocument();
+    expect(screen.getByText("25,0%")).toBeInTheDocument();
     const row = screen.getByText("Canone Organico").closest("tr")!;
     row.focus();
     await user.keyboard("{Enter}");

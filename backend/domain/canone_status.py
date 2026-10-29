@@ -24,6 +24,11 @@ DAYS_OUTPUT = DecimalField(max_digits=12, decimal_places=4)
 UNDERUSE_THRESHOLD = Decimal("0.95")
 
 
+def subactivity_state(reserved_days: Decimal, consumed_days: Decimal) -> str:
+    """Stato derivato dal totale netto dei consuntivi, inclusi gli storni."""
+    return "IN_CORSO" if consumed_days < reserved_days else "CHIUSO"
+
+
 def weeks_elapsed(start_date: date, today: date) -> int:
     """Settimane intere trascorse dall'inizio del semestre, mai negative."""
     if today <= start_date:

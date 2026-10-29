@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import date
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -7,8 +8,11 @@ from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from canone.models import CanoneSubactivity
+from canone.models import Canone, CanoneSubactivity
+from core.models import AppSettings
 from core.roles import is_admin
+from domain.canone_status import subactivity_state
+from domain.cost_analysis import build_cost_analysis
 from domain.residuals import project_balance_qs
 from domain.wallet_balance import allocation_balance_qs
 from projects.models import TimesheetStatus
@@ -25,6 +29,12 @@ class ManagementReportView(APIView):
 
     def get(self, request):
         today = timezone.localdate()
+        settings = AppSettings.get_solo()
+        economics = build_cost_analysis(
+            daily_cost=settings.daily_person_cost,
+            date_from=date(today.year, 1, 1),
+            date_to=today,
+        )
         projects = []
         for p in (
             project_balance_qs()
@@ -82,6 +92,8 @@ class ManagementReportView(APIView):
             domains[domain]["reserved"] += a.reserved_days
             domains[domain]["consumed"] += consumed
             domains[domain]["count"] += 1
+            if subactivity_state(a.reserved_days, consumed) == "CHIUSO":
+                continue
             activities.append(
                 {
                     "domain": domain,
@@ -105,9 +117,16 @@ class ManagementReportView(APIView):
         return Response(
             {
                 "date": today.isoformat(),
+                "economics": economics,
                 "projects": projects,
                 "wallet": wallet,
                 "domains": domain_rows,
+                "organico_monte": str(
+                    Canone.objects.filter(start_date__lte=today, end_date__gte=today).aggregate(
+                        total=Sum("total_days")
+                    )["total"]
+                    or Decimal(0)
+                ),
                 "activities": activities,
             }
         )
