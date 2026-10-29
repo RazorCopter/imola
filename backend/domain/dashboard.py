@@ -8,9 +8,12 @@ from decimal import Decimal
 
 from django.db.models import Count, Sum
 
-from domain.wallet_balance import wallet_year_balance
+from canone.models import Canone, CanoneSubactivity
+from domain.cost_analysis import build_cost_analysis
+from domain.residuals import project_balance_qs
+from domain.wallet_balance import allocation_balance_qs, wallet_year_balance
 from projects.models import BillingMilestone, MilestoneStatus, Project, TimesheetStatus
-from wallet.models import WalletActivity, WalletAllocation
+from wallet.models import AllocationStatus, WalletActivity, WalletAllocation
 
 UPCOMING_BILLINGS_LIMIT = 50
 OPEN_MILESTONE_STATUSES = (
@@ -28,18 +31,11 @@ def _decimal_string(value: Decimal | None) -> str | None:
     return format(value, ".4f") if value is not None else None
 
 
-def dashboard_summary(
-    *, today: date, settings_obj, billing_limit: int = UPCOMING_BILLINGS_LIMIT
-) -> dict:
-    """Restituisce il contratto dashboard usando aggregazioni e query senza N+1."""
-    project_counts = dict.fromkeys(TimesheetStatus.values, 0)
-    for row in Project.objects.values("timesheet_status").annotate(count=Count("id")):
-        project_counts[row["timesheet_status"]] = row["count"]
-
+def _referent_distribution(projects, activities, allocations) -> list[dict]:
     distribution = {}
     for field, queryset in (
-        ("progetti", Project.objects.all()),
-        ("attivita_wallet", WalletActivity.objects.filter(is_technical=False)),
+        ("progetti", projects),
+        ("attivita_wallet", activities),
     ):
         for row in queryset.values("client_owner_id", "client_owner__full_name").annotate(
             count=Count("id")
@@ -58,11 +54,10 @@ def dashboard_summary(
             )
             entry[field] = row["count"]
 
-    for row in Project.objects.values("client_owner_id").annotate(total=Sum("budget_days")):
+    for row in projects.values("client_owner_id").annotate(total=Sum("budget_days")):
         distribution[row["client_owner_id"]]["giornate_progetti"] = row["total"] or Decimal("0")
     for row in (
-        WalletAllocation.objects.filter(is_technical=False, activity__is_technical=False)
-        .values("activity__client_owner_id")
+        allocations.values("activity__client_owner_id")
         .annotate(total=Sum("allocated_days"))
     ):
         distribution[row["activity__client_owner_id"]]["giornate_wallet"] = row["total"] or Decimal(
@@ -75,7 +70,7 @@ def dashboard_summary(
         entry["giornate_progetti"] = _decimal_string(project_days)
         entry["giornate_wallet"] = _decimal_string(wallet_days)
 
-    by_referent = sorted(
+    return sorted(
         distribution.values(),
         key=lambda row: (
             row["referente_id"] is None,
@@ -84,6 +79,49 @@ def dashboard_summary(
             row["referente_id"] or "",
         ),
     )
+
+
+def dashboard_summary(
+    *, today: date, settings_obj, billing_limit: int = UPCOMING_BILLINGS_LIMIT
+) -> dict:
+    """Restituisce il contratto dashboard usando aggregazioni e query senza N+1."""
+    project_counts = dict.fromkeys(TimesheetStatus.values, 0)
+    for row in Project.objects.values("timesheet_status").annotate(count=Count("id")):
+        project_counts[row["timesheet_status"]] = row["count"]
+
+    projects = Project.objects.all()
+    activities = WalletActivity.objects.filter(is_technical=False)
+    allocations = WalletAllocation.objects.filter(is_technical=False, activity__is_technical=False)
+    open_allocations = allocations.filter(status=AllocationStatus.APERTA)
+    active_projects = projects.filter(timesheet_status=TimesheetStatus.ATTIVO)
+    active_activities = activities.filter(id__in=open_allocations.values("activity_id"))
+    by_referent = _referent_distribution(projects, activities, allocations)
+    active_referents = _referent_distribution(active_projects, active_activities, open_allocations)
+    balances = list(project_balance_qs().filter(timesheet_status=TimesheetStatus.ATTIVO))
+    allocation_balances = list(allocation_balance_qs(open_allocations))
+    canoni = Canone.objects.filter(start_date__lte=today, end_date__gte=today)
+    subactivities = list(CanoneSubactivity.objects.filter(canone__in=canoni).annotate(
+        consumed=Sum("timesheet_entries__days")
+    ))
+    monte = canoni.aggregate(total=Sum("total_days"))["total"] or Decimal(0)
+    reserved = sum((x.reserved_days for x in subactivities), Decimal(0))
+    consumed = sum((x.consumed or Decimal(0) for x in subactivities), Decimal(0))
+    economics = build_cost_analysis(daily_cost=settings_obj.daily_person_cost,
+        date_from=date(today.year, 1, 1), date_to=today)
+    operations = {
+        "progetti": {"count": len(balances),
+            "previsto": str(sum((x.budget_days for x in balances), Decimal(0))),
+            "consumato": str(sum((x.total_consumed_days for x in balances), Decimal(0)))},
+        "wallet": {"count": active_activities.count(),
+            "previsto": str(sum((x.allocated_days for x in allocation_balances), Decimal(0))),
+            "consumato": str(sum((x.consumed_days for x in allocation_balances), Decimal(0)))},
+        "organico": {"count": sum((x.consumed or 0) < x.reserved_days for x in subactivities),
+            "previsto": str(monte), "consumato": str(consumed),
+            "allocato": str(reserved), "non_allocato": str(monte - reserved)},
+        "progetti_superati": [{"id": str(x.id), "titolo": x.title,
+            "sforamento": str(x.total_consumed_days - x.budget_days)}
+            for x in balances if x.total_consumed_days > x.budget_days],
+    }
 
     wallet = wallet_year_balance(
         today.year,
@@ -119,6 +157,7 @@ def dashboard_summary(
                 "id": str(milestone.id),
                 "progetto_id": str(milestone.project_id),
                 "progetto_codice": milestone.project.code,
+                "progetto_titolo": milestone.project.title,
                 "data_pianificata": planned_date.isoformat(),
                 "data_fatturazione": planned_date.isoformat(),
                 "data_effettiva": (
@@ -145,6 +184,9 @@ def dashboard_summary(
     return {
         "generato_il": today.isoformat(),
         "distribuzione_referenti": by_referent,
+        "distribuzione_referenti_in_corso": active_referents,
+        "operativita": operations,
+        "economia": {"anno": today.year, **economics["kpi"]},
         "progetti_per_stato": [
             {"stato": status, "conteggio": project_counts[status]}
             for status in TimesheetStatus.values
@@ -157,6 +199,8 @@ def dashboard_summary(
         },
         "prossime_fatturazioni": {
             "count": len(billings),
+            "arretrate": sum(x["classificazione"] == "ARRETRATA" for x in billings),
+            "mese_corrente": sum(x["classificazione"] == "MESE_CORRENTE" for x in billings),
             "limit": billing_limit,
             "results": billings[:billing_limit],
         },
