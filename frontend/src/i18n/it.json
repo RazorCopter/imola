@@ -41,7 +41,17 @@
     "sessionExpiredTitle": "Sessione scaduta",
     "sessionExpiredBody": "La sessione è scaduta. Accedi di nuovo: il lavoro in corso viene conservato e l'operazione interrotta verrà ripetuta.",
     "signInAgain": "Accedi di nuovo",
-    "invalidCredentials": "Credenziali non valide."
+    "invalidCredentials": "Credenziali non valide.",
+    "workspace": "Il tuo spazio di lavoro",
+    "heroTitle": "Tutto sotto controllo, insieme.",
+    "heroDescription": "Progetti, giornate e wallet in un unico spazio per una gestione pi? chiara e consapevole.",
+    "heroFooter": "Architetture IT ? Banca Mediolanum / Imola Informatica",
+    "reservedArea": "Area riservata",
+    "welcome": "Bentornato",
+    "instructions": "Accedi con le tue credenziali per entrare nel tuo spazio di lavoro.",
+    "showPassword": "Mostra password",
+    "hidePassword": "Nascondi password",
+    "accessNote": "Accesso riservato agli utenti autorizzati."
   },
   "units": {
     "days": "gg",
@@ -169,17 +179,20 @@
     "projectsByStatus": "Distribuzione progetti per stato",
     "walletComposition": "Composizione wallet",
     "walletDetails": "Dettaglio disponibilità wallet",
-    "upcomingBillings": "Prossime fatturazioni",
+    "upcomingBillings": "Fatturazioni da gestire",
     "billingDate": "Data fatturazione",
     "classification": "Classificazione",
     "days": "Giornate",
     "showingBillings": "Mostrate {{shown}} di {{total}}",
-    "noUpcomingBillings": "Nessuna milestone aperta prevista nel mese corrente.",
+    "noUpcomingBillings": "Nessuna fatturazione aperta per il mese corrente o per i mesi precedenti.",
     "noChartData": "Nessun dato disponibile per il grafico.",
     "dataError": "Impossibile caricare i dati della dashboard.",
     "billingClass": {
       "MESE_CORRENTE": "Mese corrente"
-    }
+    },
+    "billingTiming": "Scadenza",
+    "overdueBilling": "Mesi precedenti",
+    "currentBilling": "Mese corrente"
   },
   "errors": {
     "generic": "Si è verificato un errore.",

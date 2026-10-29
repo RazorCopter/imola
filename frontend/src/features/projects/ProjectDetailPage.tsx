@@ -11,8 +11,20 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
 import { canCreateTimesheets, canEditTimesheets, canEditProjects } from "@/lib/permissions";
-import { EditProjectDialog } from "./EditProjectDialog";
+import { EditProjectDialog, type ProjectFormData } from "./EditProjectDialog";
 import type { ProjectBalance } from "./ProjectsPage";
+
+interface ProjectDetails extends ProjectFormData {
+  client_owner_name: string | null;
+  supplier_owner_name: string | null;
+  billing_milestones: {
+    id: string;
+    slot: string;
+    planned_date: string | null;
+    status: string;
+    amount_days: string | null;
+  }[];
+}
 
 interface ProjectLedger {
   consuntivi: {
@@ -48,6 +60,11 @@ export function ProjectDetailPage() {
   const query = useQuery({
     queryKey: ["projects", "balances"],
     queryFn: () => api.get<{ results: ProjectBalance[] }>("/projects/balances"),
+  });
+  const details = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => api.get<ProjectDetails>(`/projects/${projectId}`),
+    enabled: Boolean(projectId),
   });
   const ledger = useQuery({
     queryKey: ["projects", projectId, "ledger"],
@@ -219,6 +236,96 @@ export function ProjectDetailPage() {
               </article>
             ))}
           </div>
+          {details.isLoading ? (
+            <LoadingState />
+          ) : details.isError ? (
+            <ErrorState
+              title="Impossibile caricare i dettagli del progetto"
+              action={
+                <Button variant="secondary" onClick={() => void details.refetch()}>
+                  Riprova
+                </Button>
+              }
+            />
+          ) : (
+            details.data && (
+              <>
+                <section className="rounded-xl border border-border bg-card p-5">
+                  <h2 className="text-base font-semibold">Informazioni progetto</h2>
+                  <dl className="mt-4 grid gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
+                    {[
+                      ["Referente BMED", details.data.client_owner_name],
+                      ["Referente fornitore", details.data.supplier_owner_name],
+                      ["Tipo contratto", details.data.contract_type],
+                      ["Codice ARO", details.data.aro_code],
+                      ["Codice RDA", details.data.rda_code],
+                      ["Deliverable", details.data.deliverable],
+                      ["Data chiusura effettiva", details.data.actual_closure_date],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <dt className="text-xs uppercase text-muted-foreground">{label}</dt>
+                        <dd className="mt-1 break-words text-sm font-medium">{value || "?"}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <div className="mt-5 border-t border-border pt-4">
+                    <h3 className="text-xs uppercase text-muted-foreground">Note e annotazioni</h3>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm">
+                      {details.data.notes || "?"}
+                    </p>
+                  </div>
+                </section>
+                <section className="rounded-xl border border-border bg-card p-5">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="text-base font-semibold">Piano di fatturazione</h2>
+                    <StatusBadge status={details.data.billing_status} domain="billing" />
+                  </div>
+                  {details.data.billing_milestones?.length ? (
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full min-w-[28rem] text-left text-sm">
+                        <thead className="border-b border-border text-xs uppercase text-muted-foreground">
+                          <tr>
+                            <th className="py-2 pr-4">Tranche</th>
+                            <th className="py-2 pr-4">Data prevista</th>
+                            <th className="py-2 pr-4">Stato</th>
+                            <th className="py-2">Giornate</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {details.data.billing_milestones.map((item) => (
+                            <tr key={item.id}>
+                              <td className="py-3 pr-4">
+                                {item.slot === "START"
+                                  ? "Prima tranche"
+                                  : item.slot === "END"
+                                    ? "Seconda tranche"
+                                    : "Milestone"}
+                              </td>
+                              <td className="py-3 pr-4">{item.planned_date || "?"}</td>
+                              <td className="py-3 pr-4">
+                                <StatusBadge status={item.status} />
+                              </td>
+                              <td className="py-3">
+                                {item.amount_days === null ? (
+                                  "?"
+                                ) : (
+                                  <DaysValue value={item.amount_days} />
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-sm text-muted-foreground">
+                      Nessuna tranche di fatturazione disponibile.
+                    </p>
+                  )}
+                </section>
+              </>
+            )
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <article className="rounded-lg border border-border bg-card p-4">
               <p className="text-xs uppercase text-muted-foreground">Data inizio</p>

@@ -110,6 +110,8 @@ describe("coerenza visibilità e navigazione per ruolo", () => {
     mockSession({ roles: ["referente_bmed"], can_write: false });
     getMock.mockImplementation((path: string) => {
       if (path.startsWith("/audit/project/")) return Promise.resolve({ results: [] });
+      if (path === "/projects/proj-1")
+        return Promise.resolve({ billing_status: "DA_FATTURARE", billing_milestones: [] });
       return Promise.resolve({
         results: [
           {
@@ -157,6 +159,26 @@ describe("coerenza visibilità e navigazione per ruolo", () => {
     mockSession({ roles: ["fornitore"], can_write: false });
     getMock.mockImplementation((path: string) => {
       if (path.startsWith("/audit/project/")) return Promise.resolve({ results: [] });
+      if (path === "/projects/proj-2")
+        return Promise.resolve({
+          client_owner_name: "Mario Rossi",
+          supplier_owner_name: "Referente Imola",
+          contract_type: "AQL",
+          aro_code: "ARO-42",
+          rda_code: "RDA-42",
+          deliverable: "Documento",
+          notes: "Nota progetto",
+          billing_status: "PARZIALE",
+          billing_milestones: [
+            {
+              id: "m1",
+              slot: "END",
+              planned_date: "2026-10-31",
+              status: "PIANIFICATA",
+              amount_days: null,
+            },
+          ],
+        });
       return Promise.resolve({
         results: [
           {
@@ -193,6 +215,12 @@ describe("coerenza visibilità e navigazione per ruolo", () => {
 
     const user = userEvent.setup();
     await screen.findByRole("heading", { name: "Progetto altrui" });
+    expect(await screen.findByText("Mario Rossi")).toBeInTheDocument();
+    expect(screen.getByText("Referente Imola")).toBeInTheDocument();
+    expect(screen.getByText("ARO-42")).toBeInTheDocument();
+    expect(screen.getByText("Nota progetto")).toBeInTheDocument();
+    expect(screen.getByText("Seconda tranche")).toBeInTheDocument();
+    expect(screen.getByText("2026-10-31")).toBeInTheDocument();
     const trigger = screen.getByRole("tab", { name: "Anomalie" });
     await user.click(trigger);
     expect(

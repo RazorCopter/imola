@@ -58,7 +58,7 @@ interface DashboardSummary {
       data_pianificata: string;
       data_fatturazione: string;
       data_effettiva: string | null;
-      classificazione: "MESE_CORRENTE";
+      classificazione: "MESE_CORRENTE" | "ARRETRATA";
       stato: string;
       numero_spostamenti: number;
       spostamenti: unknown[];
@@ -312,13 +312,13 @@ export function DashboardPage() {
               <thead className="border-b border-border text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="px-2 py-2">Data prevista</th>
-                  <th className="px-2 py-2">{t("dashboard.billingDate")}</th>
+                  <th className="px-2 py-2">{t("dashboard.billingTiming")}</th>
                   <th className="px-2 py-2">{t("project.code")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {dashboard.data.prossime_fatturazioni.results.map((item) => (
-                  <tr key={`${item.progetto_id}-${item.data_pianificata}`}>
+                  <tr key={item.id}>
                     <td className="whitespace-nowrap px-2 py-3 font-medium">
                       {new Intl.DateTimeFormat("it-IT", { timeZone: "UTC" }).format(
                         new Date(`${item.data_pianificata}T00:00:00Z`),
@@ -333,8 +333,10 @@ export function DashboardPage() {
                       )}
                     </td>
                     <td className="whitespace-nowrap px-2 py-3 text-muted-foreground">
-                      {new Intl.DateTimeFormat("it-IT", { timeZone: "UTC" }).format(
-                        new Date(`${item.data_fatturazione}T00:00:00Z`),
+                      {t(
+                        item.classificazione === "ARRETRATA"
+                          ? "dashboard.overdueBilling"
+                          : "dashboard.currentBilling",
                       )}
                     </td>
                     <td className="px-2 py-3 font-medium">

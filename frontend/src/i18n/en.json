@@ -41,7 +41,17 @@
     "sessionExpiredTitle": "",
     "sessionExpiredBody": "",
     "signInAgain": "",
-    "invalidCredentials": ""
+    "invalidCredentials": "",
+    "workspace": "Your workspace",
+    "heroTitle": "Everything under control, together.",
+    "heroDescription": "Projects, working days and wallet in one place for clearer, more informed management.",
+    "heroFooter": "IT Architecture ? Banca Mediolanum / Imola Informatica",
+    "reservedArea": "Restricted area",
+    "welcome": "Welcome back",
+    "instructions": "Sign in with your credentials to access your workspace.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "accessNote": "Access is restricted to authorised users."
   },
   "units": {
     "days": "",
@@ -146,17 +156,20 @@
     "projectsByStatus": "Projects by status",
     "walletComposition": "Wallet composition",
     "walletDetails": "Wallet availability details",
-    "upcomingBillings": "Upcoming billings",
+    "upcomingBillings": "Billings to manage",
     "billingDate": "Billing date",
     "classification": "Classification",
     "days": "Days",
     "showingBillings": "Showing {{shown}} of {{total}}",
-    "noUpcomingBillings": "No open milestones planned for the current month.",
+    "noUpcomingBillings": "No open billings for the current or previous months.",
     "noChartData": "No data available for this chart.",
     "dataError": "Dashboard data could not be loaded.",
     "billingClass": {
       "MESE_CORRENTE": "Current month"
-    }
+    },
+    "billingTiming": "Due",
+    "overdueBilling": "Previous months",
+    "currentBilling": "Current month"
   },
   "errors": {
     "generic": "",

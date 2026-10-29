@@ -14,7 +14,7 @@ from tests.factories import MilestoneFactory, ProjectFactory
 pytestmark = pytest.mark.django_db
 
 
-def test_dashboard_include_solo_fatturazioni_aperte_del_mese_corrente_senza_mutarle():
+def test_dashboard_include_fatturazioni_aperte_correnti_e_arretrate_senza_mutarle():
     today = date(2026, 10, 22)
     future_project = ProjectFactory(
         code="B-FUTURE",
@@ -69,9 +69,9 @@ def test_dashboard_include_solo_fatturazioni_aperte_del_mese_corrente_senza_muta
         {"stato": "DA_VERIFICARE", "conteggio": 0},
     ]
     billings = result["prossime_fatturazioni"]
-    assert billings["count"] == 1
+    assert billings["count"] == 2
     assert billings["limit"] == 50
-    assert billings["results"] == [
+    assert billings["results"][1:] == [
         {
             "id": str(current.id),
             "progetto_id": str(current_project.id),
@@ -85,8 +85,10 @@ def test_dashboard_include_solo_fatturazioni_aperte_del_mese_corrente_senza_muta
             "spostamenti": [],
         }
     ]
-    assert str(overdue.id) not in {row["id"] for row in billings["results"]}
-    assert str(duplicate.id) not in {row["id"] for row in billings["results"]}
+    arretrata = billings["results"][0]
+    assert arretrata["classificazione"] == "ARRETRATA"
+    assert arretrata["data_fatturazione"] == "2026-09-10"
+    assert arretrata["id"] in {str(overdue.id), str(duplicate.id)}
     overdue.refresh_from_db()
     assert overdue.status == MilestoneStatus.DA_VERIFICARE
     assert overdue.planned_date == date(2026, 9, 10)
@@ -122,6 +124,12 @@ def test_dashboard_avvisa_solo_la_tranche_aperta_del_mese_corrente():
         "2026-10-31"
     ]
 
+    november = dashboard_summary(today=date(2026, 11, 1), settings_obj=AppSettings.get_solo())
+    assert [
+        (row["data_fatturazione"], row["classificazione"])
+        for row in november["prossime_fatturazioni"]["results"]
+    ] == [("2026-10-31", "ARRETRATA")]
+
     project.billing_status = BillingStatus.PARZIALE
     project.save()
     sync_project_billing_schedule(project)
@@ -133,3 +141,26 @@ def test_dashboard_avvisa_solo_la_tranche_aperta_del_mese_corrente():
     assert [row["data_fatturazione"] for row in december["prossime_fatturazioni"]["results"]] == [
         "2026-12-31"
     ]
+
+
+def test_dashboard_tranche_finale_arretrata_fino_a_fatturazione_totale():
+    project = ProjectFactory(
+        start_date=date(2026, 1, 1),
+        planned_end_date=date(2026, 10, 15),
+        billing_status=BillingStatus.PARZIALE,
+    )
+    sync_project_billing_schedule(project)
+    result = dashboard_summary(today=date(2026, 11, 1), settings_obj=AppSettings.get_solo())
+    assert [
+        (row["data_fatturazione"], row["classificazione"])
+        for row in result["prossime_fatturazioni"]["results"]
+    ] == [("2026-10-31", "ARRETRATA")]
+    project.billing_status = BillingStatus.TOTALE
+    project.save()
+    sync_project_billing_schedule(project)
+    assert (
+        dashboard_summary(today=date(2026, 11, 1), settings_obj=AppSettings.get_solo())[
+            "prossime_fatturazioni"
+        ]["results"]
+        == []
+    )

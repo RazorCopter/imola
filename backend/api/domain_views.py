@@ -1597,7 +1597,23 @@ def project_detail_payload(project, user) -> dict:
         "rda_code": project.rda_code,
         "deliverable": project.deliverable,
         "client_owner": project.client_owner_id,
+        "client_owner_name": project.client_owner.full_name if project.client_owner else None,
         "supplier_owner": project.supplier_owner_id,
+        "supplier_owner_name": project.supplier_owner.full_name if project.supplier_owner else None,
+        "billing_milestones": [
+            {
+                "id": str(milestone.id),
+                "slot": milestone.schedule_slot,
+                "planned_date": milestone.planned_date.isoformat()
+                if milestone.planned_date
+                else None,
+                "status": milestone.status,
+                "amount_days": str(milestone.amount_days)
+                if milestone.amount_days is not None
+                else None,
+            }
+            for milestone in project.milestones.all()
+        ],
         "budget_days": str(project.budget_days),
         "start_date": str(project.start_date) if project.start_date else None,
         "planned_end_date": str(project.planned_end_date) if project.planned_end_date else None,

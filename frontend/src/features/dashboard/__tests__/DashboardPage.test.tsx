@@ -104,10 +104,11 @@ describe("DashboardPage", () => {
     renderPage();
 
     expect(await screen.findByText("Distribuzione progetti per stato")).toBeInTheDocument();
-    expect(screen.getByText("Prossime fatturazioni")).toBeInTheDocument();
+    expect(screen.getByText("Fatturazioni da gestire")).toBeInTheDocument();
     expect(screen.getByText("PRJ-01")).toBeInTheDocument();
     expect(screen.queryByText("Scaduta")).not.toBeInTheDocument();
-    expect(screen.getAllByText("10/10/2026")).toHaveLength(2);
+    expect(screen.getByText("10/10/2026")).toBeInTheDocument();
+    expect(screen.getByText("Mese corrente")).toBeInTheDocument();
     expect(getMock).toHaveBeenCalledWith("/dashboard");
   });
 
@@ -128,7 +129,9 @@ describe("DashboardPage", () => {
     renderPage();
 
     expect(
-      await screen.findByText("Nessuna milestone aperta prevista nel mese corrente."),
+      await screen.findByText(
+        "Nessuna fatturazione aperta per il mese corrente o per i mesi precedenti.",
+      ),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Nessun dato disponibile per il grafico.")).toHaveLength(2);
   });

@@ -53,3 +53,6 @@ outputs/sol-git-status-final.txt
 outputs/visual-review/sol-final/initial-harness-attempt/
 outputs/visual-review/sol-final/changed-screenshots.json
 outputs/visual-review/sol-final/review-sheets/changes-*.png
+
+# generated visual review artifacts
+outputs/visual-review/

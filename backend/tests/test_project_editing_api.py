@@ -319,3 +319,27 @@ def test_delete_progetto_bloccato_per_dipendenze_primarie(dependency):
     assert response.status_code == 409
     assert "Eliminazione bloccata" in response.json()["detail"]
     assert Project.objects.filter(pk=project.id).exists()
+
+
+def test_dettaglio_progetto_mostra_referenti_e_tranche_in_consultazione():
+    client, _ = make_client_for_role(roles.SUPPLIER)
+    owner = PersonFactory(full_name="Mario Rossi")
+    supplier = PersonFactory(
+        full_name="Referente Imola", organization=SupplierOrganizationFactory()
+    )
+    project = ProjectFactory(client_owner=owner, supplier_owner=supplier, aro_code="ARO-42")
+    milestone = MilestoneFactory(
+        project=project, planned_date=date(2026, 10, 31), schedule_slot=BillingScheduleSlot.END
+    )
+    response = client.get(f"/api/v1/projects/{project.id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["client_owner_name"] == "Mario Rossi"
+    assert data["supplier_owner_name"] == "Referente Imola"
+    assert data["aro_code"] == "ARO-42"
+    assert any(
+        row["id"] == str(milestone.id)
+        and row["slot"] == "END"
+        and row["planned_date"] == "2026-10-31"
+        for row in data["billing_milestones"]
+    )

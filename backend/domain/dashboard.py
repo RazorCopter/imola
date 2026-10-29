@@ -47,7 +47,7 @@ def dashboard_summary(
     milestones = (
         BillingMilestone.objects.filter(
             status__in=OPEN_MILESTONE_STATUSES,
-            planned_date__range=(current_month_start, current_month_end),
+            planned_date__lte=current_month_end,
         )
         .select_related("project")
         .order_by("project_id", "planned_date", "created_at", "id")
@@ -74,7 +74,9 @@ def dashboard_summary(
                 "data_effettiva": (
                     milestone.actual_date.isoformat() if milestone.actual_date else None
                 ),
-                "classificazione": "MESE_CORRENTE",
+                "classificazione": "ARRETRATA"
+                if planned_date < current_month_start
+                else "MESE_CORRENTE",
                 "stato": milestone.status,
                 "numero_spostamenti": milestone.move_count,
                 "spostamenti": milestone.moves,
