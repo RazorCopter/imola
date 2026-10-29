@@ -44,7 +44,6 @@
     "invalidCredentials": "Credenziali non valide.",
     "workspace": "Architetture IT",
     "heroTitle": "Gestione fornitori e progetti",
-    "heroDescription": "Uno spazio unico per pianificare le attività, monitorare le giornate e seguire la fatturazione dei fornitori.",
     "heroFooter": "Banca Mediolanum · Architetture IT",
     "reservedArea": "Area riservata",
     "welcome": "Bentornato",
@@ -54,7 +53,7 @@
     "accessNote": "Accesso riservato agli utenti autorizzati.",
     "projectsLabel": "Progetti",
     "suppliersLabel": "Fornitori",
-    "resourcesLabel": "Giornate e wallet"
+    "resourcesLabel": "Wallet"
   },
   "units": {
     "days": "gg",

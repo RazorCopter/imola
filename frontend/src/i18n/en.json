@@ -44,7 +44,6 @@
     "invalidCredentials": "",
     "workspace": "IT Architecture",
     "heroTitle": "Supplier and project management",
-    "heroDescription": "One workspace to plan activities, monitor working days and follow supplier billing.",
     "heroFooter": "Banca Mediolanum · IT Architecture",
     "reservedArea": "Restricted area",
     "welcome": "Welcome back",
@@ -54,7 +53,7 @@
     "accessNote": "Access is restricted to authorised users.",
     "projectsLabel": "Projects",
     "suppliersLabel": "Suppliers",
-    "resourcesLabel": "Working days and wallet"
+    "resourcesLabel": "Wallet"
   },
   "units": {
     "days": "",

@@ -73,9 +73,6 @@ export function LoginPage() {
           <h1 className="max-w-xl text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl xl:text-6xl">
             {t("auth.heroTitle")}
           </h1>
-          <p className="mt-6 max-w-md text-base leading-7 text-blue-100/80 sm:text-lg">
-            {t("auth.heroDescription")}
-          </p>
           <div className="mt-9 flex flex-wrap gap-2 text-xs font-medium text-blue-100/90">
             <span className="rounded-full border border-sky-200/20 bg-white/5 px-3 py-1.5">
               {t("auth.projectsLabel")}
