@@ -3,6 +3,7 @@ import "@/i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import userEvent from "@testing-library/user-event";
 
 import { DashboardPage } from "../DashboardPage";
 import { api } from "@/lib/api";
@@ -64,10 +65,30 @@ const reconciliation = {
 
 describe("DashboardPage", () => {
   beforeEach(() => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
     getMock.mockImplementation((path) => {
       if (path === "/dashboard") {
         return Promise.resolve({
           generato_il: "2026-10-23",
+          distribuzione_referenti: [
+            {
+              referente_id: "p1",
+              referente: "Mario Rossi",
+              progetti: 2,
+              attivita_wallet: 1,
+              giornate_progetti: "25.0000",
+              giornate_wallet: "5.0000",
+              monte_giornate: "30.0000",
+            },
+            { referente_id: null, referente: "Senza referente", progetti: 1, attivita_wallet: 0 },
+          ],
           progetti_per_stato: [
             { stato: "ATTIVO", conteggio: 2 },
             { stato: "CHIUSO", conteggio: 1 },
@@ -98,12 +119,21 @@ describe("DashboardPage", () => {
     });
   });
 
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
 
   it("mostra grafici API e fatturazioni del mese con la data reale prevista", async () => {
     renderPage();
 
     expect(await screen.findByText("Distribuzione progetti per stato")).toBeInTheDocument();
+    expect(screen.getByText("Mario Rossi")).toBeInTheDocument();
+    expect(screen.getByText("Senza referente")).toBeInTheDocument();
+    await userEvent.setup().hover(screen.getByRole("button", { name: /Mario Rossi: Progetti/ }));
+    expect((await screen.findAllByText("Monte GG gestite")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("30,00 gg").length).toBeGreaterThan(0);
+    expect(screen.getByText("Distribuzione per referente BMED")).toBeInTheDocument();
     expect(screen.getByText("Fatturazioni da gestire")).toBeInTheDocument();
     expect(screen.getByText("PRJ-01")).toBeInTheDocument();
     expect(screen.queryByText("Scaduta")).not.toBeInTheDocument();

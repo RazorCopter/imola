@@ -9,7 +9,13 @@ from core.models import AppSettings
 from domain.dashboard import dashboard_summary
 from projects.billing import sync_project_billing_schedule
 from projects.models import BillingStatus, MilestoneStatus, TimesheetStatus
-from tests.factories import MilestoneFactory, ProjectFactory
+from tests.factories import (
+    MilestoneFactory,
+    PersonFactory,
+    ProjectFactory,
+    WalletActivityFactory,
+    WalletAllocationFactory,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -164,3 +170,45 @@ def test_dashboard_tranche_finale_arretrata_fino_a_fatturazione_totale():
         ]["results"]
         == []
     )
+
+
+def test_distribuzione_referenti_conta_entita_distinte_e_incluse_senza_referente():
+    first = PersonFactory(full_name="Mario Rossi")
+    second = PersonFactory(full_name="Anna Bianchi")
+    ProjectFactory(client_owner=first)
+    ProjectFactory(client_owner=first)
+    ProjectFactory(client_owner=None)
+    WalletActivityFactory(client_owner=first)
+    WalletActivityFactory(client_owner=second)
+    WalletActivityFactory(client_owner=None)
+    WalletActivityFactory(client_owner=first, is_technical=True)
+    rows = dashboard_summary(today=date(2026, 10, 22), settings_obj=AppSettings.get_solo())[
+        "distribuzione_referenti"
+    ]
+    assert [(row["referente"], row["progetti"], row["attivita_wallet"]) for row in rows] == [
+        ("Mario Rossi", 2, 1),
+        ("Anna Bianchi", 0, 1),
+        ("Senza referente", 1, 1),
+    ]
+
+
+def test_monte_giornate_per_referente_somma_budget_e_allocazioni_attivita():
+    owner = PersonFactory(full_name="Mario Rossi")
+    other = PersonFactory(full_name="Anna Bianchi")
+    ProjectFactory(client_owner=owner, budget_days=Decimal("20"))
+    ProjectFactory(client_owner=owner, budget_days=Decimal("5"))
+    activity = WalletActivityFactory(client_owner=owner)
+    WalletAllocationFactory(
+        activity=activity, source_project__client_owner=other, allocated_days=Decimal("3")
+    )
+    WalletAllocationFactory(activity=activity, allocated_days=Decimal("2"))
+    WalletAllocationFactory(activity=activity, allocated_days=Decimal("99"), is_technical=True)
+    technical = WalletActivityFactory(client_owner=owner, is_technical=True)
+    WalletAllocationFactory(activity=technical, allocated_days=Decimal("99"))
+    rows = dashboard_summary(today=date(2026, 10, 22), settings_obj=AppSettings.get_solo())[
+        "distribuzione_referenti"
+    ]
+    row = next(item for item in rows if item["referente_id"] == str(owner.id))
+    assert row["giornate_progetti"] == "25.0000"
+    assert row["giornate_wallet"] == "5.0000"
+    assert row["monte_giornate"] == "30.0000"

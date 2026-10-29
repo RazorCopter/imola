@@ -36,6 +36,7 @@ def test_dashboard_espone_solo_il_mese_corrente_con_un_contratto_stabile():
     assert set(body) == {
         "generato_il",
         "progetti_per_stato",
+        "distribuzione_referenti",
         "wallet",
         "prossime_fatturazioni",
     }
@@ -45,8 +46,8 @@ def test_dashboard_espone_solo_il_mese_corrente_con_un_contratto_stabile():
         "consumato": "0.0000",
         "disponibile": "0.0000",
     }
-    assert body["prossime_fatturazioni"]["count"] == 1
-    assert body["prossime_fatturazioni"]["results"][0] == {
+    assert body["prossime_fatturazioni"]["count"] == 2
+    assert body["prossime_fatturazioni"]["results"][1] == {
         "id": str(current.id),
         "progetto_id": str(project.id),
         "progetto_codice": "DASH-API",

@@ -6,10 +6,11 @@ from calendar import monthrange
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import Count
+from django.db.models import Count, Sum
 
 from domain.wallet_balance import wallet_year_balance
 from projects.models import BillingMilestone, MilestoneStatus, Project, TimesheetStatus
+from wallet.models import WalletActivity, WalletAllocation
 
 UPCOMING_BILLINGS_LIMIT = 50
 OPEN_MILESTONE_STATUSES = (
@@ -34,6 +35,55 @@ def dashboard_summary(
     project_counts = dict.fromkeys(TimesheetStatus.values, 0)
     for row in Project.objects.values("timesheet_status").annotate(count=Count("id")):
         project_counts[row["timesheet_status"]] = row["count"]
+
+    distribution = {}
+    for field, queryset in (
+        ("progetti", Project.objects.all()),
+        ("attivita_wallet", WalletActivity.objects.filter(is_technical=False)),
+    ):
+        for row in queryset.values("client_owner_id", "client_owner__full_name").annotate(
+            count=Count("id")
+        ):
+            owner_id = row["client_owner_id"]
+            entry = distribution.setdefault(
+                owner_id,
+                {
+                    "referente_id": str(owner_id) if owner_id is not None else None,
+                    "referente": row["client_owner__full_name"] or "Senza referente",
+                    "progetti": 0,
+                    "attivita_wallet": 0,
+                    "giornate_progetti": Decimal("0"),
+                    "giornate_wallet": Decimal("0"),
+                },
+            )
+            entry[field] = row["count"]
+
+    for row in Project.objects.values("client_owner_id").annotate(total=Sum("budget_days")):
+        distribution[row["client_owner_id"]]["giornate_progetti"] = row["total"] or Decimal("0")
+    for row in (
+        WalletAllocation.objects.filter(is_technical=False, activity__is_technical=False)
+        .values("activity__client_owner_id")
+        .annotate(total=Sum("allocated_days"))
+    ):
+        distribution[row["activity__client_owner_id"]]["giornate_wallet"] = row["total"] or Decimal(
+            "0"
+        )
+    for entry in distribution.values():
+        project_days = entry["giornate_progetti"]
+        wallet_days = entry["giornate_wallet"]
+        entry["monte_giornate"] = _decimal_string(project_days + wallet_days)
+        entry["giornate_progetti"] = _decimal_string(project_days)
+        entry["giornate_wallet"] = _decimal_string(wallet_days)
+
+    by_referent = sorted(
+        distribution.values(),
+        key=lambda row: (
+            row["referente_id"] is None,
+            -(row["progetti"] + row["attivita_wallet"]),
+            row["referente"].casefold(),
+            row["referente_id"] or "",
+        ),
+    )
 
     wallet = wallet_year_balance(
         today.year,
@@ -94,6 +144,7 @@ def dashboard_summary(
 
     return {
         "generato_il": today.isoformat(),
+        "distribuzione_referenti": by_referent,
         "progetti_per_stato": [
             {"stato": status, "conteggio": project_counts[status]}
             for status in TimesheetStatus.values

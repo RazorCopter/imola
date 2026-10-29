@@ -1,5 +1,6 @@
 import { KpiCard } from "@/components/KpiCard";
 import { useQuery } from "@tanstack/react-query";
+import * as Tooltip from "@radix-ui/react-tooltip";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -46,6 +47,15 @@ interface ReconciliationSummary {
 
 interface DashboardSummary {
   generato_il: string;
+  distribuzione_referenti: {
+    referente_id: string | null;
+    referente: string;
+    progetti: number;
+    attivita_wallet: number;
+    giornate_progetti: string;
+    giornate_wallet: string;
+    monte_giornate: string;
+  }[];
   progetti_per_stato: { stato: string; conteggio: number }[];
   wallet: { anno: number; allocato: string; consumato: string; disponibile: string };
   prossime_fatturazioni: {
@@ -288,6 +298,116 @@ export function DashboardPage() {
             </>
           )}
         </div>
+      </section>
+
+      <section
+        className="rounded-xl border border-border bg-card p-5 shadow-subtle"
+        aria-labelledby="referent-distribution-title"
+      >
+        <h2 id="referent-distribution-title" className="font-semibold">
+          Distribuzione per referente BMED
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Numero di progetti e attività wallet per referente, considerando tutti gli stati e tutti
+          gli anni. Le attività tecniche sono escluse.
+        </p>
+        {dashboard.isLoading ? (
+          <div className="skeleton mt-4 h-32 w-full" />
+        ) : dashboard.isError ? (
+          <p className="mt-4 text-sm text-danger">{t("dashboard.dataError")}</p>
+        ) : !dashboard.data?.distribuzione_referenti?.length ? (
+          <p className="mt-4 rounded-md bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+            Nessun progetto o attività wallet disponibile.
+          </p>
+        ) : (
+          <div className="mt-5 space-y-5">
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-2">
+                <span className="size-2.5 rounded-sm bg-indigo-500" aria-hidden="true" />
+                Progetti
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="size-2.5 rounded-sm bg-cyan-500" aria-hidden="true" />
+                Attività wallet
+              </span>
+            </div>
+            <ul className="space-y-4">
+              {dashboard.data.distribuzione_referenti.map((row) => {
+                const max = Math.max(
+                  ...dashboard.data.distribuzione_referenti.flatMap((item) => [
+                    item.progetti,
+                    item.attivita_wallet,
+                  ]),
+                  1,
+                );
+                return (
+                  <li
+                    key={row.referente_id ?? "unassigned"}
+                    className="grid gap-2 sm:grid-cols-[minmax(10rem,15rem)_minmax(0,1fr)] sm:items-center"
+                  >
+                    <span className="break-words text-sm font-medium">{row.referente}</span>
+                    <div className="space-y-2">
+                      {[
+                        ["Progetti", row.progetti, "bg-indigo-500"],
+                        ["Attività wallet", row.attivita_wallet, "bg-cyan-500"],
+                      ].map(([label, count, color]) => (
+                        <Tooltip.Provider key={label} delayDuration={150}>
+                          <Tooltip.Root>
+                            <Tooltip.Trigger asChild>
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 rounded text-left"
+                                aria-label={`${row.referente}: ${label}, ${count}. Mostra dettaglio`}
+                              >
+                                <span className="sr-only">{label}: </span>
+                                <div
+                                  className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted"
+                                  aria-hidden="true"
+                                >
+                                  <div
+                                    className={`h-full rounded-full ${color}`}
+                                    style={{ width: `${(Number(count) / max) * 100}%` }}
+                                  />
+                                </div>
+                                <span className="w-8 text-right text-xs font-medium tabular-nums">
+                                  {count}
+                                </span>
+                              </button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Portal>
+                              <Tooltip.Content
+                                sideOffset={8}
+                                collisionPadding={12}
+                                className="z-[100] w-64 rounded-lg border border-slate-700 bg-slate-950 p-4 text-sm text-white shadow-xl"
+                              >
+                                <p className="mb-3 font-semibold">{row.referente}</p>
+                                <dl className="space-y-2">
+                                  <div className="flex justify-between gap-3">
+                                    <dt>Progetti</dt>
+                                    <dd>{row.progetti}</dd>
+                                  </div>
+                                  <div className="flex justify-between gap-3">
+                                    <dt>Wallet</dt>
+                                    <dd>{row.attivita_wallet}</dd>
+                                  </div>
+                                  <div className="flex justify-between gap-3 border-t border-slate-700 pt-2 font-semibold">
+                                    <dt>Monte GG gestite</dt>
+                                    <dd>{formatDays(row.monte_giornate)}</dd>
+                                  </div>
+                                </dl>
+                                <Tooltip.Arrow className="fill-slate-950" />
+                              </Tooltip.Content>
+                            </Tooltip.Portal>
+                          </Tooltip.Root>
+                        </Tooltip.Provider>
+                      ))}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </section>
 
       <section className="rounded-xl border border-border bg-card p-5 shadow-subtle">
