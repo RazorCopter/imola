@@ -13,20 +13,20 @@ Per i riferimenti al modello dati generale consultare [06_DATA_MODEL.md](06_DATA
 
 | Componente | Ambito | Implementazione | File di Riferimento | Stato |
 |:---|:---|:---|:---|:---:|
-| **Provider Pattern Autenticazione** | Autenticazione | `LocalSessionProvider` attivo, `EntraIdOidcProvider` predisposto | [`backend/core/auth/providers.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/auth/providers.py#L1-L87) | **IMPLEMENTED** (Locale) / **NOT_IMPLEMENTED** (Entra ID) |
-| **Flusso di Login e Throttling** | API Autenticazione | `LoginView` con `LoginRateThrottle` (10/min), CSRF token in header | [`backend/api/auth_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/auth_views.py#L50-L77) | **IMPLEMENTED** |
-| **Session Management Trasparente** | Gestione Sessione | Cookie `sl_session` (8h), intercettazione 401 e `SessionExpiredDialog` | [`frontend/src/features/auth/SessionExpiredDialog.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/auth/SessionExpiredDialog.tsx#L15-L87) | **IMPLEMENTED** |
-| **Ruoli Applicativi (RBAC)** | Ruoli e Gruppi | 4 ruoli mappati su gruppi Django (`admin`, `responsabile_bmed`, `referente_bmed`, `fornitore`) | [`backend/core/roles.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/roles.py#L1-L49) | **IMPLEMENTED** |
-| **Catalogo Capability (CBAC)** | Autorizzazioni | 15 capability canoniche, 3 riservate ad Admin, default per ruolo | [`backend/core/capabilities.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/capabilities.py#L1-L108) | **IMPLEMENTED** |
-| **Override Dinamico Privilegi** | Autorizzazioni DB | Modello `RoleCapabilityOverride`, risoluzione dinamica a runtime | [`backend/core/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L17-L35) | **IMPLEMENTED** |
-| **Permission Classes DRF** | Autorizzazione API | 14 classi puntuali, permessi compositi (`ReferentCanAnnotate`, `ReadOnlyOrCanManageCanone`) | [`backend/core/permissions.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/permissions.py#L1-L164) | **IMPLEMENTED** |
-| **Frontend Permissions & Guards** | Autorizzazione UI | Modulo `permissions.ts`, hook `useSession()`, route guard in `App.tsx` | [`frontend/src/lib/permissions.ts`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/lib/permissions.ts#L1-L104) | **IMPLEMENTED** |
-| **Contesto Utente e Middleware** | Tracciabilità | `CurrentUserMiddleware` con `ContextVar`, helper `acting_as` | [`backend/core/middleware.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/middleware.py#L1-L22) | **IMPLEMENTED** |
-| **Audit Log Amministrativo** | Tracciabilità & Audit | Modello `AdminAuditEvent` per modifiche a utenti, ruoli, referenti e reset | [`backend/core/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L37-L60) | **IMPLEMENTED** |
-| **Storicizzazione Modelli** | Tracciabilità & Audit | `TrackedModel` (UUID, autore, versione) + `HistoricalRecords` su 17 modelli | [`backend/core/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L67-L106) | **IMPLEMENTED** |
-| **Problem Details RFC 7807** | Error Handling | Eccezioni tipizzate in italiano (`DomainError`, `SessionExpired`, `StaleResource`) | [`backend/core/exceptions.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/exceptions.py#L1-L145) | **IMPLEMENTED** |
-| **Operazioni Sensibili Protette** | Sicurezza Operativa | Token crittografico 300s + parola "ELIMINA", backup con preventiva | [`backend/api/admin_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py#L590-L752) | **IMPLEMENTED** |
-| **Internal Media Protection** | Protezione Risorse | Direttiva `internal;` in Nginx per i file in `/srv/media/` | [`deploy/nginx.conf`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/deploy/nginx.conf#L50-L53) | **IMPLEMENTED** |
+| **Provider Pattern Autenticazione** | Autenticazione | `LocalSessionProvider` attivo, `EntraIdOidcProvider` predisposto | [`backend/core/auth/providers.py`](../../backend/core/auth/providers.py#L1-L87) | **IMPLEMENTED** (Locale) / **NOT_IMPLEMENTED** (Entra ID) |
+| **Flusso di Login e Throttling** | API Autenticazione | `LoginView` con `LoginRateThrottle` (10/min), CSRF token in header | [`backend/api/auth_views.py`](../../backend/api/auth_views.py#L50-L77) | **IMPLEMENTED** |
+| **Session Management Trasparente** | Gestione Sessione | Cookie `sl_session` (8h), intercettazione 401 e `SessionExpiredDialog` | [`frontend/src/features/auth/SessionExpiredDialog.tsx`](../../frontend/src/features/auth/SessionExpiredDialog.tsx#L15-L87) | **IMPLEMENTED** |
+| **Ruoli Applicativi (RBAC)** | Ruoli e Gruppi | 4 ruoli mappati su gruppi Django (`admin`, `responsabile_bmed`, `referente_bmed`, `fornitore`) | [`backend/core/roles.py`](../../backend/core/roles.py#L1-L49) | **IMPLEMENTED** |
+| **Catalogo Capability (CBAC)** | Autorizzazioni | 15 capability canoniche, 3 riservate ad Admin, default per ruolo | [`backend/core/capabilities.py`](../../backend/core/capabilities.py#L1-L108) | **IMPLEMENTED** |
+| **Override Dinamico Privilegi** | Autorizzazioni DB | Modello `RoleCapabilityOverride`, risoluzione dinamica a runtime | [`backend/core/models.py`](../../backend/core/models.py#L17-L35) | **IMPLEMENTED** |
+| **Permission Classes DRF** | Autorizzazione API | 14 classi puntuali, permessi compositi (`ReferentCanAnnotate`, `ReadOnlyOrCanManageCanone`) | [`backend/core/permissions.py`](../../backend/core/permissions.py#L1-L164) | **IMPLEMENTED** |
+| **Frontend Permissions & Guards** | Autorizzazione UI | Modulo `permissions.ts`, hook `useSession()`, route guard in `App.tsx` | [`frontend/src/lib/permissions.ts`](../../frontend/src/lib/permissions.ts#L1-L104) | **IMPLEMENTED** |
+| **Contesto Utente e Middleware** | Tracciabilità | `CurrentUserMiddleware` con `ContextVar`, helper `acting_as` | [`backend/core/middleware.py`](../../backend/core/middleware.py#L1-L22) | **IMPLEMENTED** |
+| **Audit Log Amministrativo** | Tracciabilità & Audit | Modello `AdminAuditEvent` per modifiche a utenti, ruoli, referenti e reset | [`backend/core/models.py`](../../backend/core/models.py#L37-L60) | **IMPLEMENTED** |
+| **Storicizzazione Modelli** | Tracciabilità & Audit | `TrackedModel` (UUID, autore, versione) + `HistoricalRecords` su 17 modelli | [`backend/core/models.py`](../../backend/core/models.py#L67-L106) | **IMPLEMENTED** |
+| **Problem Details RFC 7807** | Error Handling | Eccezioni tipizzate in italiano (`DomainError`, `SessionExpired`, `StaleResource`) | [`backend/core/exceptions.py`](../../backend/core/exceptions.py#L1-L145) | **IMPLEMENTED** |
+| **Operazioni Sensibili Protette** | Sicurezza Operativa | Token crittografico 300s + parola "ELIMINA", backup con preventiva | [`backend/api/admin_views.py`](../../backend/api/admin_views.py#L590-L752) | **IMPLEMENTED** |
+| **Internal Media Protection** | Protezione Risorse | Direttiva `internal;` in Nginx per i file in `/srv/media/` | [`deploy/nginx.conf`](../../deploy/nginx.conf#L50-L53) | **IMPLEMENTED** |
 
 ---
 
@@ -34,7 +34,7 @@ Per i riferimenti al modello dati generale consultare [06_DATA_MODEL.md](06_DATA
 
 ### 2.1 Pattern Architetturale Provider
 
-L'infrastruttura di autenticazione è disaccoppiata tramite un pattern **Provider** definito in [`backend/core/auth/providers.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/auth/providers.py#L1-L87). L'astrazione consente di commutare o affiancare molteplici fonti di identità senza impattare i controller o le logiche di dominio.
+L'infrastruttura di autenticazione è disaccoppiata tramite un pattern **Provider** definito in [`backend/core/auth/providers.py`](../../backend/core/auth/providers.py#L1-L87). L'astrazione consente di commutare o affiancare molteplici fonti di identità senza impattare i controller o le logiche di dominio.
 
 ```mermaid
 classDiagram
@@ -70,7 +70,7 @@ classDiagram
 
 #### Descrizione dei Provider
 1. **`LocalSessionProvider`** (**IMPLEMENTED** - Attivo in v1):
-   - Configurato come default via `settings.AUTH_PROVIDER = "local"` ([`backend/config/settings/base.py:112`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L112)).
+   - Configurato come default via `settings.AUTH_PROVIDER = "local"` ([`backend/config/settings/base.py:112`](../../backend/config/settings/base.py#L112)).
    - Riceve `username` e `password`, effettua la verifica tramite `django.contrib.auth.authenticate()` e stabilisce la sessione server-side con `django.contrib.auth.login()`.
    - Verifica lo stato di attivazione dell'account: se `user.is_active` è `False`, l'accesso viene respinto restituendo `AuthResult(None, "Utenza disattivata.")`.
 2. **`EntraIdOidcProvider`** (**NOT_IMPLEMENTED** - Predisposto per v2):
@@ -93,7 +93,7 @@ def get_auth_provider() -> AuthProvider:
 
 ### 2.2 Flusso di Login (Login Flow & Throttling)
 
-Il login viene gestito dall'endpoint `POST /api/v1/auth/login` tramite la classe `LoginView` ([`backend/api/auth_views.py:50-77`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/auth_views.py#L50-L77)):
+Il login viene gestito dall'endpoint `POST /api/v1/auth/login` tramite la classe `LoginView` ([`backend/api/auth_views.py:50-77`](../../backend/api/auth_views.py#L50-L77)):
 
 ```mermaid
 sequenceDiagram
@@ -132,8 +132,8 @@ sequenceDiagram
 ```
 
 #### Dettagli Tecnici dell'Endpoint di Login
-- **Permessi**: `permission_classes = [AllowAny]` ([`backend/api/auth_views.py:51`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/auth_views.py#L51)).
-- **Throttling**: `throttle_classes = [LoginRateThrottle]`, con `scope = "login"`. La frequenza è configurabile mediante la variabile `LOGIN_THROTTLE_RATE` (default `10/min`, definita in [`backend/config/settings/base.py:148`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L148)).
+- **Permessi**: `permission_classes = [AllowAny]` ([`backend/api/auth_views.py:51`](../../backend/api/auth_views.py#L51)).
+- **Throttling**: `throttle_classes = [LoginRateThrottle]`, con `scope = "login"`. La frequenza è configurabile mediante la variabile `LOGIN_THROTTLE_RATE` (default `10/min`, definita in [`backend/config/settings/base.py:148`](../../backend/config/settings/base.py#L148)).
 - **Serializzazione Input**: `LoginSerializer` valida che `username` e `password` siano presenti, disabilitando esplicitamente il trimming per la password (`trim_whitespace=False`).
 - **Risposta di Successo**: HTTP 200 OK contenente il payload della sessione. Nei response header viene iniettato `X-CSRFToken` generato da `django.middleware.csrf.get_token(request)`.
 
@@ -157,7 +157,7 @@ Il ciclo di vita della sessione è governato dal motore standard di Django basat
 
 #### Gestione della Sessione Scaduta (Seamless Re-Login)
 Se una richiesta API autenticata viene inviata con sessione scaduta o mancante:
-1. Il custom exception handler `problem_detail_handler` ([`backend/core/exceptions.py:119-121`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/exceptions.py#L119-L121)) intercetta l'errore DRF `NotAuthenticated` e forza lo status `401 Unauthorized` impostando la problem detail RFC 7807:
+1. Il custom exception handler `problem_detail_handler` ([`backend/core/exceptions.py:119-121`](../../backend/core/exceptions.py#L119-L121)) intercetta l'errore DRF `NotAuthenticated` e forza lo status `401 Unauthorized` impostando la problem detail RFC 7807:
    ```json
    {
      "type": "https://supplier-ledger.local/errors/session_expired",
@@ -167,11 +167,11 @@ Se una richiesta API autenticata viene inviata con sessione scaduta o mancante:
      "detail": "Sessione scaduta: effettua di nuovo l'accesso."
    }
    ```
-2. Il client frontend intercetta l'evento tramite `onSessionExpired` registrato in [`frontend/src/features/auth/session.tsx:71`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/auth/session.tsx#L71).
-3. Viene visualizzato il dialogo modale non dismissibile [`SessionExpiredDialog`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/auth/SessionExpiredDialog.tsx#L15-L87). L'utente inserisce le credenziali e rieffettua l'autenticazione **senza ricaricare la pagina** (`location.reload()` non viene invocato), preservando moduli aperti, filtri selezionati e bozze in corso.
+2. Il client frontend intercetta l'evento tramite `onSessionExpired` registrato in [`frontend/src/features/auth/session.tsx:71`](../../frontend/src/features/auth/session.tsx#L71).
+3. Viene visualizzato il dialogo modale non dismissibile [`SessionExpiredDialog`](../../frontend/src/features/auth/SessionExpiredDialog.tsx#L15-L87). L'utente inserisce le credenziali e rieffettua l'autenticazione **senza ricaricare la pagina** (`location.reload()` non viene invocato), preservando moduli aperti, filtri selezionati e bozze in corso.
 
 #### Endpoint Informativo di Sessione (`/api/v1/auth/session`)
-L'endpoint `GET /api/v1/auth/session` ([`backend/api/auth_views.py:88-97`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/auth_views.py#L88-L97)) è protetto da `IsAuthenticated` ed è utilizzato all'inizializzazione del client React. Restituisce il payload generato dalla funzione `session_payload()`:
+L'endpoint `GET /api/v1/auth/session` ([`backend/api/auth_views.py:88-97`](../../backend/api/auth_views.py#L88-L97)) è protetto da `IsAuthenticated` ed è utilizzato all'inizializzazione del client React. Restituisce il payload generato dalla funzione `session_payload()`:
 ```json
 {
   "username": "demo_responsabile",
@@ -192,7 +192,7 @@ L'endpoint `GET /api/v1/auth/session` ([`backend/api/auth_views.py:88-97`](file:
 
 ## 3. Ruoli Applicativi (RBAC)
 
-Il sistema adotta un modello RBAC canonico con **4 ruoli applicativi**, implementati in [`backend/core/roles.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/roles.py#L1-L49) e mappati direttamente sui gruppi nativi di Django (`django.contrib.auth.models.Group`):
+Il sistema adotta un modello RBAC canonico con **4 ruoli applicativi**, implementati in [`backend/core/roles.py`](../../backend/core/roles.py#L1-L49) e mappati direttamente sui gruppi nativi di Django (`django.contrib.auth.models.Group`):
 
 | Costante Ruolo | Nome Gruppo DB | Label Interfaccia | Descrizione Funzionale |
 |:---|:---|:---|:---|
@@ -214,13 +214,13 @@ def roles_of(user) -> set[str]:
     return roles
 ```
 - **Superuser Injection**: se un account ha `is_superuser = True`, il ruolo `admin` viene aggiunto d'ufficio ai suoi ruoli effettivi, anche in assenza di appartenenza formale al gruppo.
-- **Idempotenza Gruppi**: il comando CLI `bootstrap_roles` ([`backend/core/management/commands/bootstrap_roles.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/management/commands/bootstrap_roles.py#L1-L27)), eseguito all'avvio del container Docker, assicura la creazione di tutti i 4 gruppi mediante `roles.ensure_groups()`.
+- **Idempotenza Gruppi**: il comando CLI `bootstrap_roles` ([`backend/core/management/commands/bootstrap_roles.py`](../../backend/core/management/commands/bootstrap_roles.py#L1-L27)), eseguito all'avvio del container Docker, assicura la creazione di tutti i 4 gruppi mediante `roles.ensure_groups()`.
 
 ---
 
 ## 4. Capability Granulari (CBAC)
 
-Per superare la rigidità del solo RBAC e consentire una delega puntuale dei privilegi, il sistema definisce un livello di **Capability-Based Access Control (CBAC)** in [`backend/core/capabilities.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/capabilities.py#L1-L108).
+Per superare la rigidità del solo RBAC e consentire una delega puntuale dei privilegi, il sistema definisce un livello di **Capability-Based Access Control (CBAC)** in [`backend/core/capabilities.py`](../../backend/core/capabilities.py#L1-L108).
 
 ### 4.1 Catalogo delle 15 Capability Canoniche
 
@@ -296,7 +296,7 @@ La configurazione iniziale di fabbrica associa le capability ai ruoli come segue
 
 ### 4.3 Override Dinamico e Risoluzione dei Privilegi
 
-Il sistema supporta la personalizzazione dinamica dei privilegi assegnati ai singoli ruoli tramite il modello `RoleCapabilityOverride` ([`backend/core/models.py:17-35`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L17-L35)):
+Il sistema supporta la personalizzazione dinamica dei privilegi assegnati ai singoli ruoli tramite il modello `RoleCapabilityOverride` ([`backend/core/models.py:17-35`](../../backend/core/models.py#L17-L35)):
 
 ```mermaid
 flowchart TD
@@ -317,7 +317,7 @@ flowchart TD
 ```
 
 #### Regole di Sicurezza sugli Override
-1. **Inviolabilità di Admin**: l'Amministratore non può essere depotenziato. La funzione `capabilities_for_role(role)` restituisce `set(ALL_CAPABILITIES)` immediatamente se `role == roles.ADMIN` ([`backend/core/capabilities.py:80-81`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/capabilities.py#L80-L81)). Qualsiasi tentativo di modifica via API restituisce `HTTP 409 Conflict` ("I privilegi Admin non sono riducibili.").
+1. **Inviolabilità di Admin**: l'Amministratore non può essere depotenziato. La funzione `capabilities_for_role(role)` restituisce `set(ALL_CAPABILITIES)` immediatamente se `role == roles.ADMIN` ([`backend/core/capabilities.py:80-81`](../../backend/core/capabilities.py#L80-L81)). Qualsiasi tentativo di modifica via API restituisce `HTTP 409 Conflict` ("I privilegi Admin non sono riducibili.").
 2. **Isolamento delle Capability Riservate (`RESERVED_CAPABILITIES`)**:
    `RESERVED_CAPABILITIES = frozenset({RESET_DATA, MANAGE_USERS, MANAGE_PRIVILEGES})`.
    Nessun ruolo non-admin può ricevere queste capability, neanche tramite record su DB: la logica scarta esplicitamente tali record sia in fase di scrittura su `PUT /api/v1/admin/roles/capabilities` (`HTTP 400 Bad Request`), sia in fase di valutazione in `capabilities_for_role()`.
@@ -326,7 +326,7 @@ flowchart TD
 
 ## 5. Server-Side Enforcement: Permission Classes DRF
 
-L'autorizzazione applicativa è rigidamente applicata su ciascuna View REST di Django REST Framework (DRF) tramite la gerarchia di permission classes definita in [`backend/core/permissions.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/permissions.py#L1-L164):
+L'autorizzazione applicativa è rigidamente applicata su ciascuna View REST di Django REST Framework (DRF) tramite la gerarchia di permission classes definita in [`backend/core/permissions.py`](../../backend/core/permissions.py#L1-L164):
 
 ```mermaid
 classDiagram
@@ -396,21 +396,21 @@ classDiagram
 
 Per gli endpoint di dominio che offrono consultazione aperta agli utenti autenticati ma mutazioni riservate, sono implementate classi composite:
 
-#### 1. `ReadOnlyOrCanCreateProjects` ([`backend/core/permissions.py:60-67`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/permissions.py#L60-L67))
+#### 1. `ReadOnlyOrCanCreateProjects` ([`backend/core/permissions.py:60-67`](../../backend/core/permissions.py#L60-L67))
 - Metodi `SAFE_METHODS` (`GET`, `HEAD`, `OPTIONS`): ammessi a qualunque utente autenticato.
 - Metodo `POST`: consentito esclusivamente in possesso della capability `projects.create`.
 
-#### 2. `ReadOnlyOrCanManageCanone` ([`backend/core/permissions.py:73-82`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/permissions.py#L73-L82))
+#### 2. `ReadOnlyOrCanManageCanone` ([`backend/core/permissions.py:73-82`](../../backend/core/permissions.py#L73-L82))
 - Metodi di lettura: ammessi a tutti gli autenticati per consultazione KPI e schede canone.
 - Mutazioni (`POST`, `PUT`, `PATCH`, `DELETE`): riservate agli utenti con capability `canone.manage`.
 
-#### 3. `ReferentCanAnnotate` ([`backend/core/permissions.py:109-154`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/permissions.py#L109-L154))
+#### 3. `ReferentCanAnnotate` ([`backend/core/permissions.py:109-154`](../../backend/core/permissions.py#L109-L154))
 Questa permission modella la segregazione operativa sui progetti assegnati al Referente BMED:
 - **Lettura (`SAFE_METHODS`)**: consentita a tutti gli utenti autenticati.
 - **Modifica Completa**: consentita se l'utente possiede la capability `projects.edit` (es. Responsabile BMED o Admin).
 - **Annotazione Parziale (Referente)**: se l'utente possiede `projects.annotate_own`:
   1. È ammesso **solo** il verbo HTTP `PATCH`.
-  2. I campi inviati nel payload devono essere un sottoinsieme stretto di `{"notes", "verification_points", "planned_end_date", "expected_version"}` ([`linea 116`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/permissions.py#L116)).
+  2. I campi inviati nel payload devono essere un sottoinsieme stretto di `{"notes", "verification_points", "planned_end_date", "expected_version"}` ([`linea 116`](../../backend/core/permissions.py#L116)).
   3. **Verifica di Oggetto (`has_object_permission`)**: il metodo statico `can_annotate(user, obj)` verifica che l'utente sia l'effettivo proprietario/referente del progetto. Il controllo verifica la corrispondenza dell'email (`owner.email == user.email`) o la combinazione di nome e cognome (`user.username in f"{owner.first_name}{owner.last_name}"`).
 
 #### 4. Segregazione degli Import (`CanUploadImports` vs `CanApplyImports`)
@@ -425,7 +425,7 @@ Il Fornitore possiede la capability `imports.upload` ma **NON** `imports.apply`.
 L'autorizzazione nel frontend React riflette esattamente le regole server-side per garantire un'esperienza d'uso coerente, disabilitando elementi o nascondendo percorsi inaccessibili:
 
 ### 6.1 Contesto di Sessione (`SessionProvider` & `useSession`)
-Definito in [`frontend/src/features/auth/session.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/auth/session.tsx#L1-L107), il contesto interroga l'endpoint `/api/v1/auth/session` all'avvio. L'interfaccia TypeScript `Session` espone:
+Definito in [`frontend/src/features/auth/session.tsx`](../../frontend/src/features/auth/session.tsx#L1-L107), il contesto interroga l'endpoint `/api/v1/auth/session` all'avvio. L'interfaccia TypeScript `Session` espone:
 ```typescript
 // frontend/src/features/auth/session.tsx:6-15
 export interface Session {
@@ -440,7 +440,7 @@ export interface Session {
 ```
 
 ### 6.2 Libreria di Verifica Capability (`permissions.ts`)
-Il modulo [`frontend/src/lib/permissions.ts`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/lib/permissions.ts#L1-L104) dichiara l'oggetto canonico `CAPABILITIES` ed esporta la funzione di test `hasCapability`:
+Il modulo [`frontend/src/lib/permissions.ts`](../../frontend/src/lib/permissions.ts#L1-L104) dichiara l'oggetto canonico `CAPABILITIES` ed esporta la funzione di test `hasCapability`:
 ```typescript
 // frontend/src/lib/permissions.ts:27-35
 export function hasCapability(
@@ -466,13 +466,13 @@ export function hasCapability(
 - `canUploadPpmDryRun(session)`: abilita l'area di drag-and-drop degli estratti PPM.
 
 ### 6.3 Route Guards e Rendering Condizionale
-1. **Route Guard Globale** ([`frontend/src/App.tsx:63-74`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/App.tsx#L63-L74)):
+1. **Route Guard Globale** ([`frontend/src/App.tsx:63-74`](../../frontend/src/App.tsx#L63-L74)):
    - Se `status === "loading"`: renderizza lo stato `LoadingState`.
    - Se `status === "anonymous"`: renderizza la pagina `<LoginPage />`.
    - Se `status === "authenticated"`: apre la shell principale `<AppShell />` contenente le rotte applicative.
-2. **Navigazione Laterale Protetta** ([`frontend/src/components/AppShell.tsx:111-128`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/components/AppShell.tsx#L111-L128)):
+2. **Navigazione Laterale Protetta** ([`frontend/src/components/AppShell.tsx:111-128`](../../frontend/src/components/AppShell.tsx#L111-L128)):
    Il link alla route `/amministrazione` è racchiuso nella guardia condizionale `{canAdminister(session) && <NavLink to="/amministrazione".../>}`.
-3. **Pannelli di Amministrazione Granulari** ([`frontend/src/features/admin/AdminPage.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/admin/AdminPage.tsx)):
+3. **Pannelli di Amministrazione Granulari** ([`frontend/src/features/admin/AdminPage.tsx`](../../frontend/src/features/admin/AdminPage.tsx)):
    I singoli tab (Utenti, Referenti, Ruoli, Configurazione, Reset Database) verificano le capability correlate prima di renderizzare comandi di mutazione.
 
 ---
@@ -480,15 +480,15 @@ export function hasCapability(
 ## 7. Middleware, Tracciamento e Audit
 
 ### 7.1 `CurrentUserMiddleware` e Thread-Local Context
-Per consentire ai modelli Django di tracciare l'autore delle modifiche senza passare esplicitamente l'oggetto `request` attraverso tutti i layer di servizio, è attivo il middleware custom `CurrentUserMiddleware` ([`backend/core/middleware.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/middleware.py#L1-L22)):
-- All'inizio della richiesta HTTP, invoca `set_current_user(request.user)`, memorizzando l'utente autenticato all'interno di una variabile asincrona sicura `ContextVar` (`_current_user` in [`backend/core/current_user.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/current_user.py#L1-L31)).
+Per consentire ai modelli Django di tracciare l'autore delle modifiche senza passare esplicitamente l'oggetto `request` attraverso tutti i layer di servizio, è attivo il middleware custom `CurrentUserMiddleware` ([`backend/core/middleware.py`](../../backend/core/middleware.py#L1-L22)):
+- All'inizio della richiesta HTTP, invoca `set_current_user(request.user)`, memorizzando l'utente autenticato all'interno di una variabile asincrona sicura `ContextVar` (`_current_user` in [`backend/core/current_user.py`](../../backend/core/current_user.py#L1-L31)).
 - Nel blocco `finally`, azzera il contesto con `set_current_user(None)` prevenendo memory leak o contaminazione cross-request nei thread pool.
 - Per script di manutenzione e test unitari è fornito il context manager `acting_as(user)`.
 
 ---
 
 ### 7.2 Modello Astratto `TrackedModel` e Concorrenza Ottimistica
-Tutte le entità persistite nel sistema ereditano dalla classe astratta `TrackedModel` ([`backend/core/models.py:67-106`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L67-L106)):
+Tutte le entità persistite nel sistema ereditano dalla classe astratta `TrackedModel` ([`backend/core/models.py:67-106`](../../backend/core/models.py#L67-L106)):
 - **Chiave Primaria**: identificativo UUIDv4 (`id = models.UUIDField(primary_key=True, default=uuid.uuid4)`).
 - **Tracciamento Autore**: `created_by` e `updated_by` collegati a `settings.AUTH_USER_MODEL`, popolati in automatico nel metodo `save()` leggendo `get_current_user()`.
 - **Timestamping**: `created_at` (`auto_now_add=True`) e `updated_at` (`auto_now=True`).
@@ -497,7 +497,7 @@ Tutte le entità persistite nel sistema ereditano dalla classe astratta `Tracked
 ---
 
 ### 7.3 Log delle Operazioni Amministrative (`AdminAuditEvent`)
-Gli eventi a elevato impatto di sicurezza sono registrati nella tabella immutabile `AdminAuditEvent` ([`backend/core/models.py:37-60`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L37-L60)):
+Gli eventi a elevato impatto di sicurezza sono registrati nella tabella immutabile `AdminAuditEvent` ([`backend/core/models.py:37-60`](../../backend/core/models.py#L37-L60)):
 ```python
 class AdminAuditEvent(models.Model):
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
@@ -522,29 +522,29 @@ class AdminAuditEvent(models.Model):
 ### 7.4 Storicizzazione Completa con `HistoricalRecords`
 Oltre all'audit log amministrativo, 17 modelli di dominio integrano la libreria `django-simple-history` tramite il campo `history = HistoricalRecords()`. Ciascuna modifica genera una riga di audit storico immutabile contenente snapshot dei campi, data/ora, autore della richiesta e tipo di mutazione (`+` inserimento, `~` modifica, `-` cancellazione):
 
-1. `AppSettings` ([`backend/core/models.py:145`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L145))
-2. `Project` ([`backend/projects/models.py:153`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L153))
-3. `ProjectClosure` ([`backend/projects/models.py:254`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L254))
-4. `TimesheetEntry` ([`backend/timesheets/models.py:87`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L87))
-5. `WalletYear` ([`backend/wallet/models.py:51`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L51))
-6. `WalletActivation` ([`backend/wallet/models.py:104`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L104))
-7. `WalletTransfer` ([`backend/wallet/models.py:144`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L144))
-8. `WalletAllocation` ([`backend/wallet/models.py:236`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L236))
-9. `WalletFundingTranche` ([`backend/wallet/models.py:290`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L290))
-10. `MonthlyFee` ([`backend/canone/models.py:79`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/canone/models.py#L79))
-11. `OrganicoAllargato` ([`backend/canone/models.py:169`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/canone/models.py#L169))
-12. `PPMProject` ([`backend/ppm/models.py:57`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/ppm/models.py#L57))
-13. `PPMWorkOrder` ([`backend/ppm/models.py:148`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/ppm/models.py#L148))
-14. `ClientOwner` ([`backend/directory/models.py:22`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/directory/models.py#L22))
-15. `SupplierContact` ([`backend/directory/models.py:60`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/directory/models.py#L60))
-16. `ImportBatch` ([`backend/imports/models.py:59`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/imports/models.py#L59))
-17. `ProjectAnomaly` ([`backend/anomalies/models.py:168`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py#L168))
+1. `AppSettings` ([`backend/core/models.py:145`](../../backend/core/models.py#L145))
+2. `Project` ([`backend/projects/models.py:153`](../../backend/projects/models.py#L153))
+3. `ProjectClosure` ([`backend/projects/models.py:254`](../../backend/projects/models.py#L254))
+4. `TimesheetEntry` ([`backend/timesheets/models.py:87`](../../backend/timesheets/models.py#L87))
+5. `WalletYear` ([`backend/wallet/models.py:51`](../../backend/wallet/models.py#L51))
+6. `WalletActivation` ([`backend/wallet/models.py:104`](../../backend/wallet/models.py#L104))
+7. `WalletTransfer` ([`backend/wallet/models.py:144`](../../backend/wallet/models.py#L144))
+8. `WalletAllocation` ([`backend/wallet/models.py:236`](../../backend/wallet/models.py#L236))
+9. `WalletFundingTranche` ([`backend/wallet/models.py:290`](../../backend/wallet/models.py#L290))
+10. `MonthlyFee` ([`backend/canone/models.py:79`](../../backend/canone/models.py#L79))
+11. `OrganicoAllargato` ([`backend/canone/models.py:169`](../../backend/canone/models.py#L169))
+12. `PPMProject` ([`backend/ppm/models.py:57`](../../backend/ppm/models.py#L57))
+13. `PPMWorkOrder` ([`backend/ppm/models.py:148`](../../backend/ppm/models.py#L148))
+14. `ClientOwner` ([`backend/directory/models.py:22`](../../backend/directory/models.py#L22))
+15. `SupplierContact` ([`backend/directory/models.py:60`](../../backend/directory/models.py#L60))
+16. `ImportBatch` ([`backend/imports/models.py:59`](../../backend/imports/models.py#L59))
+17. `ProjectAnomaly` ([`backend/anomalies/models.py:168`](../../backend/anomalies/models.py#L168))
 
 ---
 
 ## 8. Formato Risposte di Errore (RFC 7807 Problem Details)
 
-Tutti gli errori HTTP restituiti dalle API del backend sono conformi allo standard **RFC 7807** (`application/problem+json`), implementato centralmente in [`backend/core/exceptions.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/exceptions.py#L1-L145).
+Tutti gli errori HTTP restituiti dalle API del backend sono conformi allo standard **RFC 7807** (`application/problem+json`), implementato centralmente in [`backend/core/exceptions.py`](../../backend/core/exceptions.py#L1-L145).
 
 ### Struttura Standard del Payload di Errore
 ```json
@@ -577,7 +577,7 @@ Tutti i titoli e i messaggi utente sono rigorosamente formulati in **lingua ital
 Il sistema prevede rigorosi protocolli operativi a protezione delle operazioni critiche che possono comportare perdita di dati, disservizi o escalation di privilegi:
 
 ### 9.1 Reset Totale dei Dati Operativi (`/api/v1/admin/data-reset`)
-Implementato in [`backend/api/admin_views.py:590-752`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py#L590-L752):
+Implementato in [`backend/api/admin_views.py:590-752`](../../backend/api/admin_views.py#L590-L752):
 - **Autorizzazione**: protetto da `CanResetData` (capability `data.reset`, esclusiva di Admin).
 - **Protocollo Two-Step**:
   1. **Fase 1 (GET)**: calcola la preview del numero di record che verrebbero cancellati su 17 tabelle operative (progetti, milestone, consuntivi, wallet, canoni, snapshot PPM, batch import) e genera un token crittografico effimero:
@@ -593,7 +593,7 @@ Implementato in [`backend/api/admin_views.py:590-752`](file:///c:/Users/gianvito
 ---
 
 ### 9.2 Backup e Ripristino del Database
-Implementato in [`backend/api/database_backup.py:87-150`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/database_backup.py#L87-L150):
+Implementato in [`backend/api/database_backup.py:87-150`](../../backend/api/database_backup.py#L87-L150):
 - **Autorizzazione**: protetto da `AdministratorOnly` (riservato al ruolo `admin`).
 - **Backup (`GET /api/v1/admin/database/backup`)**:
   - Esegue `pg_dump` con formato custom (`--format=custom --no-owner --no-privileges`), escludendo privilegi di sistema e vincoli proprietari.
@@ -608,7 +608,7 @@ Implementato in [`backend/api/database_backup.py:87-150`](file:///c:/Users/gianv
 ---
 
 ### 9.3 Gestione Utenze e Safeguard Anti-Lockout
-Implementato in [`backend/api/admin_views.py:343-413`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py#L343-L413):
+Implementato in [`backend/api/admin_views.py:343-413`](../../backend/api/admin_views.py#L343-L413):
 - **Autorizzazione**: protetto da `CanManageUsers` (capability `users.manage`).
 - **Safeguard Anti-Lockout**:
   - Un amministratore **non può eliminare il proprio account** (`HTTP 409 Conflict`: "Non puoi eliminare il tuo account; usa la disattivazione.").
@@ -619,7 +619,7 @@ Implementato in [`backend/api/admin_views.py:343-413`](file:///c:/Users/gianvito
 ---
 
 ### 9.4 Override Privilegi Ruoli
-Implementato in [`backend/api/admin_views.py:536-588`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py#L536-L588):
+Implementato in [`backend/api/admin_views.py:536-588`](../../backend/api/admin_views.py#L536-L588):
 - **Autorizzazione**: protetto da `CanManagePrivileges`.
 - Rigetto immediato di tentativi di rimozione capability dal ruolo Admin (`HTTP 409`).
 - Rigetto di tentativi di assegnazione delle 3 capability riservate a ruoli ordinari (`HTTP 400`).
@@ -633,13 +633,13 @@ Dall'ispezione approfondita del codice e della configurazione emergono le seguen
 
 | ID | Aspetto / Superficie di Rischio | Livello Rischio | Evidenza nel Codice | Descrizione e Mitigazione Esistente | Raccomandazione Evolutiva |
 |:---|:---|:---:|:---|:---|:---|
-| **SEC-01** | **Assenza Autenticazione OIDC Entra ID** | **MEDIO** | [`backend/core/auth/providers.py:62-73`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/auth/providers.py#L62-L73) | In v1 è attivo solo il provider locale. `EntraIdOidcProvider` è un segnaposto che solleva `NotImplementedError`. | Completare l'integrazione OIDC per sfruttare SSO aziendale e policy di accesso condizionale Mediolanum. |
-| **SEC-02** | **Assenza Multi-Factor Authentication (MFA)** | **MEDIO** | [`backend/api/auth_views.py:50-77`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/auth_views.py#L50-L77) | Il login locale richiede esclusivamente username e password statiche. | Introdurre TOTP per utenze con capability riservate o delegare MFA a Entra ID in v2. |
-| **SEC-03** | **Configurazione Cookie Secure in Sviluppo** | **BASSO** | [`backend/config/settings/base.py:115`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L115), [`prod.py:12-13`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/prod.py#L12-L13) | `SESSION_COOKIE_SECURE` e `CSRF_COOKIE_SECURE` sono False di default in base.py; in prod.py dipendono da `COOKIE_SECURE=True`. | Garantire che in ambienti di test/produzione la variabile `COOKIE_SECURE=True` sia sempre valorizzata. |
-| **SEC-04** | **Reindirizzamento SSL e Reverse Proxy** | **BASSO** | [`backend/config/settings/prod.py:14`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/prod.py#L14), [`deploy/nginx.conf:1-23`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/deploy/nginx.conf#L1-L23) | `SECURE_SSL_REDIRECT = True` in prod.py. Nginx ascolta su porta 8080 delegando la terminazione TLS al Synology NAS / LB. | Verificare che il reverse proxy a monte inoltri sempre gli header `X-Forwarded-Proto: https`. |
-| **SEC-05** | **ALLOWED_HOSTS con Host Interno Docker** | **INFO** | [`backend/config/settings/base.py:16`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L16) | `ALLOWED_HOSTS` include "backend" per permettere le chiamate interne proxy Nginx -> Gunicorn. | Configurazione appropriata per architetture a container Docker su bridge network privata. |
-| **SEC-06** | **Throttling Limitato al Solo Login** | **BASSO** | [`backend/config/settings/base.py:147-149`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L147-L149) | Solo `LoginView` implementa `LoginRateThrottle` (10/min). Esportazioni e import massivi non hanno rate limit dedicato. | Aggiungere throttle specifici su endpoint ad alto consumo CPU/RAM (`/api/v1/exports/`, `/imports/`). |
-| **SEC-07** | **Protezione Directory Media con Direttiva Internal** | **OTTIMA** | [`deploy/nginx.conf:50-53`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/deploy/nginx.conf#L50-L53) | Nginx definisce `location /media/ { internal; alias /srv/media/; }`. Nessun file allegato è accessibile direttamente via web. | Best practice implementata: i file sono serviti solo dopo autorizzazione del backend tramite download controllato. |
+| **SEC-01** | **Assenza Autenticazione OIDC Entra ID** | **MEDIO** | [`backend/core/auth/providers.py:62-73`](../../backend/core/auth/providers.py#L62-L73) | In v1 è attivo solo il provider locale. `EntraIdOidcProvider` è un segnaposto che solleva `NotImplementedError`. | Completare l'integrazione OIDC per sfruttare SSO aziendale e policy di accesso condizionale Mediolanum. |
+| **SEC-02** | **Assenza Multi-Factor Authentication (MFA)** | **MEDIO** | [`backend/api/auth_views.py:50-77`](../../backend/api/auth_views.py#L50-L77) | Il login locale richiede esclusivamente username e password statiche. | Introdurre TOTP per utenze con capability riservate o delegare MFA a Entra ID in v2. |
+| **SEC-03** | **Configurazione Cookie Secure in Sviluppo** | **BASSO** | [`backend/config/settings/base.py:115`](../../backend/config/settings/base.py#L115), [`prod.py:12-13`](../../backend/config/settings/prod.py#L12-L13) | `SESSION_COOKIE_SECURE` e `CSRF_COOKIE_SECURE` sono False di default in base.py; in prod.py dipendono da `COOKIE_SECURE=True`. | Garantire che in ambienti di test/produzione la variabile `COOKIE_SECURE=True` sia sempre valorizzata. |
+| **SEC-04** | **Reindirizzamento SSL e Reverse Proxy** | **BASSO** | [`backend/config/settings/prod.py:14`](../../backend/config/settings/prod.py#L14), [`deploy/nginx.conf:1-23`](../../deploy/nginx.conf#L1-L23) | `SECURE_SSL_REDIRECT = True` in prod.py. Nginx ascolta su porta 8080 delegando la terminazione TLS al Synology NAS / LB. | Verificare che il reverse proxy a monte inoltri sempre gli header `X-Forwarded-Proto: https`. |
+| **SEC-05** | **ALLOWED_HOSTS con Host Interno Docker** | **INFO** | [`backend/config/settings/base.py:16`](../../backend/config/settings/base.py#L16) | `ALLOWED_HOSTS` include "backend" per permettere le chiamate interne proxy Nginx -> Gunicorn. | Configurazione appropriata per architetture a container Docker su bridge network privata. |
+| **SEC-06** | **Throttling Limitato al Solo Login** | **BASSO** | [`backend/config/settings/base.py:147-149`](../../backend/config/settings/base.py#L147-L149) | Solo `LoginView` implementa `LoginRateThrottle` (10/min). Esportazioni e import massivi non hanno rate limit dedicato. | Aggiungere throttle specifici su endpoint ad alto consumo CPU/RAM (`/api/v1/exports/`, `/imports/`). |
+| **SEC-07** | **Protezione Directory Media con Direttiva Internal** | **OTTIMA** | [`deploy/nginx.conf:50-53`](../../deploy/nginx.conf#L50-L53) | Nginx definisce `location /media/ { internal; alias /srv/media/; }`. Nessun file allegato è accessibile direttamente via web. | Best practice implementata: i file sono serviti solo dopo autorizzazione del backend tramite download controllato. |
 
 ---
 
@@ -648,35 +648,35 @@ Dall'ispezione approfondita del codice e della configurazione emergono le seguen
 La correttezza e la robustezza del modello di sicurezza sono verificate tramite una suite automatizzata di test backend e frontend:
 
 ### 11.1 Test Suite Backend
-1. **Autenticazione e Sessioni** ([`backend/tests/test_api_auth.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/tests/test_api_auth.py)):
+1. **Autenticazione e Sessioni** ([`backend/tests/test_api_auth.py`](../../backend/tests/test_api_auth.py)):
    - Verifica credenziali valide, errate e utenza disattivata (HTTP 401).
    - Generazione e persistenza del cookie `sl_session` e dell'header `X-CSRFToken`.
    - Verifica del rate limiting (blocco dopo 10 tentativi falliti entro il minuto).
    - Logout e invalidazione server-side della sessione (HTTP 204).
-2. **Permessi di Ruolo e Object-Level Permissions** ([`backend/tests/test_roles_object_permissions.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/tests/test_roles_object_permissions.py)):
+2. **Permessi di Ruolo e Object-Level Permissions** ([`backend/tests/test_roles_object_permissions.py`](../../backend/tests/test_roles_object_permissions.py)):
    - Esecuzione delle chiamate API con matrice dei 4 ruoli.
    - Verifica che `ReferentCanAnnotate` consenta solo modifiche sui propri progetti e solo sui 4 campi ammessi.
    - Verifica del divieto di scrittura a mastro per il ruolo Fornitore.
-3. **Gestione Utenti e Privilegi** ([`backend/tests/test_admin_users_privileges.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/tests/test_admin_users_privileges.py)):
+3. **Gestione Utenti e Privilegi** ([`backend/tests/test_admin_users_privileges.py`](../../backend/tests/test_admin_users_privileges.py)):
    - Verifica blocco eliminazione auto-account e ultimo admin.
    - Test override capability per ruolo e verifica dell'inviolabilità di Admin.
    - Verifica del rigetto di capability riservate assegnate a ruoli non-admin.
-4. **Procedura di Data Reset** ([`backend/tests/test_admin_reset_data.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/tests/test_admin_reset_data.py)):
+4. **Procedura di Data Reset** ([`backend/tests/test_admin_reset_data.py`](../../backend/tests/test_admin_reset_data.py)):
    - Verifica generazione token firmato e validità temporale (scadenza a 300s).
    - Verifica fallimento in caso di parola d'ordine errata (diversa da "ELIMINA").
    - Verifica atomicità della transazione ed emissione del log in `AdminAuditEvent`.
-5. **Backup e Ripristino Database** ([`backend/tests/test_database_backup.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/tests/test_database_backup.py)):
+5. **Backup e Ripristino Database** ([`backend/tests/test_database_backup.py`](../../backend/tests/test_database_backup.py)):
    - Convalida permessi `AdministratorOnly`.
    - Verifica generazione backup preventivo pre-ripristino.
 
 ### 11.2 Test Suite Frontend
-- **Verifica Permessi UI** ([`frontend/src/features/auth/__tests__/role_permissions_ui.test.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/auth/__tests__/role_permissions_ui.test.tsx)):
+- **Verifica Permessi UI** ([`frontend/src/features/auth/__tests__/role_permissions_ui.test.tsx`](../../frontend/src/features/auth/__tests__/role_permissions_ui.test.tsx)):
   Verifica il rendering condizionale di pulsanti di modifica, cancellazione e menu laterale a seconda delle capability iniettate nel contesto di sessione.
-- **Logica Libreria Capability** ([`frontend/src/lib/__tests__/permissions.test.ts`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/lib/__tests__/permissions.test.ts)):
+- **Logica Libreria Capability** ([`frontend/src/lib/__tests__/permissions.test.ts`](../../frontend/src/lib/__tests__/permissions.test.ts)):
   Test unitari per tutte le funzioni helper (`canManageCanone`, `canWriteLedger`, `canAdminister`, `canResetData`).
 
 ### 11.3 Account Demo Preconfigurati per Collaudo Locale ed E2E
-Il management command `load_demo_data` ([`backend/core/management/commands/load_demo_data.py:67-108`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/management/commands/load_demo_data.py#L67-L108)) configura deterministiche utenze dimostrative:
+Il management command `load_demo_data` ([`backend/core/management/commands/load_demo_data.py:67-108`](../../backend/core/management/commands/load_demo_data.py#L67-L108)) configura deterministiche utenze dimostrative:
 
 | Username | Password Predefinita | Ruolo Assegnato | Email | Note Operative |
 |:---|:---|:---|:---|:---|

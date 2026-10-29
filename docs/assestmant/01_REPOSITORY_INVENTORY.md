@@ -5,8 +5,8 @@
 | Parametro | Dettaglio / Valore | Evidenza |
 |---|---|---|
 | **Progetto** | Supplier Ledger (Gestione consuntivazione e wallet Imola Informatica) | [README.md](../../README.md#L1-L8), [pyproject.toml](../../backend/pyproject.toml#L1-L5) |
-| **Commit / Checkpoint** | `12905a7` (checkpoint Git noto; directory di lavoro disconnessa da `.git`) | [docs/PLAN.md](../../docs/PLAN.md#L1-L20), [docs/CHANGELOG.md](../../docs/CHANGELOG.md#L1-L15) |
-| **Branch Dichiarato** | `feature/premium-ux-redesign` | [outputs/SOL_UX_GAP_ANALYSIS.md](../../outputs/SOL_UX_GAP_ANALYSIS.md#L1-L10) |
+| **Commit / Checkpoint** | Repo Git attivo su branch `main` (`origin https://github.com/RazorCopter/imola.git`) | `git status`, `git remote -v`, [docs/CHANGELOG.md](../../docs/CHANGELOG.md) |
+| **Branch Attivo** | `main` (allineato a `origin/main`) | Repository Git locale |
 | **Stato Sviluppo** | Fasi 1-7 completate; Tranche Post-Feedback A-G completate; Fase 8 (UX Redesign) in corso | [docs/CHANGELOG.md](../../docs/CHANGELOG.md#L7-L60), [docs/PLAN.md](../../docs/PLAN.md#L1-L50) |
 | **Data Rilevamento** | 2026-10-28 | [docs/assestmant/ASSESSMENT_PROGRESS.md](ASSESSMENT_PROGRESS.md#L3-L8) |
 | **Metodologia** | Analisi statica esaustiva del codice sorgente, configurazioni e documentazione | [docs/assestmant/ASSESSMENT_PROGRESS.md](ASSESSMENT_PROGRESS.md#L7) |

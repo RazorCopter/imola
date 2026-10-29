@@ -10,24 +10,24 @@ Per la visione architetturale e il modello dati di supporto si rimanda a [05_TEC
 
 | ID | Nome Regola | Ambito di Dominio | File di Riferimento | Stato |
 |:---|:---|:---|:---|:---:|
-| **R1** | Indipendenza stati consuntivazione e fatturazione | Progetti / Milestone | [`backend/projects/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L1-L126) | **IMPLEMENTED** |
-| **R2** | Anno di riferimento e scadenza del residuo | Residui / Wallet | [`backend/domain/residuals.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L48-L110) | **IMPLEMENTED** |
-| **R3** | Calcolo dinamico disponibilità Wallet | Wallet / Bilancio | [`backend/domain/wallet_balance.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/wallet_balance.py#L157-L289) | **IMPLEMENTED** |
-| **R4** | Target progressivo e monitoraggio canone | Canone semestrale | [`backend/domain/canone_status.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/canone_status.py#L27-L216) | **IMPLEMENTED** |
-| **R5** | Consuntivi immutabili append-only e storni | Timesheet / Ledger | [`backend/timesheets/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L93-L170) | **IMPLEMENTED** |
-| **R6** | Riconciliazione consuntivi con PPM | PPM / Controllo | [`backend/domain/reconciliation.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/reconciliation.py#L97-L216) | **IMPLEMENTED** |
-| **R7** | Deduplica e ciclo di vita anomalie | Anomalie / Audit | [`backend/anomalies/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py#L43-L310) | **IMPLEMENTED** |
-| **R8** | Motore dei 18 controlli di consistenza | Motore Controlli | [`backend/domain/checks.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L58-L585) | **IMPLEMENTED** |
-| **R9** | Aritmetica contabile e quantizzazione giornate | Fondazioni Contabili | [`backend/domain/money.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/money.py#L1-L97) | **IMPLEMENTED** |
-| **R10** | Validazione transizioni stato progetto | Progetti / Offerte | [`backend/projects/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L159-L227) | **IMPLEMENTED** |
-| **R11** | Storico e tracciamento slittamento milestone | Fatturazione | [`backend/projects/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L230-L291) | **IMPLEMENTED** |
-| **R12** | Ciclo transazionale import e rollback atomico | Batch Import | [`backend/imports/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/imports/models.py#L31-L110) | **IMPLEMENTED** |
-| **R13** | Erogazione e funding FIFO delle quote Wallet | Wallet / Tranche FIFO | [`backend/wallet/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L270-L319) | **IMPLEMENTED** |
-| **R14** | Normalizzazione anagrafica e matching persone | Directory | [`backend/directory/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/directory/models.py#L33-L85) | **IMPLEMENTED** |
-| **R15** | Analisi economica read-only dei costi | Economico / Costi | [`backend/domain/cost_analysis.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/cost_analysis.py#L21-L126) | **IMPLEMENTED** |
-| **R16** | Aggregazioni real-time per Dashboard KPI | KPI / Dashboard | [`backend/domain/dashboard.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/dashboard.py#L30-L111) | **IMPLEMENTED** |
-| **R17** | Concorrenza ottimistica e blocco collisioni | Concorrenza / ETag | [`backend/api/concurrency.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/concurrency.py#L1-L60) | **IMPLEMENTED** |
-| **R18** | Coda di revisione e scadenze potenziali | Qualità Dati / D-03 | [`backend/domain/residuals.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L284-L404) | **IMPLEMENTED** |
+| **R1** | Indipendenza stati consuntivazione e fatturazione | Progetti / Milestone | [`backend/projects/models.py`](../../backend/projects/models.py#L1-L126) | **IMPLEMENTED** |
+| **R2** | Anno di riferimento e scadenza del residuo | Residui / Wallet | [`backend/domain/residuals.py`](../../backend/domain/residuals.py#L48-L110) | **IMPLEMENTED** |
+| **R3** | Calcolo dinamico disponibilità Wallet | Wallet / Bilancio | [`backend/domain/wallet_balance.py`](../../backend/domain/wallet_balance.py#L157-L289) | **IMPLEMENTED** |
+| **R4** | Target progressivo e monitoraggio canone | Canone semestrale | [`backend/domain/canone_status.py`](../../backend/domain/canone_status.py#L27-L216) | **IMPLEMENTED** |
+| **R5** | Consuntivi immutabili append-only e storni | Timesheet / Ledger | [`backend/timesheets/models.py`](../../backend/timesheets/models.py#L93-L170) | **IMPLEMENTED** |
+| **R6** | Riconciliazione consuntivi con PPM | PPM / Controllo | [`backend/domain/reconciliation.py`](../../backend/domain/reconciliation.py#L97-L216) | **IMPLEMENTED** |
+| **R7** | Deduplica e ciclo di vita anomalie | Anomalie / Audit | [`backend/anomalies/models.py`](../../backend/anomalies/models.py#L43-L310) | **IMPLEMENTED** |
+| **R8** | Motore dei 18 controlli di consistenza | Motore Controlli | [`backend/domain/checks.py`](../../backend/domain/checks.py#L58-L585) | **IMPLEMENTED** |
+| **R9** | Aritmetica contabile e quantizzazione giornate | Fondazioni Contabili | [`backend/domain/money.py`](../../backend/domain/money.py#L1-L97) | **IMPLEMENTED** |
+| **R10** | Validazione transizioni stato progetto | Progetti / Offerte | [`backend/projects/models.py`](../../backend/projects/models.py#L159-L227) | **IMPLEMENTED** |
+| **R11** | Storico e tracciamento slittamento milestone | Fatturazione | [`backend/projects/models.py`](../../backend/projects/models.py#L230-L291) | **IMPLEMENTED** |
+| **R12** | Ciclo transazionale import e rollback atomico | Batch Import | [`backend/imports/models.py`](../../backend/imports/models.py#L31-L110) | **IMPLEMENTED** |
+| **R13** | Erogazione e funding FIFO delle quote Wallet | Wallet / Tranche FIFO | [`backend/wallet/models.py`](../../backend/wallet/models.py#L270-L319) | **IMPLEMENTED** |
+| **R14** | Normalizzazione anagrafica e matching persone | Directory | [`backend/directory/models.py`](../../backend/directory/models.py#L33-L85) | **IMPLEMENTED** |
+| **R15** | Analisi economica read-only dei costi | Economico / Costi | [`backend/domain/cost_analysis.py`](../../backend/domain/cost_analysis.py#L21-L126) | **IMPLEMENTED** |
+| **R16** | Aggregazioni real-time per Dashboard KPI | KPI / Dashboard | [`backend/domain/dashboard.py`](../../backend/domain/dashboard.py#L30-L111) | **IMPLEMENTED** |
+| **R17** | Concorrenza ottimistica e blocco collisioni | Concorrenza / ETag | [`backend/api/concurrency.py`](../../backend/api/concurrency.py#L1-L60) | **IMPLEMENTED** |
+| **R18** | Coda di revisione e scadenze potenziali | Qualità Dati / D-03 | [`backend/domain/residuals.py`](../../backend/domain/residuals.py#L284-L404) | **IMPLEMENTED** |
 
 ---
 
@@ -154,8 +154,8 @@ flowchart LR
   - Progetti con `billing_status == TOTALE` e `timesheet_status == ATTIVO` sono ammessi (es. fatturazione anticipata a inizio fornitura).
 - **Error Handling**: Nessuna eccezione scatenata per combinazioni arbitrarie dei due stati. I campi sono gestiti come `CharField` con choices Django separate e indicizzati individualmente per query performanti.
 - **Evidenze di Implementazione**:
-  - File: [`backend/projects/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L1-L5) (Docstring esplicita riga 1-5).
-  - Campi modello: [`Project.timesheet_status`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L114-L119) e [`Project.billing_status`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L120-L125).
+  - File: [`backend/projects/models.py`](../../backend/projects/models.py#L1-L5) (Docstring esplicita riga 1-5).
+  - Campi modello: [`Project.timesheet_status`](../../backend/projects/models.py#L114-L119) e [`Project.billing_status`](../../backend/projects/models.py#L120-L125).
 
 ---
 
@@ -186,8 +186,8 @@ flowchart LR
   - Il campo informativo `declared_residual_year` proveniente dal seed storico non sovrascrive mai `residual_reference_year` derivato dal database (decisione D-03).
 - **Error Handling**: Modello `Project.clean()` vieta la creazione manuale o l'aggiornamento di un progetto a `CHIUSO` senza `actual_closure_date` al di fuori dei batch seed.
 - **Evidenze di Implementazione**:
-  - File: [`backend/projects/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L128-L133) (`GeneratedField` su `actual_closure_date`).
-  - File: [`backend/domain/residuals.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L48-L110) (funzioni `last_usable_day` e `residual_validity`).
+  - File: [`backend/projects/models.py`](../../backend/projects/models.py#L128-L133) (`GeneratedField` su `actual_closure_date`).
+  - File: [`backend/domain/residuals.py`](../../backend/domain/residuals.py#L48-L110) (funzioni `last_usable_day` e `residual_validity`).
 
 ---
 
@@ -219,9 +219,9 @@ flowchart LR
   - Per i progetti `ATTIVO` o `NON_AVVIATO`, il residuo non conferito al wallet viene categorizzato separatamente in `ongoing_project_residual_days` (se positivo) o `ongoing_project_overrun_days` (se negativo, ovvero sforamento).
 - **Error Handling**: Annotazioni SQL realizzate tramite subquery scalari indipendenti (`OuterRef`) per prevenire duplicazioni di riga e moltiplicazioni cartesiane da cross join.
 - **Evidenze di Implementazione**:
-  - File: [`backend/wallet/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L1-L5) (Docstring normativa).
-  - File: [`backend/domain/residuals.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L140-L186) (`project_balance_qs`).
-  - File: [`backend/domain/wallet_balance.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/wallet_balance.py#L104-L118) e [L157-L289](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/wallet_balance.py#L157-L289) (`WalletYearBalance` e `wallet_year_balance`).
+  - File: [`backend/wallet/models.py`](../../backend/wallet/models.py#L1-L5) (Docstring normativa).
+  - File: [`backend/domain/residuals.py`](../../backend/domain/residuals.py#L140-L186) (`project_balance_qs`).
+  - File: [`backend/domain/wallet_balance.py`](../../backend/domain/wallet_balance.py#L104-L118) e [L157-L289](../../backend/domain/wallet_balance.py#L157-L289) (`WalletYearBalance` e `wallet_year_balance`).
 
 ---
 
@@ -252,9 +252,9 @@ flowchart LR
   - Generazione serie settimanale completa per grafici di burn-down (`canone_burndown`).
 - **Error Handling**: Gestione di semestri con date non ancora avviate (weeks = 0) o monte a zero (`forecast_ratio` quantizzato a zero).
 - **Evidenze di Implementazione**:
-  - File: [`backend/domain/canone_status.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/canone_status.py#L27-L47) (formule `weeks_elapsed`, `target_days`).
-  - File: [`backend/domain/canone_status.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/canone_status.py#L144-L216) (calcolo completo `canone_status` e breakdown uffici EA, SA, TA, CROSS).
-  - File: [`backend/domain/canone_status.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/canone_status.py#L218-L260) (`canone_burndown`).
+  - File: [`backend/domain/canone_status.py`](../../backend/domain/canone_status.py#L27-L47) (formule `weeks_elapsed`, `target_days`).
+  - File: [`backend/domain/canone_status.py`](../../backend/domain/canone_status.py#L144-L216) (calcolo completo `canone_status` e breakdown uffici EA, SA, TA, CROSS).
+  - File: [`backend/domain/canone_status.py`](../../backend/domain/canone_status.py#L218-L260) (`canone_burndown`).
 
 ---
 
@@ -275,9 +275,9 @@ flowchart LR
   - `TimesheetEntry.save()` lancia `ValidationError("I consuntivi sono append-only...")` se `not self._state.adding`.
   - `TimesheetEntry.delete()` lancia `ValidationError("I consuntivi non si cancellano...")`.
 - **Evidenze di Implementazione**:
-  - File: [`backend/timesheets/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L93-L118) (CheckConstraint Django).
-  - File: [`backend/timesheets/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L146-L170) (`save`, `delete`, `build_reversal`).
-  - File: [`backend/timesheets/mutations.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/mutations.py#L27-L50) (`allow_ledger_mutation`).
+  - File: [`backend/timesheets/models.py`](../../backend/timesheets/models.py#L93-L118) (CheckConstraint Django).
+  - File: [`backend/timesheets/models.py`](../../backend/timesheets/models.py#L146-L170) (`save`, `delete`, `build_reversal`).
+  - File: [`backend/timesheets/mutations.py`](../../backend/timesheets/mutations.py#L27-L50) (`allow_ledger_mutation`).
 
 ---
 
@@ -306,9 +306,9 @@ flowchart LR
   - In presenza di delta KO, lo stato scala a `NON_ALLINEATO`.
 - **Error Handling**: Isolamento delle righe non agganciate a progetti (`unmatched_ppm_rows`) che vengono dirottate sulla coda di revisione anomalie.
 - **Evidenze di Implementazione**:
-  - File: [`backend/domain/reconciliation.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/reconciliation.py#L18-L36) (costanti e stati).
-  - File: [`backend/domain/reconciliation.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/reconciliation.py#L97-L155) (`reconcile`).
-  - File: [`backend/domain/reconciliation.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/reconciliation.py#L168-L216) (`reconciliation_summary`).
+  - File: [`backend/domain/reconciliation.py`](../../backend/domain/reconciliation.py#L18-L36) (costanti e stati).
+  - File: [`backend/domain/reconciliation.py`](../../backend/domain/reconciliation.py#L97-L155) (`reconcile`).
+  - File: [`backend/domain/reconciliation.py`](../../backend/domain/reconciliation.py#L168-L216) (`reconciliation_summary`).
 
 ---
 
@@ -327,9 +327,9 @@ flowchart LR
   - Superamento automatico seed-to-engine: `mark_superseded(replacements, expected_entities)` permette di marcare come `RISOLTA` un'anomalia storica del seed solo se l'insieme dei nuovi controlli automatici copre integralmente tutte le entità collegate.
 - **Error Handling**: `ValidationError` scatenato se si tenta di salvare una nota vuota in risoluzione/deroga, oppure se la sostituzione di un'anomalia presenta copertura incompleta delle entità.
 - **Evidenze di Implementazione**:
-  - File: [`backend/anomalies/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py#L43-L47) (`build_fingerprint`).
-  - File: [`backend/anomalies/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py#L190-L214) (`resolve`, `accept`).
-  - File: [`backend/anomalies/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py#L243-L310) (`mark_superseded`).
+  - File: [`backend/anomalies/models.py`](../../backend/anomalies/models.py#L43-L47) (`build_fingerprint`).
+  - File: [`backend/anomalies/models.py`](../../backend/anomalies/models.py#L190-L214) (`resolve`, `accept`).
+  - File: [`backend/anomalies/models.py`](../../backend/anomalies/models.py#L243-L310) (`mark_superseded`).
 
 ---
 
@@ -342,9 +342,9 @@ flowchart LR
 - **Condizioni e Casi Limite**: Severità parametrizzata (`ALTA`, `MEDIA`, `BASSA`) con escalation automatica da `MEDIA` ad `ALTA` in caso di sforamenti percentuali $> 10\%$.
 - **Error Handling**: Gestione dei valori nulli e delle date incomplete; nessun fallimento a cascata in caso di singoli record anomali.
 - **Evidenze di Implementazione**:
-  - File: [`backend/domain/checks.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L30-L45) (`Finding` dataclass).
-  - File: [`backend/domain/checks.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L58-L563) (I 18 detector).
-  - File: [`backend/domain/checks.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L565-L584) (Dizionario `RULES`).
+  - File: [`backend/domain/checks.py`](../../backend/domain/checks.py#L30-L45) (`Finding` dataclass).
+  - File: [`backend/domain/checks.py`](../../backend/domain/checks.py#L58-L563) (I 18 detector).
+  - File: [`backend/domain/checks.py`](../../backend/domain/checks.py#L565-L584) (Dizionario `RULES`).
 
 ---
 
@@ -364,9 +364,9 @@ flowchart LR
   - Rifiuto perentorio di valori booleani, infiniti, NaN o stringhe non numeriche.
 - **Error Handling**: `DaysValueError` scatenato su dati in input privi di senso contabile.
 - **Evidenze di Implementazione**:
-  - File: [`backend/domain/money.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/money.py#L12-L17) (costanti `DAYS_QUANT`, `PPM_GRANULARITY`).
-  - File: [`backend/domain/money.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/money.py#L23-L45) (`to_days`).
-  - File: [`backend/domain/money.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/money.py#L52-L55) (`cost_for_days`).
+  - File: [`backend/domain/money.py`](../../backend/domain/money.py#L12-L17) (costanti `DAYS_QUANT`, `PPM_GRANULARITY`).
+  - File: [`backend/domain/money.py`](../../backend/domain/money.py#L23-L45) (`to_days`).
+  - File: [`backend/domain/money.py`](../../backend/domain/money.py#L52-L55) (`cost_for_days`).
 
 ---
 
@@ -385,8 +385,8 @@ flowchart LR
   - Esenzione seed storico: se il record è associato a un batch `SEED_JSON` o `WORKBOOK_JSON`, la chiusura senza data è tollerata per consentire il censimento dello storico pregresso.
 - **Error Handling**: `Project.clean()` solleva `ValidationError` con dizionario puntuale dei campi errati; il database garantisce la consistenza tramite CheckConstraint dedicati.
 - **Evidenze di Implementazione**:
-  - File: [`backend/projects/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L159-L179) (CheckConstraint `project_budget_non_negative`, `project_end_after_start`, `project_closed_requires_date`).
-  - File: [`backend/projects/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L197-L227) (`clean`).
+  - File: [`backend/projects/models.py`](../../backend/projects/models.py#L159-L179) (CheckConstraint `project_budget_non_negative`, `project_end_after_start`, `project_closed_requires_date`).
+  - File: [`backend/projects/models.py`](../../backend/projects/models.py#L197-L227) (`clean`).
 
 ---
 
@@ -405,8 +405,8 @@ flowchart LR
   - Vincolo di unicità: `UniqueConstraint(fields=("project", "schedule_slot"), condition=~Q(schedule_slot=""))` assicura l'unicità delle posizioni fisse nel piano (es. avvio `START` e saldo `END`).
 - **Error Handling**: `ValidationError({"reason": "La motivazione dello spostamento è obbligatoria."})` scatenato se `reason` è vuota o composta solo da spazi.
 - **Evidenze di Implementazione**:
-  - File: [`backend/projects/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L260-L266) (UniqueConstraint `unique_project_billing_schedule_slot`).
-  - File: [`backend/projects/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L272-L291) (`move_to`).
+  - File: [`backend/projects/models.py`](../../backend/projects/models.py#L260-L266) (UniqueConstraint `unique_project_billing_schedule_slot`).
+  - File: [`backend/projects/models.py`](../../backend/projects/models.py#L272-L291) (`move_to`).
 
 ---
 
@@ -427,9 +427,9 @@ flowchart LR
   - Controllo `_external_dependencies`: il rollback è rifiutato se record esterni fanno riferimento a entità create dal batch.
 - **Error Handling**: `RollbackError` sollevato in caso di violazione delle guardie pre-rollback; l'intera operazione vive in un blocco transazionale atomico `transaction.atomic()`.
 - **Evidenze di Implementazione**:
-  - File: [`backend/imports/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/imports/models.py#L70-L76) (`can_apply`, `can_rollback`).
-  - File: [`backend/imports/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/imports/models.py#L97-L110) (`ImportedRecordMixin`).
-  - File: [`backend/importers/rollback.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/importers/rollback.py#L55-L140) (`ROLLBACK_ORDER`, `_reject_later_batches`, `rollback_seed_batch`).
+  - File: [`backend/imports/models.py`](../../backend/imports/models.py#L70-L76) (`can_apply`, `can_rollback`).
+  - File: [`backend/imports/models.py`](../../backend/imports/models.py#L97-L110) (`ImportedRecordMixin`).
+  - File: [`backend/importers/rollback.py`](../../backend/importers/rollback.py#L55-L140) (`ROLLBACK_ORDER`, `_reject_later_batches`, `rollback_seed_batch`).
 
 ---
 
@@ -447,8 +447,8 @@ flowchart LR
   - L'allocazione registra automaticamente se richiede attribuzione di origine (`requires_source_attribution`) qualora provenga dal wallet generale senza specificazione del progetto sorgente o delle relative tranche.
 - **Error Handling**: `WalletFundingTranche.clean()` valida la gerarchia sollevando `ValidationError` se le giornate impegnate superano la riserva iniziale o se le consuntivate superano le impegnate.
 - **Evidenze di Implementazione**:
-  - File: [`backend/wallet/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L270-L319) (`WalletFundingTranche`, vincoli e `clean()`).
-  - File: [`backend/wallet/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L262-L268) (`WalletAllocation.save()` per gestione origine).
+  - File: [`backend/wallet/models.py`](../../backend/wallet/models.py#L270-L319) (`WalletFundingTranche`, vincoli e `clean()`).
+  - File: [`backend/wallet/models.py`](../../backend/wallet/models.py#L262-L268) (`WalletAllocation.save()` per gestione origine).
 
 ---
 
@@ -468,9 +468,9 @@ flowchart LR
   - Unicità per organizzazione: `UniqueConstraint(fields=("full_name", "organization"))` e `UniqueConstraint(fields=("name_key", "organization"))`.
 - **Error Handling**: `PersonQuerySet.by_name(name, organization)` esegue il lookup tramite `comparison_key(name)`, garantendo matching esatto indipendentemente dall'ordine con cui l'utente digita il nome.
 - **Evidenze di Implementazione**:
-  - File: [`backend/directory/normalization.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/directory/normalization.py#L18-L60) (`comparison_key`, `titlecase_name`, `normalize_person_name`).
-  - File: [`backend/directory/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/directory/models.py#L33-L39) (`PersonQuerySet.by_name`).
-  - File: [`backend/directory/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/directory/models.py#L80-L84) (`Person.save()` con auto-normalizzazione).
+  - File: [`backend/directory/normalization.py`](../../backend/directory/normalization.py#L18-L60) (`comparison_key`, `titlecase_name`, `normalize_person_name`).
+  - File: [`backend/directory/models.py`](../../backend/directory/models.py#L33-L39) (`PersonQuerySet.by_name`).
+  - File: [`backend/directory/models.py`](../../backend/directory/models.py#L80-L84) (`Person.save()` con auto-normalizzazione).
 
 ---
 
@@ -492,8 +492,8 @@ flowchart LR
   - Policy esplicita restituita nel payload JSON: *"Costo globale corrente, non storicizzato e non differenziato per fornitore."*
 - **Error Handling**: Tracciamento di righe prive di progetto o fornitore sotto le etichette convenzionali *"Senza progetto"* e *"Senza fornitore"*.
 - **Evidenze di Implementazione**:
-  - File: [`backend/domain/cost_analysis.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/cost_analysis.py#L21-L95) (`build_cost_analysis`).
-  - File: [`backend/domain/cost_analysis.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/cost_analysis.py#L96-L125) (strutturazione del report e policy).
+  - File: [`backend/domain/cost_analysis.py`](../../backend/domain/cost_analysis.py#L21-L95) (`build_cost_analysis`).
+  - File: [`backend/domain/cost_analysis.py`](../../backend/domain/cost_analysis.py#L96-L125) (strutturazione del report e policy).
 
 ---
 
@@ -511,8 +511,8 @@ flowchart LR
   - Ordinamento deterministico per data fatturazione, codice progetto, data pianificata e id.
 - **Error Handling**: Limite di sicurezza `UPCOMING_BILLINGS_LIMIT = 50` per contenere il payload di rendering.
 - **Evidenze di Implementazione**:
-  - File: [`backend/domain/dashboard.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/dashboard.py#L14-L19) (costanti e filtri).
-  - File: [`backend/domain/dashboard.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/dashboard.py#L30-L110) (`dashboard_summary`).
+  - File: [`backend/domain/dashboard.py`](../../backend/domain/dashboard.py#L14-L19) (costanti e filtri).
+  - File: [`backend/domain/dashboard.py`](../../backend/domain/dashboard.py#L30-L110) (`dashboard_summary`).
 
 ---
 
@@ -532,8 +532,8 @@ flowchart LR
   - Se la versione inviata non coincide con quella corrente a database, la richiesta viene respinta con HTTP `409 Conflict` (eccezione `StaleResource`).
 - **Error Handling**: Restituzione del messaggio esplicito all'utente: *"La risorsa è stata modificata da un altro utente... ricarica i dati e riprova."*
 - **Evidenze di Implementazione**:
-  - File: [`backend/core/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L67-L105) (`TrackedModel.save()` con incremento di `version`).
-  - File: [`backend/api/concurrency.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/concurrency.py#L25-L60) (`make_etag`, `etag_matches`, `OptimisticLockMixin.check_precondition`).
+  - File: [`backend/core/models.py`](../../backend/core/models.py#L67-L105) (`TrackedModel.save()` con incremento di `version`).
+  - File: [`backend/api/concurrency.py`](../../backend/api/concurrency.py#L25-L60) (`make_etag`, `etag_matches`, `OptimisticLockMixin.check_precondition`).
 
 ---
 
@@ -558,34 +558,34 @@ flowchart LR
   - Ordinamento della coda: per data di scadenza potenziale crescente, così da sottoporre all'operatore prioritariamente le posizioni a rischio imminente di decadenza del credito.
 - **Error Handling**: Gestione dei punti di verifica multipli registrati in `project.verification_points`.
 - **Evidenze di Implementazione**:
-  - File: [`backend/domain/residuals.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L284-L404) (`review_queue_projects`).
+  - File: [`backend/domain/residuals.py`](../../backend/domain/residuals.py#L284-L404) (`review_queue_projects`).
 
 ---
 
 ## 4. Catalogo dei 18 Controlli di Consistenza (CHK_*)
 
-Il motore dei controlli di consistenza di Fase 4 ([`backend/domain/checks.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py)) implementa le seguenti 18 regole pure. Ciascun rilievo genera un'istanza di [`Finding`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L30-L45) persistibile nel modello `Anomaly`.
+Il motore dei controlli di consistenza di Fase 4 ([`backend/domain/checks.py`](../../backend/domain/checks.py)) implementa le seguenti 18 regole pure. Ciascun rilievo genera un'istanza di [`Finding`](../../backend/domain/checks.py#L30-L45) persistibile nel modello `Anomaly`.
 
 | Codice Regola | Ambito (Scope) | Severità | Condizione di Trigger | Azione Suggerita | File e Righe |
 |:---|:---|:---:|:---|:---|:---|
-| **CHK_DATE_ORDER** | `PROGETTO` | `ALTA` | `planned_end_date < start_date` oppure `actual_closure_date < start_date` | Correggere le date del progetto. | [`checks.py:59-93`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L59-L93) |
-| **CHK_END_PASSED_ACTIVE** | `PROGETTO` | `MEDIA` | Progetto `ATTIVO` con `planned_end_date` superata da oltre 30 giorni rispetto ad oggi | Prorogare la data di fine prevista o chiudere la consuntivazione. | [`checks.py:96-121`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L96-L121) |
-| **CHK_CLOSED_NO_DATE** | `PROGETTO` | `ALTA` | Progetto in stato `CHIUSO` ma con `actual_closure_date` nulla | Inserire la data di chiusura effettiva dalla coda di revisione. | [`checks.py:124-139`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L124-L139) |
-| **CHK_OVERRUN_PROJECT** | `PROGETTO` | `ALTA` / `MEDIA` | Progetto `ATTIVO` con consuntivato (ledger o PPM) $> \text{budget\_days}$. Severità `ALTA` se sforamento $> 10\%$ | Verificare il consuntivo con Imola e aggiornare pianificazione o budget. | [`checks.py:142-182`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L142-L182) |
-| **CHK_OVERRUN_ALLOCATION** | `WALLET` | `ALTA` / `MEDIA` | Allocazione con `consumed_days > allocated_days`. Severità `ALTA` se sforamento $> 10\%$ | Verificare i consuntivi wallet con Imola o incrementare l'allocazione. | [`checks.py:185-210`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L185-L210) |
-| **CHK_ALLOC_EXCEEDS_RESIDUAL** | `WALLET` | `ALTA` | Somma delle giornate allocate dal progetto $> \text{residuo base}$ ($\text{budget} - \text{diretti}$) | Ridurre le allocazioni o approvare l'override con motivazione formale. | [`checks.py:213-260`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L213-L260) |
-| **CHK_RESIDUAL_EXPIRING** | `WALLET` | `MEDIA` | Progetto `CHIUSO` con residuo non allocato in stato `IN_SCADENZA` (entro 90 giorni) | Allocare il residuo al wallet prima della scadenza. | [`checks.py:263-298`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L263-L298) |
-| **CHK_RESIDUAL_UNALLOCATED_CLOSED** | `WALLET` | `BASSA` | Progetto `CHIUSO` con residuo non allocato ma ancora in stato `VALIDO` | Valutare l'allocazione delle giornate al wallet. | [`checks.py:301-332`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L301-L332) |
-| **CHK_ALLOC_FROM_EXPIRED** | `WALLET` | `ALTA` | Data di creazione dell'allocazione posteriore alla data di scadenza del residuo del progetto sorgente | Verificare la data di assegnazione e correggere la provenienza. | [`checks.py:335-378`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L335-L378) |
-| **CHK_RECON_DELTA** | `RICONCILIAZIONE` | `MEDIA` | Progetto con riconciliazione PPM in esito `KO` ($|\Delta| > \text{tolleranza}$) | Allineare i consuntivi importando l'estratto PPM aggiornato. | [`checks.py:381-400`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L381-L400) |
-| **CHK_MISSING_IN_PPM** | `RICONCILIAZIONE` | `MEDIA` | Progetto `ATTIVO` con consuntivi interni $> 0$, data fine prevista superata, ma totalmente assente in PPM | Chiedere a Imola l'associazione nel PPM. | [`checks.py:403-425`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L403-L425) |
-| **CHK_DOUBLE_COUNT** | `DOPPIO_CONTEGGIO` | `MEDIA` | Riferimento ticket Redmine (`redmine_ref`) presente contemporaneamente sia in una sotto-attività Canone sia in un'attività Wallet | Verificare che le giornate non siano conteggiate due volte. | [`checks.py:428-444`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L428-L444) |
-| **CHK_CANONE_UNDERUSE** | `CANONE` | `MEDIA` | Canone semestrale con $\text{forecast} < 95\%$ del monte complessivo contrattuale | Rivedere forecast e carico delle sotto-attività. | [`checks.py:447-467`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L447-L467) |
-| **CHK_CANONE_OVERUSE** | `CANONE` | `ALTA` | Canone semestrale con consuntivato corrente maggiore del monte complessivo ($\text{consumed} > \text{total\_days}$) | Verificare i consuntivi del canone o concordare una variazione del monte. | [`checks.py:470-490`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L470-L490) |
-| **CHK_ACTIVE_WITHOUT_OFFER** | `PROGETTO` | `MEDIA` | Progetto in stato consuntivazione `ATTIVO` ma con stato offerta diverso da `ACCETTATA` | Sollecitare l'accettazione dell'offerta o sospendere la consuntivazione. | [`checks.py:493-509`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L493-L509) |
-| **CHK_ALLOC_NO_SOURCE** | `WALLET` | `ALTA` | Allocazione per l'anno 2026 o successivo creata senza progetto di origine specificato | Attribuire l'origine o motivare l'uso del wallet generale. | [`checks.py:512-527`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L512-L527) |
-| **CHK_UNVERIFIED_DATA** | `PROGETTO` | `BASSA` | Progetto contrassegnato dallo stato provvisorio `DA_VERIFICARE` | Revisionare il progetto nella coda di revisione. | [`checks.py:530-544`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L530-L544) |
-| **CHK_MILESTONE_SLIPPED** | `PROGETTO` | `MEDIA` | Milestone di fatturazione che ha subito uno o più spostamenti ($\text{move\_count} > 0$) | Verificare i motivi dello slittamento con il fornitore. | [`checks.py:547-563`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L547-L563) |
+| **CHK_DATE_ORDER** | `PROGETTO` | `ALTA` | `planned_end_date < start_date` oppure `actual_closure_date < start_date` | Correggere le date del progetto. | [`checks.py:59-93`](../../backend/domain/checks.py#L59-L93) |
+| **CHK_END_PASSED_ACTIVE** | `PROGETTO` | `MEDIA` | Progetto `ATTIVO` con `planned_end_date` superata da oltre 30 giorni rispetto ad oggi | Prorogare la data di fine prevista o chiudere la consuntivazione. | [`checks.py:96-121`](../../backend/domain/checks.py#L96-L121) |
+| **CHK_CLOSED_NO_DATE** | `PROGETTO` | `ALTA` | Progetto in stato `CHIUSO` ma con `actual_closure_date` nulla | Inserire la data di chiusura effettiva dalla coda di revisione. | [`checks.py:124-139`](../../backend/domain/checks.py#L124-L139) |
+| **CHK_OVERRUN_PROJECT** | `PROGETTO` | `ALTA` / `MEDIA` | Progetto `ATTIVO` con consuntivato (ledger o PPM) $> \text{budget\_days}$. Severità `ALTA` se sforamento $> 10\%$ | Verificare il consuntivo con Imola e aggiornare pianificazione o budget. | [`checks.py:142-182`](../../backend/domain/checks.py#L142-L182) |
+| **CHK_OVERRUN_ALLOCATION** | `WALLET` | `ALTA` / `MEDIA` | Allocazione con `consumed_days > allocated_days`. Severità `ALTA` se sforamento $> 10\%$ | Verificare i consuntivi wallet con Imola o incrementare l'allocazione. | [`checks.py:185-210`](../../backend/domain/checks.py#L185-L210) |
+| **CHK_ALLOC_EXCEEDS_RESIDUAL** | `WALLET` | `ALTA` | Somma delle giornate allocate dal progetto $> \text{residuo base}$ ($\text{budget} - \text{diretti}$) | Ridurre le allocazioni o approvare l'override con motivazione formale. | [`checks.py:213-260`](../../backend/domain/checks.py#L213-L260) |
+| **CHK_RESIDUAL_EXPIRING** | `WALLET` | `MEDIA` | Progetto `CHIUSO` con residuo non allocato in stato `IN_SCADENZA` (entro 90 giorni) | Allocare il residuo al wallet prima della scadenza. | [`checks.py:263-298`](../../backend/domain/checks.py#L263-L298) |
+| **CHK_RESIDUAL_UNALLOCATED_CLOSED** | `WALLET` | `BASSA` | Progetto `CHIUSO` con residuo non allocato ma ancora in stato `VALIDO` | Valutare l'allocazione delle giornate al wallet. | [`checks.py:301-332`](../../backend/domain/checks.py#L301-L332) |
+| **CHK_ALLOC_FROM_EXPIRED** | `WALLET` | `ALTA` | Data di creazione dell'allocazione posteriore alla data di scadenza del residuo del progetto sorgente | Verificare la data di assegnazione e correggere la provenienza. | [`checks.py:335-378`](../../backend/domain/checks.py#L335-L378) |
+| **CHK_RECON_DELTA** | `RICONCILIAZIONE` | `MEDIA` | Progetto con riconciliazione PPM in esito `KO` ($|\Delta| > \text{tolleranza}$) | Allineare i consuntivi importando l'estratto PPM aggiornato. | [`checks.py:381-400`](../../backend/domain/checks.py#L381-L400) |
+| **CHK_MISSING_IN_PPM** | `RICONCILIAZIONE` | `MEDIA` | Progetto `ATTIVO` con consuntivi interni $> 0$, data fine prevista superata, ma totalmente assente in PPM | Chiedere a Imola l'associazione nel PPM. | [`checks.py:403-425`](../../backend/domain/checks.py#L403-L425) |
+| **CHK_DOUBLE_COUNT** | `DOPPIO_CONTEGGIO` | `MEDIA` | Riferimento ticket Redmine (`redmine_ref`) presente contemporaneamente sia in una sotto-attività Canone sia in un'attività Wallet | Verificare che le giornate non siano conteggiate due volte. | [`checks.py:428-444`](../../backend/domain/checks.py#L428-L444) |
+| **CHK_CANONE_UNDERUSE** | `CANONE` | `MEDIA` | Canone semestrale con $\text{forecast} < 95\%$ del monte complessivo contrattuale | Rivedere forecast e carico delle sotto-attività. | [`checks.py:447-467`](../../backend/domain/checks.py#L447-L467) |
+| **CHK_CANONE_OVERUSE** | `CANONE` | `ALTA` | Canone semestrale con consuntivato corrente maggiore del monte complessivo ($\text{consumed} > \text{total\_days}$) | Verificare i consuntivi del canone o concordare una variazione del monte. | [`checks.py:470-490`](../../backend/domain/checks.py#L470-L490) |
+| **CHK_ACTIVE_WITHOUT_OFFER** | `PROGETTO` | `MEDIA` | Progetto in stato consuntivazione `ATTIVO` ma con stato offerta diverso da `ACCETTATA` | Sollecitare l'accettazione dell'offerta o sospendere la consuntivazione. | [`checks.py:493-509`](../../backend/domain/checks.py#L493-L509) |
+| **CHK_ALLOC_NO_SOURCE** | `WALLET` | `ALTA` | Allocazione per l'anno 2026 o successivo creata senza progetto di origine specificato | Attribuire l'origine o motivare l'uso del wallet generale. | [`checks.py:512-527`](../../backend/domain/checks.py#L512-L527) |
+| **CHK_UNVERIFIED_DATA** | `PROGETTO` | `BASSA` | Progetto contrassegnato dallo stato provvisorio `DA_VERIFICARE` | Revisionare il progetto nella coda di revisione. | [`checks.py:530-544`](../../backend/domain/checks.py#L530-L544) |
+| **CHK_MILESTONE_SLIPPED** | `PROGETTO` | `MEDIA` | Milestone di fatturazione che ha subito uno o più spostamenti ($\text{move\_count} > 0$) | Verificare i motivi dello slittamento con il fornitore. | [`checks.py:547-563`](../../backend/domain/checks.py#L547-L563) |
 
 ---
 

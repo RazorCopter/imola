@@ -64,11 +64,11 @@ flowchart TD
     P4 --- P5
 ```
 
-1. **Disaccoppiamento Ortogonale tra Consuntivazione e Fatturazione (Regola R1)**: Lo stato di avanzamento operativo dei consumi delle giornate (`timesheet_status`) e lo stato commerciale di incasso/liquidazione (`billing_status`) sono trattati come due dimensioni analitiche rigorosamente indipendenti. Un progetto può essere completato e chiuso dal punto di vista dell'erogazione pur mantenendo tranche di fatturazione pianificate nel tempo, o viceversa ([`backend/projects/models.py#L114-L125`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L114-L125)).
-2. **Le Giornate/Uomo come Moneta Contabile Rigorosa (Regola R9)**: L'unità fondamentale del sistema è la giornata/uomo (8 ore lavorative). Tutte le grandezze temporali ed economiche sono memorizzate ed elaborate tramite il tipo [`DaysField`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/fields.py#L15-L28) (`Decimal(8,4)` con quantizzazione a `0.0001` gg e arrotondamento contabile `ROUND_HALF_UP`). L'uso dei tipi `float` IEEE 754 è categoricamente escluso dall'architettura del software ([`backend/domain/money.py#L1-L45`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/money.py#L1-L45)).
-3. **Il Wallet dei Residui come Salvadanaio a Scadenza Certa (Regole R2 & R3)**: Le giornate di budget non consuntivate alla chiusura di un progetto non vanno perdute, ma confluiscono nel **Wallet** (salvadanaio crediti). La fruibilità del credito è soggetta a una scadenza legale rigida: il 31 dicembre dell'anno successivo a quello di chiusura effettiva della commessa (`actual_closure_date.year + 1`). Il disponibile spendibile non è mai un numero cablato nel database, bensì il risultato di una formula di bilancio calcolata in tempo reale ([`backend/domain/residuals.py#L48-L110`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L48-L110), [`backend/domain/wallet_balance.py#L157-L289`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/wallet_balance.py#L157-L289)).
-4. **Il PPM come Fonte di Verità Esterna Certificata (Regola R6)**: Il sistema aziendale PPM di Banca Mediolanum è la fonte contabile autorevole esterna. Supplier Ledger acquisisce periodicamente gli estratti PPM preservandoli in snapshot immutabili ([`backend/ppm/models.py#L36-L67`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/ppm/models.py#L36-L67)), calcolando lo scostamento tra consuntivi interni e PPM con una tolleranza predefinita di `0.0100` gg (`DEFAULT_TOLERANCE`).
-5. **Libro Mastro Append-Only e Tracciabilità Integrale (Regola R5)**: Nessuna registrazione contabile (`TimesheetEntry`) può essere modificata (`UPDATE`) o cancellata (`DELETE`). Qualsiasi correzione viene effettuata mediante un'operazione esplicita di storno contabile (`reverses`), garantita sia a livello di modello applicativo sia da trigger SQL nativo a livello PostgreSQL ([`backend/timesheets/models.py#L147-L170`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L147-L170)).
+1. **Disaccoppiamento Ortogonale tra Consuntivazione e Fatturazione (Regola R1)**: Lo stato di avanzamento operativo dei consumi delle giornate (`timesheet_status`) e lo stato commerciale di incasso/liquidazione (`billing_status`) sono trattati come due dimensioni analitiche rigorosamente indipendenti. Un progetto può essere completato e chiuso dal punto di vista dell'erogazione pur mantenendo tranche di fatturazione pianificate nel tempo, o viceversa ([`backend/projects/models.py#L114-L125`](../../backend/projects/models.py#L114-L125)).
+2. **Le Giornate/Uomo come Moneta Contabile Rigorosa (Regola R9)**: L'unità fondamentale del sistema è la giornata/uomo (8 ore lavorative). Tutte le grandezze temporali ed economiche sono memorizzate ed elaborate tramite il tipo [`DaysField`](../../backend/core/fields.py#L15-L28) (`Decimal(8,4)` con quantizzazione a `0.0001` gg e arrotondamento contabile `ROUND_HALF_UP`). L'uso dei tipi `float` IEEE 754 è categoricamente escluso dall'architettura del software ([`backend/domain/money.py#L1-L45`](../../backend/domain/money.py#L1-L45)).
+3. **Il Wallet dei Residui come Salvadanaio a Scadenza Certa (Regole R2 & R3)**: Le giornate di budget non consuntivate alla chiusura di un progetto non vanno perdute, ma confluiscono nel **Wallet** (salvadanaio crediti). La fruibilità del credito è soggetta a una scadenza legale rigida: il 31 dicembre dell'anno successivo a quello di chiusura effettiva della commessa (`actual_closure_date.year + 1`). Il disponibile spendibile non è mai un numero cablato nel database, bensì il risultato di una formula di bilancio calcolata in tempo reale ([`backend/domain/residuals.py#L48-L110`](../../backend/domain/residuals.py#L48-L110), [`backend/domain/wallet_balance.py#L157-L289`](../../backend/domain/wallet_balance.py#L157-L289)).
+4. **Il PPM come Fonte di Verità Esterna Certificata (Regola R6)**: Il sistema aziendale PPM di Banca Mediolanum è la fonte contabile autorevole esterna. Supplier Ledger acquisisce periodicamente gli estratti PPM preservandoli in snapshot immutabili ([`backend/ppm/models.py#L36-L67`](../../backend/ppm/models.py#L36-L67)), calcolando lo scostamento tra consuntivi interni e PPM con una tolleranza predefinita di `0.0100` gg (`DEFAULT_TOLERANCE`).
+5. **Libro Mastro Append-Only e Tracciabilità Integrale (Regola R5)**: Nessuna registrazione contabile (`TimesheetEntry`) può essere modificata (`UPDATE`) o cancellata (`DELETE`). Qualsiasi correzione viene effettuata mediante un'operazione esplicita di storno contabile (`reverses`), garantita sia a livello di modello applicativo sia da trigger SQL nativo a livello PostgreSQL ([`backend/timesheets/models.py#L147-L170`](../../backend/timesheets/models.py#L147-L170)).
 
 ---
 
@@ -78,31 +78,31 @@ La tabella seguente fornisce la definizione rigorosa di tutti i concetti, costru
 
 | Termine Funzionale | Simbolo / Modello | Definizione di Business | Regole / Vincoli Associati | File di Riferimento |
 | :--- | :--- | :--- | :--- | :--- |
-| **Giornata/Uomo (gg)** | `DaysField` | Unità contabile fondamentale del dominio, corrispondente a 8 ore standard di erogazione specialistica. | Precisione a 4 cifre decimali (`0.0001` gg), arrotondamento `ROUND_HALF_UP`. Mai `float`. | [`core/fields.py#L15`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/fields.py#L15), [`domain/money.py#L12`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/money.py#L12) |
-| **Budget Progetto** | `Project.budget_days` | Monte complessivo delle giornate contrattualizzate per uno specifico progetto tra BMED e Imola. | Non negativo (`CheckConstraint: budget_days >= 0`). | [`projects/models.py#L93`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L93) |
-| **Consuntivo Diretto** | `direct_consumed_days` | Somma algebrica delle giornate erogate e registrate direttamente a valere sulla commessa originaria. | Include eventuali movimenti di storno (con segno negativo). Append-only. | [`domain/residuals.py#L113`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L113), [`timesheets/models.py#L34`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L34) |
-| **Consuntivo via Wallet** | `consumed_via_wallet_days` | Giornate consumate su attività esterne o ticket tecnici finanziati dalle quote wallet generate dal progetto. | Rilevato tramite join su `wallet_allocations.timesheet_entries`. | [`domain/residuals.py#L132`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L132) |
-| **Residuo Operativo Progetto** | `residual_days` | Saldo algebrico delle giornate non consumate: `budget_days - direct_consumed - allocated_to_wallet`. | Calcolato a livello query; non persistito su colonna statica. | [`domain/residuals.py#L185`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L185) |
-| **Quota Rilasciata al Wallet** | `released_to_wallet_days` | Anticipazione esplicita di una porzione del residuo di un progetto ancora attivo resa disponibile al wallet. | Permette l'utilizzo di economie previste senza attendere la chiusura formale del progetto. | [`projects/models.py#L94`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L94) |
-| **Lotto Sorgente Wallet** | `WalletSourceLot` | Conferimento formale del residuo spendibile di un progetto chiuso con data certa nel monte wallet di un anno. | Unico per coppia `(wallet_year, source_project)`. Conserva `source_year` e data. | [`wallet/models.py#L121`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L121) |
-| **Allocazione Wallet** | `WalletAllocation` | Impegno formale di un plafond di giornate per una specifica attività o ticket assegnato a un architetto. | Stati: `APERTA`, `CHIUSA`. Motivi chiusura: `ESAURITA`, `CON_RESIDUO`. | [`wallet/models.py#L163`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L163) |
-| **Tranche di Finanziamento** | `WalletFundingTranche` | Singolo segmento di alimentazione di un'allocazione a valere su uno specifico lotto sorgente ordinato via FIFO. | Traccia `initial_reserved_days`, `committed_days` e `consumed_days`. | [`wallet/models.py#L270`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L270) |
-| **Canone (Organico Allargato)** | `Canone` | Contratto forfettario periodico (semestrale o trimestrale) che disciplina un monte giornate complessivo. | Vincolo `total_days > 0`. Traccia date limite ed estrazione. | [`canone/models.py#L49`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/canone/models.py#L49) |
-| **Target Progressivo Canone** | `target` | Quota teorica di giornate che dovrebbero risultare erogate alla data corrente secondo il piano contrattuale. | Formula: $\min(monte, base + sett \times gg\_sett)$. Soglia allerta sottoutilizzo: 95%. | [`domain/canone_status.py#L34`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/canone_status.py#L34) |
-| **Sotto-Attività Canone** | `CanoneSubactivity` | Dettaglio operativo del canone associato a uno specifico ufficio architetturale (`EA`, `SA`, `TA`, `CROSS`). | Traccia `reserved_days`, `quarter_estimate_days`, `forecast_remaining_days`. | [`canone/models.py#L130`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/canone/models.py#L130) |
-| **Milestone di Fatturazione** | `BillingMilestone` | Scadenza commerciale pianificata per l'emissione e liquidazione di una tranche economica. | Stati: `PIANIFICATA`, `FATTURATA`, `SPOSTATA`, `ANNULLATA`, `DA_VERIFICARE`. | [`projects/models.py#L230`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L230) |
-| **Slot Automatico Milestone** | `BillingScheduleSlot` | Marcatura delle due milestone standard generate dal piano di progetto: `START` (avvio) ed `END` (fine). | Vincolo di unicità: massimo una milestone START e una END per commessa. | [`projects/models.py#L59`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L59), [`projects/billing.py#L20`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/billing.py#L20) |
-| **Snapshot PPM** | `PpmSnapshot` | Archiviazione immutabile e lossless di un estratto esportato periodicamente dal PPM aziendale. | Tipi: `PPM_WALLET`, `PPM_CANONE`, `PPM_PROGETTI`. Verifica quadratura totale. | [`ppm/models.py#L36`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/ppm/models.py#L36) |
-| **Coda di Revisione** | `ReviewQueue` | Backlog operativo dei progetti chiusi senza data certa o in stato `DA_VERIFICARE` (Decisione D-03). | I residui rimangono bloccati finché l'utente non assegna una data effettiva valida. | [`domain/residuals.py#L269`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L269) |
-| **Anomalia Contabile** | `Anomaly` | Segnalazione di violazione di coerenza rilevata dal motore dei 18 controlli automatici o dal seed. | Ciclo di vita: `APERTA`, `IN_VERIFICA`, `RISOLTA`, `ACCETTATA`. Fingerprint immutabile. | [`anomalies/models.py#L49`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py#L49) |
-| **Fingerprint Anomalia** | `fingerprint` | Impronta hash SHA-256 univoca calcolata come `SHA256(rule_code \| entity_refs)`. Esclude i valori. | Garantisce deduplica esatta: modifiche di contesto aggiornano il record senza duplicati. | [`anomalies/models.py#L43`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py#L43) |
-| **Storno Contabile** | `TimesheetEntry.reverses` | Registrazione di compensazione avente giornate di segno opposto a fronte di un movimento errato. | Unico meccanismo ammesso per correggere consuntivi errati senza infrangere l'append-only. | [`timesheets/models.py#L78`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L78) |
+| **Giornata/Uomo (gg)** | `DaysField` | Unità contabile fondamentale del dominio, corrispondente a 8 ore standard di erogazione specialistica. | Precisione a 4 cifre decimali (`0.0001` gg), arrotondamento `ROUND_HALF_UP`. Mai `float`. | [`core/fields.py#L15`](../../backend/core/fields.py#L15), [`domain/money.py#L12`](../../backend/domain/money.py#L12) |
+| **Budget Progetto** | `Project.budget_days` | Monte complessivo delle giornate contrattualizzate per uno specifico progetto tra BMED e Imola. | Non negativo (`CheckConstraint: budget_days >= 0`). | [`projects/models.py#L93`](../../backend/projects/models.py#L93) |
+| **Consuntivo Diretto** | `direct_consumed_days` | Somma algebrica delle giornate erogate e registrate direttamente a valere sulla commessa originaria. | Include eventuali movimenti di storno (con segno negativo). Append-only. | [`domain/residuals.py#L113`](../../backend/domain/residuals.py#L113), [`timesheets/models.py#L34`](../../backend/timesheets/models.py#L34) |
+| **Consuntivo via Wallet** | `consumed_via_wallet_days` | Giornate consumate su attività esterne o ticket tecnici finanziati dalle quote wallet generate dal progetto. | Rilevato tramite join su `wallet_allocations.timesheet_entries`. | [`domain/residuals.py#L132`](../../backend/domain/residuals.py#L132) |
+| **Residuo Operativo Progetto** | `residual_days` | Saldo algebrico delle giornate non consumate: `budget_days - direct_consumed - allocated_to_wallet`. | Calcolato a livello query; non persistito su colonna statica. | [`domain/residuals.py#L185`](../../backend/domain/residuals.py#L185) |
+| **Quota Rilasciata al Wallet** | `released_to_wallet_days` | Anticipazione esplicita di una porzione del residuo di un progetto ancora attivo resa disponibile al wallet. | Permette l'utilizzo di economie previste senza attendere la chiusura formale del progetto. | [`projects/models.py#L94`](../../backend/projects/models.py#L94) |
+| **Lotto Sorgente Wallet** | `WalletSourceLot` | Conferimento formale del residuo spendibile di un progetto chiuso con data certa nel monte wallet di un anno. | Unico per coppia `(wallet_year, source_project)`. Conserva `source_year` e data. | [`wallet/models.py#L121`](../../backend/wallet/models.py#L121) |
+| **Allocazione Wallet** | `WalletAllocation` | Impegno formale di un plafond di giornate per una specifica attività o ticket assegnato a un architetto. | Stati: `APERTA`, `CHIUSA`. Motivi chiusura: `ESAURITA`, `CON_RESIDUO`. | [`wallet/models.py#L163`](../../backend/wallet/models.py#L163) |
+| **Tranche di Finanziamento** | `WalletFundingTranche` | Singolo segmento di alimentazione di un'allocazione a valere su uno specifico lotto sorgente ordinato via FIFO. | Traccia `initial_reserved_days`, `committed_days` e `consumed_days`. | [`wallet/models.py#L270`](../../backend/wallet/models.py#L270) |
+| **Canone (Organico Allargato)** | `Canone` | Contratto forfettario periodico (semestrale o trimestrale) che disciplina un monte giornate complessivo. | Vincolo `total_days > 0`. Traccia date limite ed estrazione. | [`canone/models.py#L49`](../../backend/canone/models.py#L49) |
+| **Target Progressivo Canone** | `target` | Quota teorica di giornate che dovrebbero risultare erogate alla data corrente secondo il piano contrattuale. | Formula: $\min(monte, base + sett \times gg\_sett)$. Soglia allerta sottoutilizzo: 95%. | [`domain/canone_status.py#L34`](../../backend/domain/canone_status.py#L34) |
+| **Sotto-Attività Canone** | `CanoneSubactivity` | Dettaglio operativo del canone associato a uno specifico ufficio architetturale (`EA`, `SA`, `TA`, `CROSS`). | Traccia `reserved_days`, `quarter_estimate_days`, `forecast_remaining_days`. | [`canone/models.py#L130`](../../backend/canone/models.py#L130) |
+| **Milestone di Fatturazione** | `BillingMilestone` | Scadenza commerciale pianificata per l'emissione e liquidazione di una tranche economica. | Stati: `PIANIFICATA`, `FATTURATA`, `SPOSTATA`, `ANNULLATA`, `DA_VERIFICARE`. | [`projects/models.py#L230`](../../backend/projects/models.py#L230) |
+| **Slot Automatico Milestone** | `BillingScheduleSlot` | Marcatura delle due milestone standard generate dal piano di progetto: `START` (avvio) ed `END` (fine). | Vincolo di unicità: massimo una milestone START e una END per commessa. | [`projects/models.py#L59`](../../backend/projects/models.py#L59), [`projects/billing.py#L20`](../../backend/projects/billing.py#L20) |
+| **Snapshot PPM** | `PpmSnapshot` | Archiviazione immutabile e lossless di un estratto esportato periodicamente dal PPM aziendale. | Tipi: `PPM_WALLET`, `PPM_CANONE`, `PPM_PROGETTI`. Verifica quadratura totale. | [`ppm/models.py#L36`](../../backend/ppm/models.py#L36) |
+| **Coda di Revisione** | `ReviewQueue` | Backlog operativo dei progetti chiusi senza data certa o in stato `DA_VERIFICARE` (Decisione D-03). | I residui rimangono bloccati finché l'utente non assegna una data effettiva valida. | [`domain/residuals.py#L269`](../../backend/domain/residuals.py#L269) |
+| **Anomalia Contabile** | `Anomaly` | Segnalazione di violazione di coerenza rilevata dal motore dei 18 controlli automatici o dal seed. | Ciclo di vita: `APERTA`, `IN_VERIFICA`, `RISOLTA`, `ACCETTATA`. Fingerprint immutabile. | [`anomalies/models.py#L49`](../../backend/anomalies/models.py#L49) |
+| **Fingerprint Anomalia** | `fingerprint` | Impronta hash SHA-256 univoca calcolata come `SHA256(rule_code \| entity_refs)`. Esclude i valori. | Garantisce deduplica esatta: modifiche di contesto aggiornano il record senza duplicati. | [`anomalies/models.py#L43`](../../backend/anomalies/models.py#L43) |
+| **Storno Contabile** | `TimesheetEntry.reverses` | Registrazione di compensazione avente giornate di segno opposto a fronte di un movimento errato. | Unico meccanismo ammesso per correggere consuntivi errati senza infrangere l'append-only. | [`timesheets/models.py#L78`](../../backend/timesheets/models.py#L78) |
 
 ---
 
 ## 3. Gli Attori e i Ruoli del Sistema
 
-L'accesso e le facoltà operative nel sistema sono definiti nel modulo [`backend/core/roles.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/roles.py) e mappati sui gruppi standard di Django. Il framework autorizzativo a grana fine è implementato in [`backend/core/capabilities.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/capabilities.py) e consente override dinamici tramite la tabella DB `RoleCapabilityOverride`.
+L'accesso e le facoltà operative nel sistema sono definiti nel modulo [`backend/core/roles.py`](../../backend/core/roles.py) e mappati sui gruppi standard di Django. Il framework autorizzativo a grana fine è implementato in [`backend/core/capabilities.py`](../../backend/core/capabilities.py) e consente override dinamici tramite la tabella DB `RoleCapabilityOverride`.
 
 ### 3.1 Catalogo degli Attori di Dominio
 
@@ -167,7 +167,7 @@ flowchart LR
 
 ### 3.2 Matrice Canonica Capability vs Ruoli
 
-La tabella seguente riporta la configurazione canonica delle 15 capability di sistema ([`backend/core/capabilities.py#L25-L73`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/capabilities.py#L25-L73)):
+La tabella seguente riporta la configurazione canonica delle 15 capability di sistema ([`backend/core/capabilities.py#L25-L73`](../../backend/core/capabilities.py#L25-L73)):
 
 | Codice Capability | Descrizione Funzionale | Admin (`admin`) | Responsabile BMED (`responsabile_bmed`) | Referente BMED (`referente_bmed`) | Fornitore (`fornitore`) |
 | :--- | :--- | :---: | :---: | :---: | :---: |
@@ -188,14 +188,14 @@ La tabella seguente riporta la configurazione canonica delle 15 capability di si
 | `anomalies.resolve` | Risoluzione anomalie e concessione deroghe temporanee | **SI** | **SI** | NO | NO |
 
 > [!IMPORTANT]
-> Le tre capability `data.reset`, `users.manage` e `privileges.manage` sono dichiarate in `RESERVED_CAPABILITIES` ([`backend/core/capabilities.py#L75`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/capabilities.py#L75)). Il sistema impedisce programmaticamente l'assegnazione di tali privilegi a ruoli diversi da `admin`, anche in presenza di record di override manuale nel database.
+> Le tre capability `data.reset`, `users.manage` e `privileges.manage` sono dichiarate in `RESERVED_CAPABILITIES` ([`backend/core/capabilities.py#L75`](../../backend/core/capabilities.py#L75)). Il sistema impedisce programmaticamente l'assegnazione di tali privilegi a ruoli diversi da `admin`, anche in presenza di record di override manuale nel database.
 
 ---
 
 ## 4. Ciclo di Vita dei Progetti e degli Stati Contabili (Regola R1 & R10)
 
 ### 4.1 L'Ortogonalità Tridimensionale degli Stati
-Nel modello dati di Supplier Ledger non esiste un generico "stato del progetto". Conformemente alla **Regola R1** ([`backend/projects/models.py#L3`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L3)), l'avanzamento di una commessa è tracciato da tre dimensioni contabili e contrattuali mutuamente indipendenti:
+Nel modello dati di Supplier Ledger non esiste un generico "stato del progetto". Conformemente alla **Regola R1** ([`backend/projects/models.py#L3`](../../backend/projects/models.py#L3)), l'avanzamento di una commessa è tracciato da tre dimensioni contabili e contrattuali mutuamente indipendenti:
 
 ```mermaid
 flowchart TD
@@ -224,7 +224,7 @@ flowchart TD
 
 ### 4.2 Diagramma di Stato e Transizioni Vincolate
 
-Il diagramma seguente formalizza le transizioni ammesse e i controlli applicativi implementati in `Project.clean()` ([`backend/projects/models.py#L197-L228`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L197-L228)):
+Il diagramma seguente formalizza le transizioni ammesse e i controlli applicativi implementati in `Project.clean()` ([`backend/projects/models.py#L197-L228`](../../backend/projects/models.py#L197-L228)):
 
 ```mermaid
 stateDiagram-v2
@@ -296,10 +296,10 @@ Il ciclo di vita del progetto è presidiato da tre livelli di vincolo:
 Quando una commessa si conclude senza che l'intero budget sia stato consumato, il residuo contabile maturato può essere riutilizzato per finanziare nuove attività architetturali. La **Regola R2** stabilisce le norme perenni di eleggibilità e scadenza del credito:
 
 1. **Determinazione dell'Anno di Riferimento (`residual_reference_year`)**:
-   L'anno di riferimento del residuo deriva in modo deterministico e non sovrascrivibile dall'anno solare della data di chiusura effettiva (`actual_closure_date.year`). Nel modello relazionale, questo valore è memorizzato tramite una colonna generata e persistita dal database ([`backend/projects/models.py#L128-L133`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L128-L133)):
+   L'anno di riferimento del residuo deriva in modo deterministico e non sovrascrivibile dall'anno solare della data di chiusura effettiva (`actual_closure_date.year`). Nel modello relazionale, questo valore è memorizzato tramite una colonna generata e persistita dal database ([`backend/projects/models.py#L128-L133`](../../backend/projects/models.py#L128-L133)):
    $$\text{residual\_reference\_year} = \text{EXTRACT(YEAR FROM actual\_closure\_date)}$$
 2. **Data Limite di Spendibilità (`last_usable_day`)**:
-   Il residuo è spendibile fino al **31 dicembre dell'anno successivo** a quello di chiusura ([`backend/domain/residuals.py#L48-L51`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L48-L51)):
+   Il residuo è spendibile fino al **31 dicembre dell'anno successivo** a quello di chiusura ([`backend/domain/residuals.py#L48-L51`](../../backend/domain/residuals.py#L48-L51)):
    $$\text{Deadline} = \text{Date}(\text{actual\_closure\_date.year} + 1, 12, 31)$$
    *Esempio*: Un progetto chiuso il 15 marzo 2025 genera un residuo spendibile fino al 31 dicembre 2026.
 3. **I Cinque Stati di Validità del Residuo (`ResidualState`)**:
@@ -311,7 +311,7 @@ Quando una commessa si conclude senza che l'intero budget sia stato consumato, i
    - **`NON_DISPONIBILE`**: Progetto ancora `ATTIVO` o `NON_AVVIATO`. Il saldo operativo teorico non costituisce credito wallet (salvo esplicito rilascio tramite `released_to_wallet_days`).
 
 ### 5.2 La Regola R3: Calcolo Dinamico della Disponibilità Wallet
-La capienza e la disponibilità del Wallet annuale **non sono mai campi memorizzati staticamente nel database**, poiché qualsiasi aggiornamento di consuntivo altererebbe i saldi. La **Regola R3** ([`backend/domain/wallet_balance.py#L1-L289`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/wallet_balance.py#L1-L289)) calcola le grandezze per aggregazione analitica real-time:
+La capienza e la disponibilità del Wallet annuale **non sono mai campi memorizzati staticamente nel database**, poiché qualsiasi aggiornamento di consuntivo altererebbe i saldi. La **Regola R3** ([`backend/domain/wallet_balance.py#L1-L289`](../../backend/domain/wallet_balance.py#L1-L289)) calcola le grandezze per aggregazione analitica real-time:
 
 $$\begin{aligned}
 \text{disponibile\_anno} = &\sum_{\text{allocazioni aperte}} (\text{allocated\_days} - \text{consumed\_days}) \\
@@ -359,13 +359,13 @@ sequenceDiagram
     end
 ```
 
-#### Regole Operative del Motore FIFO ([`backend/wallet/services.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/services.py)):
+#### Regole Operative del Motore FIFO ([`backend/wallet/services.py`](../../backend/wallet/services.py)):
 1. **Priorità Rigorosa di Consumo (`reserve_fifo`)**: I lotti sono agganciati partendo da quelli con anno di provenienza più anziano (`source_year`), seguiti dalla data di conferimento (`effective_date`) e dal codice progetto in ordine alfabetico (`source_project__code`).
 2. **Tracciamento per Tranche (`WalletFundingTranche`)**: Per ciascun lotto coinvolto, viene creata una tranche di finanziamento avente sequenza progressiva (`sequence = 1, 2, ...`), memorizzando sia la riserva iniziale (`initial_reserved_days`) sia l'impegno effettivo (`committed_days`).
 3. **Sincronizzazione Dinamica dei Consumi (`sync_allocation_funding`)**: Quando un architetto registra un consuntivo a valere sull'allocazione, le giornate consumate erodono le tranche secondo la sequenza ordinata.
 4. **Restituzione delle Eccedenze alla Chiusura (`close_allocation`)**: Quando un'allocazione viene chiusa anticipatamente con ore residue non consumate:
    - Le quote impegnate non erogate (`committed_days - consumed_days`) vengono rilasciate istantaneamente al lotto sorgente originario.
-   - Lo stato dell'allocazione passa a `CHIUSA` con motivazione `CON_RESIDUO` ([`backend/wallet/models.py#L31-L34`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L31-L34)).
+   - Lo stato dell'allocazione passa a `CHIUSA` con motivazione `CON_RESIDUO` ([`backend/wallet/models.py#L31-L34`](../../backend/wallet/models.py#L31-L34)).
    - La capienza del lotto sorgente torna disponibile per nuove allocazioni.
 
 ---
@@ -378,7 +378,7 @@ Il contratto di **Canone (Organico Allargato)** risponde alla necessità di gara
 - **Monitoraggio del Tasso di Utilizzo (Burn-Down)**: Il sistema verifica costantemente che il committente stia fruendo del servizio con ritmo coerente con le settimane lavorative trascorse, evitando concentrazioni massive a fine periodo o sottoutilizzi irreversibili.
 
 ### 6.2 Formula del Target Progressivo e Regola R4
-Il controllo di avanzamento del canone è implementato in [`backend/domain/canone_status.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/canone_status.py):
+Il controllo di avanzamento del canone è implementato in [`backend/domain/canone_status.py`](../../backend/domain/canone_status.py):
 
 $$\text{weeks} = \max\left(0, \lfloor(\text{today} - \text{start\_date}).\text{days} / 7\rfloor\right)$$
 
@@ -404,11 +404,11 @@ flowchart LR
 ```
 
 - **Interpretazione del Delta Contabile**: Un `delta` positivo indica che il fornitore ha consuntivato meno giornate rispetto al ritmo teorico concordato (a favore BMED).
-- **Soglia di Sottoutilizzo (`UNDERUSE_THRESHOLD = 0.95`)**: Se il valore proiettato a fine semestre (`forecast`) risulta inferiore al 95% del monte complessivo contrattualizzato, scatta automaticamente l'anomalia `CHK_CANONE_UNDERUSE` ([`backend/domain/checks.py#L447-L467`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L447-L467)).
+- **Soglia di Sottoutilizzo (`UNDERUSE_THRESHOLD = 0.95`)**: Se il valore proiettato a fine semestre (`forecast`) risulta inferiore al 95% del monte complessivo contrattualizzato, scatta automaticamente l'anomalia `CHK_CANONE_UNDERUSE` ([`backend/domain/checks.py#L447-L467`](../../backend/domain/checks.py#L447-L467)).
 - **Destinazione del Residuo Inutilizzato (Decisione D-01)**: Come specificato nelle decisioni architetturali di progetto, le giornate di canone non consuntivate a fine semestre non possono essere riversate automaticamente nel wallet crediti: restano come indicatore a credito di rendicontazione tra le parti.
 
 ### 6.3 Struttura degli Uffici e Prevenzione del Doppio Conteggio (Regola R8)
-Le attività svolte all'interno del canone sono censite in sotto-attività ([`backend/canone/models.py#L130-L194`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/canone/models.py#L130-L194)) e suddivise per ufficio competente:
+Le attività svolte all'interno del canone sono censite in sotto-attività ([`backend/canone/models.py#L130-L194`](../../backend/canone/models.py#L130-L194)) e suddivise per ufficio competente:
 - **`EA` (Enterprise Architecture)**: Iniziative strategiche di governance architetturale d'impresa, roadmap ed evoluzione applicativa globale.
 - **`SA` (Solution Architecture)**: Definizione e disegno delle architetture di progetto e soluzioni applicative specifiche per le linee di business.
 - **`TA` (Technology Architecture)**: Standard tecnologici, infrastrutture cloud, middleware, security framework e linee guida di ingegneria del software.
@@ -416,14 +416,14 @@ Le attività svolte all'interno del canone sono censite in sotto-attività ([`ba
 
 #### Prevenzione del Doppio Conteggio Redmine (`CHK_DOUBLE_COUNT`):
 Spesso le attività tecniche sono tracciate su issue tracker **Redmine** tramite ticket numerati (es. `#300228`). Il motore controlli esegue una scansione incrociata tra le sotto-attività del canone e le allocazioni del wallet:
-- Qualora un identificativo Redmine figuri simultaneamente collegato a una sotto-attività di canone e a un'allocazione wallet con giornate consuntivate, scatta tempestivamente l'anomalia ad alta severità `CHK_DOUBLE_COUNT` ([`backend/domain/checks.py#L428-L444`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L428-L444)), impedendo che la medesima prestazione lavorativa venga contabilizzata due volte a carico della banca.
+- Qualora un identificativo Redmine figuri simultaneamente collegato a una sotto-attività di canone e a un'allocazione wallet con giornate consuntivate, scatta tempestivamente l'anomalia ad alta severità `CHK_DOUBLE_COUNT` ([`backend/domain/checks.py#L428-L444`](../../backend/domain/checks.py#L428-L444)), impedendo che la medesima prestazione lavorativa venga contabilizzata due volte a carico della banca.
 
 ---
 
 ## 7. Fatturazione Commerciale e Milestone di Progetto (Regola R11)
 
 ### 7.1 Il Ciclo di Vita delle Milestone
-La gestione della fatturazione è demandata all'entità [`BillingMilestone`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L230-L291), collegata al progetto e regolata da un proprio ciclo di vita:
+La gestione della fatturazione è demandata all'entità [`BillingMilestone`](../../backend/projects/models.py#L230-L291), collegata al progetto e regolata da un proprio ciclo di vita:
 - **`PIANIFICATA`**: Tranche commerciale inserita nel piano di fatturazione con data prevista (`planned_date`).
 - **`FATTURATA`**: Tranche emessa e certificata, con registrazione della data effettiva di liquidazione (`actual_date`).
 - **`SPOSTATA`**: Tranche rinegoziata e slittata temporalmente rispetto alla pianificazione iniziale.
@@ -431,7 +431,7 @@ La gestione della fatturazione è demandata all'entità [`BillingMilestone`](fil
 - **`DA_VERIFICARE`**: Tranche la cui data o importo è oggetto di contestazione o incertezza documentale.
 
 ### 7.2 Piano Automatico a Due Tranche (`BillingScheduleSlot`)
-Per semplificare la governance delle commesse standard, la funzione di sincronizzazione automatica ([`backend/projects/billing.py#L19-L67`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/billing.py#L19-L67)) gestisce due slot di fatturazione automatici posizionati all'ultimo giorno del mese:
+Per semplificare la governance delle commesse standard, la funzione di sincronizzazione automatica ([`backend/projects/billing.py#L19-L67`](../../backend/projects/billing.py#L19-L67)) gestisce due slot di fatturazione automatici posizionati all'ultimo giorno del mese:
 1. **Slot `START`**: associato a `month_end(project.start_date)`.
 2. **Slot `END`**: associato a `month_end(project.planned_end_date)`.
 
@@ -446,11 +446,11 @@ Un vincolo di unicità a livello database (`unique_project_billing_schedule_slot
 | `DA_VERIFICARE` | `DA_VERIFICARE` | `DA_VERIFICARE` |
 
 ### 7.3 Disciplina degli Slittamenti (`move_to`) e Regola R11
-La rinegoziazione dei termini di fatturazione è un processo formalizzato. In conformità alla **Regola R11** ([`backend/projects/models.py#L272-L291`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L272-L291)):
+La rinegoziazione dei termini di fatturazione è un processo formalizzato. In conformità alla **Regola R11** ([`backend/projects/models.py#L272-L291`](../../backend/projects/models.py#L272-L291)):
 - **Motivazione Obbligatoria**: Il metodo `move_to(new_date, reason, user)` solleva un errore bloccante di validazione (`ValidationError`) se la motivazione fornita è assente, vuota o costituita da soli spazi.
 - **Audit Trail Strutturato nel campo JSON `moves`**: A ogni spostamento viene aggiunto un elemento cronologico immutabile contenente data di partenza, data di destinazione, motivazione, autore (`spostata_da`) e timestamp UTC (`spostata_il`).
 - **Contatore Incrementale (`move_count`)**: Il sistema aggiorna un contatore progressivo degli spostamenti.
-- **Rilevamento Anomalie (`CHK_MILESTONE_SLIPPED`)**: Il motore controlli segnala come anomala qualsiasi milestone che abbia subito **più di 2 spostamenti** oppure il cui slittamento complessivo superi i **60 giorni** rispetto alla pianificazione originaria ([`backend/domain/checks.py#L547-L585`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py#L547-L585)).
+- **Rilevamento Anomalie (`CHK_MILESTONE_SLIPPED`)**: Il motore controlli segnala come anomala qualsiasi milestone che abbia subito **più di 2 spostamenti** oppure il cui slittamento complessivo superi i **60 giorni** rispetto alla pianificazione originaria ([`backend/domain/checks.py#L547-L585`](../../backend/domain/checks.py#L547-L585)).
 
 ---
 
@@ -458,10 +458,10 @@ La rinegoziazione dei termini di fatturazione è un processo formalizzato. In co
 
 ### 8.1 Il Ruolo Contabile del PPM
 Nell'ecosistema informativo di Banca Mediolanum, il sistema proprietario di **Project Portfolio Management (PPM)** rappresenta la fonte di verità contabile istituzionale per il consuntivo delle prestazioni erogate dai fornitori esterni.
-Periodicamente, la committente o il fornitore esportano gli estratti PPM che vengono acquisiti da Supplier Ledger sotto forma di **Snapshot Immutabili** ([`backend/ppm/models.py#L36-L67`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/ppm/models.py#L36-L67)).
+Periodicamente, la committente o il fornitore esportano gli estratti PPM che vengono acquisiti da Supplier Ledger sotto forma di **Snapshot Immutabili** ([`backend/ppm/models.py#L36-L67`](../../backend/ppm/models.py#L36-L67)).
 
 ### 8.2 Il Modello di Confronto e la Formula del Delta (Regola R6)
-Il motore di riconciliazione contabile ([`backend/domain/reconciliation.py#L97-L216`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/reconciliation.py#L97-L216)) opera a livello di singola commessa, confrontando il monte consuntivo registrato internamente con il totale risultante dall'ultimo estratto PPM disponibile:
+Il motore di riconciliazione contabile ([`backend/domain/reconciliation.py#L97-L216`](../../backend/domain/reconciliation.py#L97-L216)) opera a livello di singola commessa, confrontando il monte consuntivo registrato internamente con il totale risultante dall'ultimo estratto PPM disponibile:
 
 $$\text{internal\_days} = \text{direct\_consumed\_days} + \text{consumed\_via\_wallet\_days}$$
 
@@ -495,15 +495,15 @@ flowchart TD
 
 ### 8.3 Normalizzazione dei Codici e Righe Non Riconciliate
 Le discrepanze tra stringhe di testo e naming convention negli estratti PPM vengono gestite mediante due algoritmi specifici:
-1. **Normalizzazione Codici Progetto (`normalize_project_code`)**: Rimuove spazi, trattini bassi, converte in maiuscolo e strip i prefissi/suffissi bancari (`BMED-` e `-BMED`). In questo modo, codici scritti come `bmed_im_01` e `IM-01` vengono associati alla medesima commessa con certezza matematica ([`backend/ppm/models.py#L21-L28`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/ppm/models.py#L21-L28)).
-2. **Coda delle Righe PPM Senza Progetto (`unmatched_ppm_rows`)**: Le righe presenti nell'estratto PPM che non trovano corrispondenza con alcun progetto né sotto-attività a canone vengono isolate e convogliate nella coda di verifica, evitando perdite di dati o scarti silenziosi ([`backend/domain/reconciliation.py#L219-L225`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/reconciliation.py#L219-L225)).
+1. **Normalizzazione Codici Progetto (`normalize_project_code`)**: Rimuove spazi, trattini bassi, converte in maiuscolo e strip i prefissi/suffissi bancari (`BMED-` e `-BMED`). In questo modo, codici scritti come `bmed_im_01` e `IM-01` vengono associati alla medesima commessa con certezza matematica ([`backend/ppm/models.py#L21-L28`](../../backend/ppm/models.py#L21-L28)).
+2. **Coda delle Righe PPM Senza Progetto (`unmatched_ppm_rows`)**: Le righe presenti nell'estratto PPM che non trovano corrispondenza con alcun progetto né sotto-attività a canone vengono isolate e convogliate nella coda di verifica, evitando perdite di dati o scarti silenziosi ([`backend/domain/reconciliation.py#L219-L225`](../../backend/domain/reconciliation.py#L219-L225)).
 
 ---
 
 ## 9. Motore di Controllo delle Anomalie (Regole R7 & R8)
 
 ### 9.1 I 18 Controlli Automatici di Consistenza
-Il motore di verifica della consistenza dati ([`backend/domain/checks.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py)) esegue 18 regole di audit deterministiche, catalogate nella tabella sottostante:
+Il motore di verifica della consistenza dati ([`backend/domain/checks.py`](../../backend/domain/checks.py)) esegue 18 regole di audit deterministiche, catalogate nella tabella sottostante:
 
 | # | Codice Regola (`rule_code`) | Severità | Ambito (`scope`) | Condizione di Attivazione e Logica di Dominio | Azione Suggerita al Business |
 | :-: | :--- | :---: | :---: | :--- | :--- |
@@ -527,7 +527,7 @@ Il motore di verifica della consistenza dati ([`backend/domain/checks.py`](file:
 | 18 | `CHK_MILESTONE_SLIPPED` | MEDIA | PROGETTO | Milestone con più di 2 spostamenti o ritardo complessivo > 60 giorni. | Rivedere pianificazione contrattuale con l'amministrazione. |
 
 ### 9.2 Deduplica Deterministica e Ciclo di Vita delle Anomalie (Regola R7)
-Il tracciamento delle anomalie adotta una politica rigorosa di persistenza in [`backend/anomalies/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py):
+Il tracciamento delle anomalie adotta una politica rigorosa di persistenza in [`backend/anomalies/models.py`](../../backend/anomalies/models.py):
 
 ```mermaid
 stateDiagram-v2
@@ -575,7 +575,7 @@ stateDiagram-v2
 2. **Concessione di Deroghe a Termine (`accept`)**:
    Il Responsabile BMED può accettare formalmente una situazione anomala (ad esempio un ritardo autorizzato per motivi contingenti) impostando una data di scadenza della deroga (`accepted_until`). Durante la validità della deroga, l'anomalia non compare tra i bloccanti. Superata la data limite, il sistema riapre automaticamente la segnalazione in stato `APERTA`.
 3. **Meccanismo di Supersessione delle Anomalie Seed (Decisione D-05)**:
-   Le anomalie caricate dai dati storici legacy (`SEED_MANUALE`) contenevano testi generici. Il metodo `mark_superseded` consente di estinguere formalmente le anomalie del seed solo quando tutte le entità citate nel contesto risultano coperte e presidiate dai nuovi controlli automatici formalizzati ([`backend/anomalies/models.py#L243-L280`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py#L243-L280)).
+   Le anomalie caricate dai dati storici legacy (`SEED_MANUALE`) contenevano testi generici. Il metodo `mark_superseded` consente di estinguere formalmente le anomalie del seed solo quando tutte le entità citate nel contesto risultano coperte e presidiate dai nuovi controlli automatici formalizzati ([`backend/anomalies/models.py#L243-L280`](../../backend/anomalies/models.py#L243-L280)).
 
 ---
 
@@ -659,8 +659,8 @@ Per completezza metodologica, la tabella seguente mappa le principali decisioni 
 
 | ID Decisione | Titolo / Oggetto | Impatto sul Dominio Funzionale | Evidenza Codice Sorgente |
 | :---: | :--- | :--- | :--- |
-| **D-01** | Destinazione giornate canone inutilizzate | Nessun riversamento automatico del canone a wallet; il saldo resta indicatore analitico per BMED. | [`domain/canone_status.py#L7-L10`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/canone_status.py#L7-L10) |
-| **D-03** | Progetti CHIUSI senza data di chiusura | Confinamento nella Coda di Revisione; esclusione dai residui spendibili finché non validati con data certa. | [`domain/residuals.py#L65-L73`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L65-L73), [`backend/tests/test_review_queue.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/tests/test_review_queue.py) |
-| **D-04** | Tracciamento attività wallet pregresse | Creazione di attività tecniche (`is_technical=True`) per assorbire consuntivi storici non abbinati. | [`wallet/models.py#L99-L103`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L99-L103) |
-| **D-05** | Supersessione anomalie storiche da seed | Risoluzione guidata dei rilievi seed (`SEED_MANUALE`) rimpiazzati dalla copertura dei controlli automatici. | [`anomalies/models.py#L243-L280`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py#L243-L280) |
-| **D-14** | Divieto di mutazione diretta ledger per PPM | Solo i caricamenti seed possono beneficiare di deroghe transazionali; il PPM rettifica solo via storni. | [`timesheets/mutations.py#L27-L72`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/mutations.py#L27-L72) |
+| **D-01** | Destinazione giornate canone inutilizzate | Nessun riversamento automatico del canone a wallet; il saldo resta indicatore analitico per BMED. | [`domain/canone_status.py#L7-L10`](../../backend/domain/canone_status.py#L7-L10) |
+| **D-03** | Progetti CHIUSI senza data di chiusura | Confinamento nella Coda di Revisione; esclusione dai residui spendibili finché non validati con data certa. | [`domain/residuals.py#L65-L73`](../../backend/domain/residuals.py#L65-L73), [`backend/tests/test_review_queue.py`](../../backend/tests/test_review_queue.py) |
+| **D-04** | Tracciamento attività wallet pregresse | Creazione di attività tecniche (`is_technical=True`) per assorbire consuntivi storici non abbinati. | [`wallet/models.py#L99-L103`](../../backend/wallet/models.py#L99-L103) |
+| **D-05** | Supersessione anomalie storiche da seed | Risoluzione guidata dei rilievi seed (`SEED_MANUALE`) rimpiazzati dalla copertura dei controlli automatici. | [`anomalies/models.py#L243-L280`](../../backend/anomalies/models.py#L243-L280) |
+| **D-14** | Divieto di mutazione diretta ledger per PPM | Solo i caricamenti seed possono beneficiare di deroghe transazionali; il PPM rettifica solo via storni. | [`timesheets/mutations.py#L27-L72`](../../backend/timesheets/mutations.py#L27-L72) |

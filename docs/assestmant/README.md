@@ -48,7 +48,7 @@ flowchart TB
 
     subgraph AppLayer ["Backend Application Layer"]
         Gunicorn["WSGI Server: Gunicorn 23.0<br/>(4 Workers, gthread, 120s timeout)"]
-        Django["Django 5.1.2 + Django REST Framework 3.15<br/>(Modular API Router: 68 Route Registrate)"]
+        Django["Django 5.1.2 + Django REST Framework 3.15<br/>(Modular API Router: 69 Route Registrate)"]
         
         subgraph DomainCore ["Pure Domain Engine (backend/domain/)"]
             D1["residuals.py (R1, R2, R10, R18)"]
@@ -98,19 +98,19 @@ docs/assestmant/
 |-- 03_FUNCTIONAL_CAPABILITY_MAP.md        <- Mappa esaustiva 15 capability canoniche e 39 functional
 |-- 04_WORKFLOW_CATALOG.md                 <- Catalogo analitico dei 34 workflow end-to-end con 6 sequence
 |-- 05_TECHNICAL_ARCHITECTURE.md           <- Architettura 10-layer, sequence, OCC, DDD e pattern
-|-- 06_DATA_MODEL.md                       <- Modello relazionale PostgreSQL, 26 modelli ORM e diagramma ER
-|-- 07_API_CATALOG.md                      <- Catalogo 68 route, contratti RFC 7807, If-Match e tracciabilit
+|-- 06_DATA_MODEL.md                       <- Modello relazionale PostgreSQL, 23 modelli dominio + 17 storici e diagramma ER
+|-- 07_API_CATALOG.md                      <- Catalogo 69 route, contratti RFC 7807, If-Match e tracciabilit
 |-- 08_BUSINESS_RULES.md                   <- Le 18 regole di business (R1-R18), 18 controlli e formule
 |-- 09_SECURITY_AUTHORIZATION.md           <- Modello CBAC a 15 permessi, 4 ruoli, audit trail e minacce
-|-- 10_FRONTEND_UX_ASSESSMENT.md           <- Valutazione redesign Sol/Terra, gap UX/UI, WCAG AA e responsive
-|-- 11_TEST_QUALITY_ASSESSMENT.md          <- Analisi piramide test (38 pytest, 14 vitest, 8 playwright)
+|-- 10_FRONTEND_UX_ASSESSMENT.md           <- Valutazione redesign Sol/Terra, 11 viste, WCAG AA, responsive e gap Sol
+|-- 11_TEST_QUALITY_ASSESSMENT.md          <- Analisi piramide test (36 pytest con 403 test, 15 vitest con 75 test, 8 playwright)
 |-- 12_DEPLOYMENT_OPERATIONS.md            <- Docker Compose, Nginx, Synology NAS, Make target e backup
 |-- 13_TECHNICAL_DEBT_RISKS.md             <- 12 debiti tecnici, 8 rischi architetturali e piano remediation
 |-- 14_STATE_OF_THE_ART.md                 <- Fotografia oggettiva senza percentuali arbitrarie e gap residui
 |-- 15_COMPLETION_ROADMAP.md               <- Piano Go-Live a 4 sprint, backlog prioritizzato P0-P4 e DoD
 |-- 16_AI_HANDOVER.md                      <- Guida di passaggio consegne ad agenti AI e regole inviolabili
 |-- 17_EVIDENCE_INDEX.md                   <- Matrice di tracciabilit totale requisiti -> codice -> test
-`-- 18_ASSESSMENT_CONSISTENCY_REPORT.md    <- Report di risoluzione e riconciliazione delle 11 incongruenze
+`-- 18_ASSESSMENT_CONSISTENCY_REPORT.md    <- Report di risoluzione e riconciliazione delle 16 incongruenze
 ```
 
 ---
@@ -119,51 +119,56 @@ docs/assestmant/
 
 | # | Documento | Dimensione | Area Tematica & Contenuto Chiave |
 |---|:---|:---:|---|
-| **00** | [`ASSESSMENT_PROGRESS.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/ASSESSMENT_PROGRESS.md) | 2.1 KB | Registro delle 19 fasi operative; tracciamento stati di avanzamento (100% COMPLETATO). |
-| **01** | [`01_REPOSITORY_INVENTORY.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/01_REPOSITORY_INVENTORY.md) | 48.4 KB | Censimento integrale file tree, metriche SLOC, stack software, entry point, 20 make target e diagramma componenti. |
-| **02** | [`02_FUNCTIONAL_DOMAIN_MODEL.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/02_FUNCTIONAL_DOMAIN_MODEL.md) | 60.9 KB | Dominio BMED/Imola, glossario 20 termini formali, ortogonalit stati, ciclo vita wallet e formule matematiche pure. |
-| **03** | [`03_FUNCTIONAL_CAPABILITY_MAP.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/03_FUNCTIONAL_CAPABILITY_MAP.md) | 58.6 KB | Tassonomia funzionale su 10 macro-aree, conciliazione 15 capability CBAC vs 39 functional capabilities di business. |
-| **04** | [`04_WORKFLOW_CATALOG.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/04_WORKFLOW_CATALOG.md) | 129.3 KB | Schede analitiche dei 34 workflow applicativi end-to-end con 6 sequence diagram Mermaid (OCC, FIFO, Storno, Import). |
-| **05** | [`05_TECHNICAL_ARCHITECTURE.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/05_TECHNICAL_ARCHITECTURE.md) | 64.1 KB | Architettura a 10 layer logici, pipeline di comunicazione client/server, diagramma di deployment e pattern DDD/OCC. |
-| **06** | [`06_DATA_MODEL.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/06_DATA_MODEL.md) | 82.6 KB | Modello relazionale completo, catalogo 26 modelli ORM Django, vincoli SQL, trigger nativo append-only e diagramma ER. |
-| **07** | [`07_API_CATALOG.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/07_API_CATALOG.md) | 74.1 KB | Censimento formale delle 68 route registrate (55 logiche, 12 alias), standard RFC 7807, If-Match e mapping client. |
-| **08** | [`08_BUSINESS_RULES.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/08_BUSINESS_RULES.md) | 58.9 KB | Le 18 regole contabili (R1-R18), catalogo dei 18 controlli `CHK_*`, formule LaTeX, soglie e storni append-only. |
-| **09** | [`09_SECURITY_AUTHORIZATION.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/09_SECURITY_AUTHORIZATION.md) | 54.9 KB | Modello di sicurezza CBAC a 15 capability, 4 ruoli canonici, permission classes DRF, audit trail, gestione rischi OWASP. |
-| **10** | [`10_FRONTEND_UX_ASSESSMENT.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/10_FRONTEND_UX_ASSESSMENT.md) | 69.6 KB | Valutazione specialistica UX/UI, analisi 10 viste, conformit WCAG AA, token Tailwind, verifica responsive e gap Sol. |
-| **11** | [`11_TEST_QUALITY_ASSESSMENT.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/11_TEST_QUALITY_ASSESSMENT.md) | 68.2 KB | Analisi piramide di testing: 38 suite pytest, 14 vitest (73 unit test), 8 spec E2E Playwright e gap FG-039. |
-| **12** | [`12_DEPLOYMENT_OPERATIONS.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/12_DEPLOYMENT_OPERATIONS.md) | 75.1 KB | Stack Docker Compose prod/dev, multi-stage build, configurazione Nginx, deployment su Synology NAS e procedure DR. |
-| **13** | [`13_TECHNICAL_DEBT_RISKS.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/13_TECHNICAL_DEBT_RISKS.md) | 71.2 KB | Mappatura di 12 debiti tecnici (monoliti, asincronismo) e 8 rischi architetturali con matrice Probabilit x Impatto. |
-| **14** | [`14_STATE_OF_THE_ART.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/14_STATE_OF_THE_ART.md) | 69.5 KB | Valutazione oggettiva dello stato reale senza metriche arbitrarie: classificazione generale PARTIAL per test e UX. |
-| **15** | [`15_COMPLETION_ROADMAP.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/15_COMPLETION_ROADMAP.md) | 59.4 KB | Piano operativo di rilascio articolato su 4 Sprint (P0 Bloccanti, P1 Incompletezze, P2 Debito, P3/P4 Rifiniture). |
-| **16** | [`16_AI_HANDOVER.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/16_AI_HANDOVER.md) | 43.2 KB | Guida operativa di passaggio consegne per agenti AI, 8 regole inviolabili, mappa dei moduli e comandi di verifica. |
-| **17** | [`17_EVIDENCE_INDEX.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/17_EVIDENCE_INDEX.md) | 79.2 KB | Matrice totale di tracciabilit incrociata: Requisito -> UI -> Endpoint -> Handler -> Dominio -> ORM -> Test. |
-| **18** | [`18_ASSESSMENT_CONSISTENCY_REPORT.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/18_ASSESSMENT_CONSISTENCY_REPORT.md) | 54.5 KB | Risoluzione formale e riconciliazione delle 11 incongruenze riscontrate sul codice sorgente effettivo (SSoT). |
+| **00** | [`ASSESSMENT_PROGRESS.md`](./ASSESSMENT_PROGRESS.md) | 2.1 KB | Registro delle 19 fasi operative; tracciamento stati di avanzamento (100% COMPLETATO). |
+| **01** | [`01_REPOSITORY_INVENTORY.md`](./01_REPOSITORY_INVENTORY.md) | 48.4 KB | Censimento integrale file tree, metriche SLOC, stack software, entry point, 20 make target e diagramma componenti. |
+| **02** | [`02_FUNCTIONAL_DOMAIN_MODEL.md`](./02_FUNCTIONAL_DOMAIN_MODEL.md) | 60.9 KB | Dominio BMED/Imola, glossario 20 termini formali, ortogonalit stati, ciclo vita wallet e formule matematiche pure. |
+| **03** | [`03_FUNCTIONAL_CAPABILITY_MAP.md`](./03_FUNCTIONAL_CAPABILITY_MAP.md) | 58.6 KB | Tassonomia funzionale su 10 macro-aree, conciliazione 15 capability CBAC vs 39 functional capabilities di business. |
+| **04** | [`04_WORKFLOW_CATALOG.md`](./04_WORKFLOW_CATALOG.md) | 129.3 KB | Schede analitiche dei 34 workflow applicativi end-to-end con 6 sequence diagram Mermaid (OCC, FIFO, Storno, Import). |
+| **05** | [`05_TECHNICAL_ARCHITECTURE.md`](./05_TECHNICAL_ARCHITECTURE.md) | 64.1 KB | Architettura a 10 layer logici, pipeline di comunicazione client/server, diagramma di deployment e pattern DDD/OCC. |
+| **06** | [`06_DATA_MODEL.md`](./06_DATA_MODEL.md) | 82.6 KB | Modello relazionale completo, catalogo 23 modelli ORM Django + 17 storici, vincoli SQL, trigger nativo append-only. |
+| **07** | [`07_API_CATALOG.md`](./07_API_CATALOG.md) | 74.1 KB | Censimento formale delle 69 route registrate (56 logiche, 12 alias), standard RFC 7807, If-Match e report gestionale. |
+| **08** | [`08_BUSINESS_RULES.md`](./08_BUSINESS_RULES.md) | 58.9 KB | Le 18 regole contabili (R1-R18), catalogo dei 18 controlli `CHK_*`, formule LaTeX, soglie e storni append-only. |
+| **09** | [`09_SECURITY_AUTHORIZATION.md`](./09_SECURITY_AUTHORIZATION.md) | 54.9 KB | Modello di sicurezza CBAC a 15 capability, 4 ruoli canonici, permission classes DRF, audit trail, gestione rischi OWASP. |
+| **10** | [`10_FRONTEND_UX_ASSESSMENT.md`](./10_FRONTEND_UX_ASSESSMENT.md) | 69.6 KB | Valutazione specialistica UX/UI, analisi 11 viste (inclusa ManagementReportPage), WCAG AA, responsive e gap Sol. |
+| **11** | [`11_TEST_QUALITY_ASSESSMENT.md`](./11_TEST_QUALITY_ASSESSMENT.md) | 68.2 KB | Analisi piramide di testing: 36 suite pytest (403 test), 15 vitest (75 unit test: 68 pass, 7 fail), 8 playwright. |
+| **12** | [`12_DEPLOYMENT_OPERATIONS.md`](./12_DEPLOYMENT_OPERATIONS.md) | 75.1 KB | Stack Docker Compose prod/dev, multi-stage build, configurazione Nginx, deployment su Synology NAS e procedure DR. |
+| **13** | [`13_TECHNICAL_DEBT_RISKS.md`](./13_TECHNICAL_DEBT_RISKS.md) | 71.2 KB | Mappatura di 12 debiti tecnici (monoliti, asincronismo) e 8 rischi architetturali con matrice Probabilit x Impatto. |
+| **14** | [`14_STATE_OF_THE_ART.md`](./14_STATE_OF_THE_ART.md) | 69.5 KB | Fotografia oggettiva senza percentuali arbitrarie: 403 test pytest, 15 vitest, 11 viste, repo git attivo su main. |
+| **15** | [`15_COMPLETION_ROADMAP.md`](./15_COMPLETION_ROADMAP.md) | 59.4 KB | Piano operativo di rilascio articolato su 4 Sprint (P0 Bloccanti, P1 Incompletezze, P2 Debito, P3/P4 Rifiniture). |
+| **16** | [`16_AI_HANDOVER.md`](./16_AI_HANDOVER.md) | 43.2 KB | Guida operativa di passaggio consegne per agenti AI, 8 regole inviolabili, mappa dei moduli e comandi di verifica. |
+| **17** | [`17_EVIDENCE_INDEX.md`](./17_EVIDENCE_INDEX.md) | 79.2 KB | Matrice totale di tracciabilit incrociata: Requisito -> UI -> Endpoint -> Handler -> Dominio -> ORM -> Test. |
+| **18** | [`18_ASSESSMENT_CONSISTENCY_REPORT.md`](./18_ASSESSMENT_CONSISTENCY_REPORT.md) | 54.5 KB | Risoluzione formale e riconciliazione delle 16 incongruenze riscontrate sul codice sorgente effettivo (SSoT). |
 
 ---
 
 ## 3. Matrice Riconciliata della Single Source of Truth (SSoT)
 
-In conformit all'audit formale svolto in [`18_ASSESSMENT_CONSISTENCY_REPORT.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/18_ASSESSMENT_CONSISTENCY_REPORT.md), tutti i documenti della knowledge base sono stati uniformati secondo i seguenti punti fermi provati dal codice sorgente:
+In conformit all'audit formale svolto in [`18_ASSESSMENT_CONSISTENCY_REPORT.md`](./18_ASSESSMENT_CONSISTENCY_REPORT.md), tutti i documenti della knowledge base sono stati uniformati secondo i seguenti punti fermi provati dal codice sorgente:
 
 | ID | Ambito Conteso | Valore Documentale Discordante | Verit Provata nel Codice Sorgente (SSoT) | Evidenza Primaria nel Repo |
 |:---:|---|---|---|---|
 | **INC-01** | **Capability di Sistema** | 13 capability | **15 Canonical Capabilities** (`ALL_CAPABILITIES`) | `backend/core/capabilities.py:25-43` |
 | **INC-02** | **Ruoli Applicativi** | Ruoli generici (Admin, PM, Viewer) | **4 Ruoli Enterprise BMED** (`admin`, `responsabile_bmed`, `referente_bmed`, `fornitore`) | `backend/core/roles.py:7-19` |
-| **INC-03** | **Censimento Route API** | 40..60 endpoint | **68 Route Registrate** (55 percorsi logici univoci, 12 alias, 1 deprecato) | `backend/api/urls.py` + `config/urls.py` |
+| **INC-03** | **Censimento Route API** | 40..60 endpoint | **69 Route Registrate** (56 percorsi logici univoci, 12 alias, 1 deprecato) | `backend/api/urls.py` + `config/urls.py` |
 | **INC-04** | **Tolleranza PPM** | Confusione tra 0.01 gg e 0.0625 gg | **Tolleranza: 0.0100 gg** (~4.8 min) / **Granularit: 0.0625 gg** (30 min) | `backend/core/models.py:AppSettings` |
-| **INC-05** | **Dataset Seed Reale** | `seed_imola_2026-10-16.json` (refuso) | **`seed_imola_v4_2026-10-09.json`** (142 progetti, 206 monthly timesheet) | `data/seed/seed_imola_v4_2026-10-09.json` |
+| **INC-05** | **Dataset Seed Reale** | Dichiarato inesistente sul filesystem | **File presente su disco** (84.3 KB, v1 40 progetti); per produzione: `seed_imola_v4_2026-10-09.json` (142 progetti) | `data/seed/` |
 | **INC-06** | **Workbook Excel Storico** | Falso blocco import storico | **File presente su disco** (122.666 bytes, SHA-256 verificato) | `docs/2026S1-OrgAllargatoProgetti-Situazione.xlsx` |
-| **INC-07** | **Ambiente Git Locale** | Branch / Commit locali | **Directory di lavoro senza repository Git locale attivo** | Sincronizzazione filesystem host OneDrive |
-| **INC-08** | **Stato Redesign UX** | Completato al 100% | **Classificato PARTIAL** (componenti attivi, integrazione E2E live pendente) | `outputs/SOL_UX_GAP_ANALYSIS.md` |
+| **INC-07** | **Ambiente Git Locale** | Assenza repository Git | **Repository Git locale ATTIVO**, branch `main`, remote GitHub `RazorCopter/imola.git` | `.git/`, `git status` |
+| **INC-08** | **Stato Redesign UX** | Completato al 100% | **Classificato PARTIAL** (componenti attivi, integrazione E2E live pendente, 7 test vitest da allineare) | `outputs/SOL_UX_GAP_ANALYSIS.md` |
 | **INC-09** | **Formule Saldo Wallet** | Notazioni ambigue | **Allocazioni decrementano immediatamente il residuo spendibile** | `backend/domain/residuals.py:184-186` |
 | **INC-10** | **Nomenclatura Canone/UI** | Termini alternati | **Entit tecnica = Canone; UI/Presentazione = Organico Allargato** | `frontend/src/features/canone/CanonePage.tsx` |
 | **INC-11** | **Chiusura Commesse** | `Release to Wallet` | **Endpoint deprecato (HTTP 409); flusso valido: `Validate Closure`** | `backend/api/domain_views.py:1767-1815` |
+| **INC-12** | **Test Backend Pytest** | 153 test su 38 file | **403 test collezionati su 36 file Python** | `backend/tests/` |
+| **INC-13** | **Test Frontend Vitest** | 14 suite con 73/73 passati | **15 suite con 75 test totali: 68 passati, 7 falliti in 4 suite** | `frontend/src/**/__tests__/` |
+| **INC-14** | **Viste SPA e Reporting** | 10 viste SPA | **11 viste protette + login**: inclusa `ManagementReportPage.tsx` (`/report-gestionale`) | `frontend/src/App.tsx`, `api/management_report.py` |
+| **INC-15** | **Stabilità Backend** | Blocco P0 per crash sintassi admin_views | `manage.py check` a zero errori; dipendenza esclusiva da host PostgreSQL | `python manage.py check` |
+| **INC-16** | **Modelli ORM Django** | 26 o 17 modelli | **23 modelli dominio concreti + 17 modelli storici** (40 applicativi totali) | Django Apps Registry |
 
 ---
 
 ## 4. Onboarding Rapido per Ingegneri e Nuovi Agenti AI
 
-Per interagire con il repository senza commettere errori contabili o architetturali, consultare prioritariamente il deliverable dedicato [`16_AI_HANDOVER.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/16_AI_HANDOVER.md).
+Per interagire con il repository senza commettere errori contabili o architetturali, consultare prioritariamente il deliverable dedicato [`16_AI_HANDOVER.md`](./16_AI_HANDOVER.md).
 
 ### 4.1 Comandi Essenziali del Ciclo di Vita (Make Toolchain)
 
@@ -208,7 +213,7 @@ make lint
 
 ## 5. Sintesi dello Stato dell'Arte e Criteri di Pronto al Rilascio (Go-Live Gate)
 
-Come documentato in [`14_STATE_OF_THE_ART.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/14_STATE_OF_THE_ART.md) e pianificato in [`15_COMPLETION_ROADMAP.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/15_COMPLETION_ROADMAP.md), il sistema si trova in uno stato di avanzamento elevato ma **non pu essere dichiarato immediatamente pronto per la produzione** fino al soddisfacimento dei seguenti 5 Gate Criteria:
+Come documentato in [`14_STATE_OF_THE_ART.md`](./14_STATE_OF_THE_ART.md) e pianificato in [`15_COMPLETION_ROADMAP.md`](./15_COMPLETION_ROADMAP.md), il sistema si trova in uno stato di avanzamento elevato ma **non pu essere dichiarato immediatamente pronto per la produzione** fino al soddisfacimento dei seguenti 5 Gate Criteria:
 
 ```mermaid
 flowchart TD
@@ -219,8 +224,8 @@ flowchart TD
     G5 -->|TUTTI I GATE SUPERATI| PROD["AUTORIZZAZIONE AL GO-LIVE IN PRODUZIONE"]
 ```
 
-1. **Gate 1**: Risoluzione del riavvio ciclico del container backend riscontrato in `SOL_UX_GAP_ANALYSIS.md` su `admin_views.py`.
-2. **Gate 2**: Firma della checklist di accettazione umana [`docs/MANUAL_VALIDATION_FASE7.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/MANUAL_VALIDATION_FASE7.md) a browser con gli utenti di test BMED.
+1. **Gate 1**: Verifica e allineamento connettività PostgreSQL locale / Docker host (risoluzione hostname `db` vs `localhost`).
+2. **Gate 2**: Firma della checklist di accettazione umana [`docs/MANUAL_VALIDATION_FASE7.md`](../../docs/MANUAL_VALIDATION_FASE7.md) a browser con gli utenti di test BMED.
 3. **Gate 3**: Esecuzione della suite E2E Playwright completa su stack Docker reale con database PostgreSQL (senza intercettazione di rete `fixtures.ts`).
 4. **Gate 4**: Allineamento del Makefile per puntare al dataset definitivo `seed_imola_v4_2026-10-09.json`.
 5. **Gate 5**: Verifica del deployment su Synology NAS Container Manager con permessi utente non-root (UID 10001) e rotazione automatizzata dei dump `pg_dump`.

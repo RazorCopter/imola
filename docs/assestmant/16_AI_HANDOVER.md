@@ -57,12 +57,12 @@ La soluzione è strutturata su quattro layer architetturali completamente contai
    - Smista le richieste: route `/api/v1/*` al backend Django (porta `8000`), route statiche/SPA `/*` al container frontend.
    - Fornisce compressione gzip, gestione header di sicurezza e proxying streaming/ETag.
 2. **Frontend SPA**: React 18.3, TypeScript 5.6, Tailwind CSS 3.4, Vite 5.4
-   - Layout shell unificato ([`frontend/src/components/AppShell.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/components/AppShell.tsx)) con navigazione gerarchica, Command Palette (`Ctrl+K`), supporto dark/light theme e localizzazione italiana con i18next.
-   - 10 feature modules isolati in [`frontend/src/features/`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/).
-   - Client HTTP specializzato ([`frontend/src/lib/api.ts`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/lib/api.ts)) conforme allo standard RFC 7807 (`application/problem+json`) e supporto concurrency lock ottimistico (`If-Match` / ETag).
+   - Layout shell unificato ([`frontend/src/components/AppShell.tsx`](../../frontend/src/components/AppShell.tsx)) con navigazione gerarchica, Command Palette (`Ctrl+K`), supporto dark/light theme e localizzazione italiana con i18next.
+   - 10 feature modules isolati in [`frontend/src/features/`](../../frontend/src/features/).
+   - Client HTTP specializzato ([`frontend/src/lib/api.ts`](../../frontend/src/lib/api.ts)) conforme allo standard RFC 7807 (`application/problem+json`) e supporto concurrency lock ottimistico (`If-Match` / ETag).
 3. **Backend REST**: Python 3.12, Django 5.1.2, Django REST Framework 3.15, drf-spectacular 0.27
-   - Modelli di tracciamento universale ([`backend/core/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L67-L106)) con lock ottimistico tramite campo `version` e audit trail immutabile via `django-simple-history`.
-   - Modulo di dominio puro ([`backend/domain/`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/)): calcoli contabili, scadenze residui, disponibilità wallet e quadratura PPM isolati dal layer HTTP/DB.
+   - Modelli di tracciamento universale ([`backend/core/models.py`](../../backend/core/models.py#L67-L106)) con lock ottimistico tramite campo `version` e audit trail immutabile via `django-simple-history`.
+   - Modulo di dominio puro ([`backend/domain/`](../../backend/domain/)): calcoli contabili, scadenze residui, disponibilità wallet e quadratura PPM isolati dal layer HTTP/DB.
 4. **Data Layer**: PostgreSQL 16
    - Persistenza con transazioni ACID, chiavi primarie UUID v4 (`uuid_generate_v4()`), trigger DB per blocco modifiche non consentite e vincoli di integrità relazionale avanzati (Check Constraints).
 
@@ -70,8 +70,8 @@ La soluzione è strutturata su quattro layer architetturali completamente contai
 
 | Ambito | Stato | Evidenza Chiave | Descrizione |
 |---|---|---|---|
-| **Fasi 1-7 Core & Business Logic** | **IMPLEMENTED** | [`backend/domain/`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/), [`backend/api/`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/) | Motore regole R1-R18, importatori Seed v4 e PPM, audit trail, gestione capability e controlli contabili operativi. |
-| **Fase 8 UX Redesign** | **PARTIAL** | [`outputs/UX_REDESIGN_FINAL_REPORT.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/outputs/UX_REDESIGN_FINAL_REPORT.md#L1-L46) | Riprogettate le 7 aree operative, 73/73 test Vitest superati su 14 file, catture visive multi-viewport generate. Rimangono parziali: centralizzazione totale del design system, conformità WCAG 2.1 AA su tutti i dialog e verifiche E2E reali contro backend attivo. |
+| **Fasi 1-7 Core & Business Logic** | **IMPLEMENTED** | [`backend/domain/`](../../backend/domain/), [`backend/api/`](../../backend/api/) | Motore regole R1-R18, importatori Seed v4 e PPM, audit trail, gestione capability e controlli contabili operativi. |
+| **Fase 8 UX Redesign** | **PARTIAL** | [`outputs/UX_REDESIGN_FINAL_REPORT.md`](../../outputs/UX_REDESIGN_FINAL_REPORT.md#L1-L46) | Riprogettate le 7 aree operative, 73/73 test Vitest superati su 14 file, catture visive multi-viewport generate. Rimangono parziali: centralizzazione totale del design system, conformità WCAG 2.1 AA su tutti i dialog e verifiche E2E reali contro backend attivo. |
 | **Ambiente Backend Locale** | **PARTIAL** | Host Windows / Docker | Il container backend su alcuni ambienti host risente di riavvii periodici legati al reload hot-swap o a configurazioni Postgres locali (porta 5433). Richiede verifica operativa prima del rilascio. |
 
 ---
@@ -99,7 +99,7 @@ flowchart LR
 - **Motivazione Contabile**: In JavaScript e Python i numeri `float` a 64 bit a virgola mobile non possono rappresentare esattamente frazioni decimali (es. `0.1 + 0.2 = 0.30000000000000004`). In un ledger contabile dove si sommano migliaia di consuntivi e si calcolano valori economici da centinaia di migliaia di euro, un errore di rappresentazione binaria genera ammanchi o eccedenze fittizie.
 - **Implementazione Backend**:
   * Tutte le quantità di giornate devono essere istanze di `Decimal` con precisione minima di 4 cifre decimali (`Decimal("0.0001")`), arrotondate rigorosamente con `ROUND_HALF_UP`.
-  * Riferimento codice: [`backend/domain/money.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/money.py#L12-L17):
+  * Riferimento codice: [`backend/domain/money.py`](../../backend/domain/money.py#L12-L17):
     ```python
     DAYS_QUANT = Decimal("0.0001")
     DISPLAY_QUANT = Decimal("0.01")
@@ -107,17 +107,17 @@ flowchart LR
     ZERO = Decimal("0.0000")
     PPM_GRANULARITY = Decimal("0.0625")
     ```
-  * Campo Django standard per i modelli: [`backend/core/fields.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/fields.py) -> `DaysField` (`DecimalField(max_digits=12, decimal_places=4)`).
-  * Serializzazione API: [`backend/api/renderers.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/renderers.py) converte ogni valore `Decimal` in `string` nel JSON.
+  * Campo Django standard per i modelli: [`backend/core/fields.py`](../../backend/core/fields.py) -> `DaysField` (`DecimalField(max_digits=12, decimal_places=4)`).
+  * Serializzazione API: [`backend/api/renderers.py`](../../backend/api/renderers.py) converte ogni valore `Decimal` in `string` nel JSON.
 - **Implementazione Frontend**:
-  * Nel frontend le giornate arrivano come stringhe e **devono rimanere stringhe** ([`frontend/src/lib/format.ts`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/lib/format.ts#L1-L18)).
+  * Nel frontend le giornate arrivano come stringhe e **devono rimanere stringhe** ([`frontend/src/lib/format.ts`](../../frontend/src/lib/format.ts#L1-L18)).
   * **DIVIETO DI CALCOLO LATO CLIENT**: Nel frontend non si esegue MAI alcun calcolo aritmetico contabile (somme, sottrazioni, percentuali, residui). Se occorre un indicatore aggregato, DEVE essere calcolato nel backend (`backend/domain/`) ed esposto via endpoint.
   * L'unica operazione concessa sul client è la formattazione visiva tramite `Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true })` prima della visualizzazione nelle celle.
 
 ### Vincolo 2: DIVIETO ASSOLUTO DI UPDATE E DELETE SU TIMESHEET ENTRY (Decisione D-14)
 - **Motivazione Contabile**: I consuntivi formano il giornale mastro (General Ledger). La cancellazione o la modifica sul posto di una riga distrugge la catena di custodia e rende impossibile la revisione contabile.
 - **Implementazione Backend**:
-  * Modello [`backend/timesheets/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L146-L156):
+  * Modello [`backend/timesheets/models.py`](../../backend/timesheets/models.py#L146-L156):
     ```python
     def save(self, *args: Any, **kwargs: Any) -> None:
         if not self._state.adding:
@@ -131,14 +131,14 @@ flowchart LR
             "I consuntivi non si cancellano: registrare una riga di storno (reverses)."
         )
     ```
-  * Correzioni: si effettuano ESCLUSIVAMENTE tramite storno contabile invocando [`TimesheetEntry.build_reversal()`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L158-L169), che genera una riga nuova con `days = -self.days`, `source = TimesheetSource.STORNO` e puntatore `reverses = self`.
+  * Correzioni: si effettuano ESCLUSIVAMENTE tramite storno contabile invocando [`TimesheetEntry.build_reversal()`](../../backend/timesheets/models.py#L158-L169), che genera una riga nuova con `days = -self.days`, `source = TimesheetSource.STORNO` e puntatore `reverses = self`.
   * Trigger DB: a livello PostgreSQL è attivo un trigger che inibisce istruzioni SQL `UPDATE` o `DELETE` sulla tabella `timesheets_timesheetentry`, disabilitabile temporaneamente solo durante l'import batch seed controllato.
   * Check Constraint Target Esclusivo: ogni riga di consuntivo DEVE avere esattamente uno e un solo target valorizzato tra `project`, `canone_subactivity`, `wallet_allocation` (`timesheet_exactly_one_target`). Le giornate non possono essere zero (`timesheet_days_not_zero`).
 
 ### Vincolo 3: DISACCOPPIAMENTO STATI PROGETTO (Regola R1)
 - **Motivazione di Business**: Lo stato operativo di erogazione e consuntivazione delle giornate non coincide con lo stato amministrativo/finanziario di fatturazione e incasso. Un progetto può aver terminato le attività tecniche da mesi pur avendo milestone di fatturazione bloccate da verifiche amministrative, o viceversa essere fatturato in anticipo contrattuale ad avvio lavori.
 - **Implementazione**:
-  * [`backend/projects/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L36-L49):
+  * [`backend/projects/models.py`](../../backend/projects/models.py#L36-L49):
     * `timesheet_status`: `NON_AVVIATO`, `ATTIVO`, `CHIUSO`, `DA_VERIFICARE`.
     * `billing_status`: `DA_FATTURARE`, `PARZIALE`, `TOTALE`, `NON_FATTURABILE`, `DA_VERIFICARE`.
   * **Regola**: È severamente vietato introdurre vincoli, trigger o logiche applicative che impongano transizioni sincronizzate o dipendenze implicite tra `timesheet_status` e `billing_status`.
@@ -148,7 +148,7 @@ flowchart LR
   $$\text{Data Scadenza} = 31\text{ Dicembre dell'anno }(Y_{\text{chiusura}} + 1)$$
   dove $Y_{\text{chiusura}}$ è l'anno estratto **esclusivamente** dal campo `actual_closure_date` del modello `Project`.
 - **Implementazione**:
-  * [`backend/domain/residuals.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py#L48-L60):
+  * [`backend/domain/residuals.py`](../../backend/domain/residuals.py#L48-L60):
     ```python
     def last_usable_day(closure_date: date, years_valid_after_closure: int = 1) -> date:
         return date(closure_date.year + years_valid_after_closure, 12, 31)
@@ -162,7 +162,7 @@ flowchart LR
 ### Vincolo 5: REGOLA R3 DISPONIBILE WALLET
 - **Motivazione**: Il totale delle giornate disponibili all'interno del wallet annuale non è un campo statico su una tabella, né un dato inserito manualmente dall'utente.
 - **Implementazione**:
-  * È sempre una proprietà derivata pura calcolata in tempo reale da [`backend/domain/wallet_balance.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/wallet_balance.py):
+  * È sempre una proprietà derivata pura calcolata in tempo reale da [`backend/domain/wallet_balance.py`](../../backend/domain/wallet_balance.py):
     $$\text{Disponibile Anno} = \sum_{\text{allocazioni aperte}} (\text{gg allocati} - \text{gg consumati}) + \sum_{\text{progetti chiusi R2 validi}} (\text{residuo non allocato})$$
   * È fatto divieto assoluto di creare colonne `available_days` memorizzate o editabili sul modello `WalletYear`.
 
@@ -170,15 +170,15 @@ flowchart LR
 - **Autorità del Dato**: Il sistema PPM Mediolanum rappresenta la fonte di verità esterna contrattuale per le giornate consuntivate sul cliente.
 - **Implementazione**:
   * La tolleranza ammessa per considerare una voce `QUADRATO` è fissata a **0.0100 giornate** (pari a un centesimo di giornata uomo).
-  * È codificata e letta da [`backend/core/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L124-L129): `AppSettings.reconciliation_tolerance_days = Decimal("0.0100")`.
+  * È codificata e letta da [`backend/core/models.py`](../../backend/core/models.py#L124-L129): `AppSettings.reconciliation_tolerance_days = Decimal("0.0100")`.
   * Qualsiasi scostamento superiore in valore assoluto a `0.0100 gg` deve generare uno stato di `SCOSTAMENTO_POSITIVO` o `SCOSTAMENTO_NEGATIVO` e attivare la creazione del finding contabile.
 
 ### Vincolo 7: FINGERPRINT DELLE ANOMALIE (Regola R7)
 - **Meccanismo di Deduplica**:
-  * Il rilevamento automatico delle anomalie ([`backend/domain/checks.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks.py)) deve essere idempotente.
+  * Il rilevamento automatico delle anomalie ([`backend/domain/checks.py`](../../backend/domain/checks.py)) deve essere idempotente.
   * Il fingerprint deve identificare l'anomalia indipendentemente dall'evoluzione numerica del dato nel tempo.
 - **Implementazione**:
-  * [`backend/anomalies/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py#L43-L47):
+  * [`backend/anomalies/models.py`](../../backend/anomalies/models.py#L43-L47):
     ```python
     def build_fingerprint(rule_code: str, *refs: object) -> str:
         payload = "|".join([rule_code, *(str(ref) for ref in refs if ref is not None)])
@@ -188,9 +188,9 @@ flowchart LR
 
 ### Vincolo 8: MODELLO DEI RUOLI E DELLE CAPABILITY
 - **Matrice di Sicurezza**:
-  * 4 Ruoli applicativi: `admin`, `responsabile_bmed`, `referente_bmed`, `fornitore` ([`backend/core/roles.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/roles.py#L7-L12)).
-  * 15 Capability canoniche definite in [`backend/core/capabilities.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/capabilities.py#L9-L24).
-  * Risoluzione dinamica con persistenza su tabella [`RoleCapabilityOverride`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L17-L35).
+  * 4 Ruoli applicativi: `admin`, `responsabile_bmed`, `referente_bmed`, `fornitore` ([`backend/core/roles.py`](../../backend/core/roles.py#L7-L12)).
+  * 15 Capability canoniche definite in [`backend/core/capabilities.py`](../../backend/core/capabilities.py#L9-L24).
+  * Risoluzione dinamica con persistenza su tabella [`RoleCapabilityOverride`](../../backend/core/models.py#L17-L35).
   * Le tre capability di sicurezza `data.reset`, `users.manage` e `privileges.manage` sono `RESERVED_CAPABILITIES`: appartengono esclusivamente all'amministratore e non possono essere assegnate o revocate tramite interfaccia a ruoli non-admin.
 
 ---
@@ -239,36 +239,36 @@ graph TD
 ```
 
 #### File Chiave Backend
-- [`backend/core/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py):
+- [`backend/core/models.py`](../../backend/core/models.py):
   * `TrackedModel` (L67-L106): fornitore di UUID v4, date `created_at`/`updated_at`, autore `created_by`/`updated_by` da thread locale e contatore `version` per la gestione dell'ETag (`If-Match`).
   * `VerifiableMixin` (L182-L233): implementa i campi `reliability` (`CERTO`, `DA_VERIFICARE`) e `verification_points` (JSON dei punti aperti da verificare con nota obbligatoria).
   * `AppSettings` (L108-L164): singleton su DB con i parametri globali contabili.
-- [`backend/core/roles.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/roles.py) & [`backend/core/capabilities.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/capabilities.py):
+- [`backend/core/roles.py`](../../backend/core/roles.py) & [`backend/core/capabilities.py`](../../backend/core/capabilities.py):
   * Definizione canonica di permessi atomici e associazione di default per ruolo con fallback trasparente.
-- [`backend/projects/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py):
+- [`backend/projects/models.py`](../../backend/projects/models.py):
   * `Project` (L64-L180): entità centrale di commessa, codici ARO/RDA, deliverable, date contrattuali ed effettive, budget giornate.
   * `BillingMilestone` (L185-L290): rate e milestone di fatturazione collegate a slot `START`/`END` o date specifiche.
-- [`backend/wallet/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py):
+- [`backend/wallet/models.py`](../../backend/wallet/models.py):
   * `WalletYear` (L43-L60): contenitore dell'anno contabile.
   * `WalletActivity` (L62-L110): destinazione contabile (progetto o ticket Redmine).
   * `WalletSourceLot` (L112-L170): lotto originario derivante dal residuo di un progetto chiuso.
   * `WalletAllocation` (L172-L260): impegno di giornate su una specifica attività.
   * `WalletFundingTranche` (L262-L319): tranches di finanziamento collegate ad ARO/RDA.
-- [`backend/timesheets/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py):
+- [`backend/timesheets/models.py`](../../backend/timesheets/models.py):
   * `TimesheetEntry` (L34-L170): mastro giornate append-only con puntatori univoci e supporto storni.
-- [`backend/canone/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/canone/models.py):
+- [`backend/canone/models.py`](../../backend/canone/models.py):
   * `Canone` (L49-L130): contratto organico allargato per semestre/trimestre.
   * `CanoneSubactivity` (L132-L194): sotto-attività tecnica con attribuzione all'ufficio di competenza (EA, SA, TA, CROSS) ed estrazione automatica ticket Redmine (`#300228`).
-- [`backend/anomalies/models.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py):
+- [`backend/anomalies/models.py`](../../backend/anomalies/models.py):
   * `Anomaly` (L49-L160): violazioni contabili tracciate con fingerprint univoco, contesto JSON e ciclo di vita dello stato.
-- [`backend/domain/`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/):
+- [`backend/domain/`](../../backend/domain/):
   * `residuals.py`: calcolo saldi di commessa, validità e scadenze (R2).
   * `wallet_balance.py`: disponibilità economica annuale (R3).
   * `canone_status.py`: burn-down target settimanale e consuntivazione (R4).
   * `reconciliation.py`: confronto bidirezionale Timesheet vs PPM (R6).
   * `checks.py`: detector per le 18 regole di audit contabile (R1-R18).
   * `money.py`: aritmetica contabile `Decimal("0.0001")`.
-- [`backend/api/urls.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py) & [`backend/api/domain_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py):
+- [`backend/api/urls.py`](../../backend/api/urls.py) & [`backend/api/domain_views.py`](../../backend/api/domain_views.py):
   * Esposizione endpoint RESTful, calcolo aggregati di dominio e supporto OpenAPI/Swagger.
 
 ---
@@ -307,13 +307,13 @@ graph TD
 ```
 
 #### File e Directory Chiave Frontend
-- [`frontend/src/App.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/App.tsx):
+- [`frontend/src/App.tsx`](../../frontend/src/App.tsx):
   * Gestione stato sessione (`loading`, `anonymous`, `authenticated`).
   * Intercettazione globale della scorciatoia da tastiera `Ctrl+K` per l'apertura immediata della `CommandPalette`.
   * Lazy loading asincrono di tutte le 10 viste primarie tramite React `Suspense`.
-- [`frontend/src/components/AppShell.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/components/AppShell.tsx):
+- [`frontend/src/components/AppShell.tsx`](../../frontend/src/components/AppShell.tsx):
   * Layout principale dell'applicazione, include la barra di navigazione laterale collassabile, la barra superiore con le briciole di pane (breadcrumbs), il selettore del tema visivo e il menu contestuale utente con indicatore dei ruoli attivi.
-- **Le 10 Directory di Feature** ([`frontend/src/features/`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/)):
+- **Le 10 Directory di Feature** ([`frontend/src/features/`](../../frontend/src/features/)):
   1. `dashboard`: cruscotto direzionale KPI, anomalie critiche e stato del canone.
   2. `projects`: elenco progetti con filtri complessi, ricerca testo e vista dettaglio commessa con tab consuntivi e milestone.
   3. `wallet`: situazione annuale del salvadanaio residui, allocazioni aperte ed evoluzione storica.
@@ -324,15 +324,15 @@ graph TD
   8. `review`: coda di verifica dei punti aperti (VerifiableMixin) con chiusura tramite nota obbligatoria.
   9. `admin`: pannello di controllo per import seed v4/PPM, backup/ripristino DB, gestione utenti e matrice dei privilegi.
   10. `auth`: gestione login, recupero credenziali e intercettazione sessione scaduta (`SessionExpiredDialog`).
-- [`frontend/src/lib/api.ts`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/lib/api.ts):
+- [`frontend/src/lib/api.ts`](../../frontend/src/lib/api.ts):
   * Client HTTP `request<T>()` basato su Fetch API nativa.
   * Riconoscimento ed estrazione automatica del payload RFC 7807 `ProblemDetail` con mapping degli errori puntuali sui campi form.
   * Iniezione automatica dell'header `X-CSRFToken` estratto dal cookie sicuro `sl_csrftoken`.
   * Supporto concorrenza ottimistica tramite parametro `ifMatch` con header HTTP `If-Match`.
   * Gestione graceful della scadenza sessione: quando il backend restituisce HTTP 401 con codice `session_expired`, il client non esegue redirect distruttivi, ma invoca `notifySessionExpired()` consentendo il re-login in modale senza perdere i dati inseriti nei form.
-- [`frontend/src/lib/format.ts`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/lib/format.ts):
+- [`frontend/src/lib/format.ts`](../../frontend/src/lib/format.ts):
   * Funzioni `formatDays` (con suffisso "gg"), `formatDaysCell` (per tabelle dense), `formatPercent`, `formatCurrency`.
-- [`frontend/src/lib/permissions.ts`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/lib/permissions.ts):
+- [`frontend/src/lib/permissions.ts`](../../frontend/src/lib/permissions.ts):
   * Funzione `hasCapability(session, capability)` per il controllo granulare dell'abilitazione/visibilità di elementi UI e azioni.
 
 ---
@@ -373,7 +373,7 @@ docker compose exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-bro
 ### 4.3 Gestione PostgreSQL Locale su Windows (senza Docker)
 
 Qualora si sviluppi direttamente su host Windows utilizzando un cluster PostgreSQL locale (installato su `C:\Program Files\PostgreSQL\16` o binari portabili in `C:\dev\pgsql`):
-- Script di gestione: [`scripts/pg-local.ps1`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/scripts/pg-local.ps1)
+- Script di gestione: [`scripts/pg-local.ps1`](../../scripts/pg-local.ps1)
 - Parametri di default: Porta `5433`, Directory dati `C:\dev\pgdata`, Database `supplier_ledger`, Utente `supplier_ledger`.
 - Comandi:
   ```powershell
@@ -414,32 +414,32 @@ flowchart TD
 
 ### Guida Dettagliata ai 10 Passi di Lettura
 
-1. [**`README.md`**](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/README.md):  
+1. [**`README.md`**](./README.md):  
    *Obiettivo*: Acquisire la struttura complessiva della knowledge base dell'assessment e orientarsi tra i 17 documenti analitici.
-2. [**`02_FUNCTIONAL_DOMAIN_MODEL.md`**](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/02_FUNCTIONAL_DOMAIN_MODEL.md):  
+2. [**`02_FUNCTIONAL_DOMAIN_MODEL.md`**](./02_FUNCTIONAL_DOMAIN_MODEL.md):  
    *Obiettivo*: Comprendere il glossario di business: Canone vs AQL, meccanismo del Wallet annuale, natura degli snapshot PPM e cicli di approvazione BMED.
-3. [**`08_BUSINESS_RULES.md`**](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/08_BUSINESS_RULES.md):  
+3. [**`08_BUSINESS_RULES.md`**](./08_BUSINESS_RULES.md):  
    *Obiettivo*: Imparare a memoria le 18 regole di calcolo e quadratura (R1 disaccoppiamento, R2 scadenza residui, R3 disponibilità wallet, R4 target canone, R6 riconciliazione PPM, R7 fingerprint anomalie).
-4. [**`06_DATA_MODEL.md`**](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/06_DATA_MODEL.md):  
+4. [**`06_DATA_MODEL.md`**](./06_DATA_MODEL.md):  
    *Obiettivo*: Esaminare ogni singola tabella, colonna, chiave esterna, check constraint e mixin (`TrackedModel`, `VerifiableMixin`).
-5. [**`05_TECHNICAL_ARCHITECTURE.md`**](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/05_TECHNICAL_ARCHITECTURE.md):  
+5. [**`05_TECHNICAL_ARCHITECTURE.md`**](./05_TECHNICAL_ARCHITECTURE.md):  
    *Obiettivo*: Comprendere i layer di astrazione del software, il flusso tra Nginx, Vite e Django, e la gestione delle sessioni tramite cookie `sl_sessionid`.
-6. [**`07_API_CATALOG.md`**](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/07_API_CATALOG.md):  
+6. [**`07_API_CATALOG.md`**](./07_API_CATALOG.md):  
    *Obiettivo*: Conoscere il contratto di interfaccia di tutte le API v1, gli schemi di request/response, i query parameter supportati e la gestione del locking ottimistico (`If-Match`).
-7. [**`04_WORKFLOW_CATALOG.md`**](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/04_WORKFLOW_CATALOG.md):  
+7. [**`04_WORKFLOW_CATALOG.md`**](./04_WORKFLOW_CATALOG.md):  
    *Obiettivo*: Mappare i 34 casi d'uso concreti eseguiti dagli utenti (es. creazione commessa, registrazione storno, concessione deroga anomalia, import snapshot PPM).
-8. [**`10_FRONTEND_UX_ASSESSMENT.md`**](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/10_FRONTEND_UX_ASSESSMENT.md):  
+8. [**`10_FRONTEND_UX_ASSESSMENT.md`**](./10_FRONTEND_UX_ASSESSMENT.md):  
    *Obiettivo*: Valutare la struttura dell'interfaccia utente, la coerenza dei componenti del design system e lo stato di avanzamento delle 7 viste operative.
-9. [**`14_STATE_OF_THE_ART.md`**](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/14_STATE_OF_THE_ART.md) & [**`13_TECHNICAL_DEBT_RISKS.md`**](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/13_TECHNICAL_DEBT_RISKS.md):  
+9. [**`14_STATE_OF_THE_ART.md`**](./14_STATE_OF_THE_ART.md) & [**`13_TECHNICAL_DEBT_RISKS.md`**](./13_TECHNICAL_DEBT_RISKS.md):  
    *Obiettivo*: Conoscere i debiti tecnici noti, le dipendenze da aggiornare, le criticità di performance e i gap architetturali ancora aperti.
-10. [**`15_COMPLETION_ROADMAP.md`**](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/15_COMPLETION_ROADMAP.md):  
+10. [**`15_COMPLETION_ROADMAP.md`**](./15_COMPLETION_ROADMAP.md):  
     *Obiettivo*: Consultare il backlog dettagliato dei task prioritari e il piano operativo per portare l'intero repository a completamento.
 
 ---
 
 ## 6. Come Riprendere lo Sviluppo e Dove Mettere le Mani
 
-Per chi subentra nel progetto e deve pianificare il prossimo sprint operativo basato sulla roadmap [**`15_COMPLETION_ROADMAP.md`**](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/15_COMPLETION_ROADMAP.md), di seguito sono fornite le linee guida di ingaggio operativo immediato.
+Per chi subentra nel progetto e deve pianificare il prossimo sprint operativo basato sulla roadmap [**`15_COMPLETION_ROADMAP.md`**](./15_COMPLETION_ROADMAP.md), di seguito sono fornite le linee guida di ingaggio operativo immediato.
 
 ```mermaid
 flowchart TD
@@ -456,7 +456,7 @@ flowchart TD
 ### 6.1 Task Operativo A: Ispezione e Stabilizzazione del Backend
 - **Problema Noto**: Nelle sessioni precedenti è stato segnalato che il processo Django backend su alcuni ambienti tende a riavviarsi o a generare eccezioni se avviato in combinazione con script ausiliari.
 - **Punto di Ingresso**:
-  1. Ispezionare [`backend/api/admin_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py) per verificare che non vi siano pendenze o errori di sintassi non committati.
+  1. Ispezionare [`backend/api/admin_views.py`](../../backend/api/admin_views.py) per verificare che non vi siano pendenze o errori di sintassi non committati.
   2. Eseguire all'interno del container `backend`:
      ```bash
      docker compose exec -T backend python manage.py check
@@ -465,25 +465,25 @@ flowchart TD
   3. Verificare che il motore controlli `make checks` completi l'analisi senza generare traceback.
 
 ### 6.2 Task Operativo B: Consolidamento del Design System UI
-- **Problema Noto**: Nel report di avanzamento UX ([`outputs/UX_REDESIGN_FINAL_REPORT.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/outputs/UX_REDESIGN_FINAL_REPORT.md)) lo stato è `PARTIAL`. Sono stati implementati miglioramenti visivi locali, ma manca la centralizzazione formale dei componenti riutilizzabili.
+- **Problema Noto**: Nel report di avanzamento UX ([`outputs/UX_REDESIGN_FINAL_REPORT.md`](../../outputs/UX_REDESIGN_FINAL_REPORT.md)) lo stato è `PARTIAL`. Sono stati implementati miglioramenti visivi locali, ma manca la centralizzazione formale dei componenti riutilizzabili.
 - **Punto di Ingresso**:
-  1. Cartella componenti: [`frontend/src/components/`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/components/).
+  1. Cartella componenti: [`frontend/src/components/`](../../frontend/src/components/).
   2. Centralizzare i componenti:
      - `Dialog` e modali di conferma (attualmente instanziati con varianti locali nelle singole feature).
      - Componenti di selezione (`Select`, filtri a discesa).
      - Gestione unificata dei messaggi toast di notifica esito azioni.
-  3. Evitare duplicazioni di stili Tailwind e utilizzare esclusivamente i design token semantici definiti in [`frontend/tailwind.config.js`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/tailwind.config.js).
+  3. Evitare duplicazioni di stili Tailwind e utilizzare esclusivamente i design token semantici definiti in [`frontend/tailwind.config.js`](../../frontend/tailwind.config.js).
 
 ### 6.3 Task Operativo C: Verifica dell'Accessibilità (WCAG 2.1 AA) e Viewport Dense
 - **Punto di Ingresso**:
   1. Pagine con densità di dati elevata:
-     - [`frontend/src/features/cost-analysis/CostAnalysisPage.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/cost-analysis/CostAnalysisPage.tsx): verificare l'assenza di overflow orizzontale a risoluzione `1440x900` e `1024x768`.
-     - [`frontend/src/features/reconciliation/ReconciliationPage.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/reconciliation/ReconciliationPage.tsx): verificare il contrasto del testo nelle celle di scostamento e la navigabilità via tastiera (`Tab` / frecce).
-     - [`frontend/src/features/anomalies/AnomaliesPage.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/anomalies/AnomaliesPage.tsx): verificare il dialog di concessione deroga (`visual-review/anomalie-deroga-dark-1440x900.png`) e il corretto bind dell'input data di scadenza della deroga.
+     - [`frontend/src/features/cost-analysis/CostAnalysisPage.tsx`](../../frontend/src/features/cost-analysis/CostAnalysisPage.tsx): verificare l'assenza di overflow orizzontale a risoluzione `1440x900` e `1024x768`.
+     - [`frontend/src/features/reconciliation/ReconciliationPage.tsx`](../../frontend/src/features/reconciliation/ReconciliationPage.tsx): verificare il contrasto del testo nelle celle di scostamento e la navigabilità via tastiera (`Tab` / frecce).
+     - [`frontend/src/features/anomalies/AnomaliesPage.tsx`](../../frontend/src/features/anomalies/AnomaliesPage.tsx): verificare il dialog di concessione deroga (`visual-review/anomalie-deroga-dark-1440x900.png`) e il corretto bind dell'input data di scadenza della deroga.
 
 ### 6.4 Task Operativo D: Completamento dei Flussi di Scrittura End-to-End
 - **Punto di Ingresso**:
-  1. File test E2E: [`frontend/e2e/`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/e2e/).
+  1. File test E2E: [`frontend/e2e/`](../../frontend/e2e/).
   2. Implementare gli scenari completi di test automatizzato per:
      - Creazione di una nuova commessa con milestone associate.
      - Inserimento di una riga di timesheet append-only e successiva generazione di storno contabile (`reverses`).

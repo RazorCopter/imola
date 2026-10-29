@@ -30,22 +30,22 @@ L'architettura dei dati si fonda su cinque pilastri concettuali:
 
 | Modulo Backend | Modelli Principali | Ruolo Architetturale | Stato |
 | :--- | :--- | :--- | :--- |
-| [`core`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py) | `TrackedModel`, `AppSettings`, `RoleCapabilityOverride`, `AdminAuditEvent`, `VerifiableMixin` | Base infrastrutturale di auditing, parametri contabili globali, autorizzazioni e affidabilità | **IMPLEMENTED** |
-| [`directory`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/directory/models.py) | `Organization`, `Person` | Anagrafica persone e strutture con normalizzazione fonetica/lessicale e collision key | **IMPLEMENTED** |
-| [`projects`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py) | `Project`, `BillingMilestone` | Contratti di progetto, budget in gg, scadenze, stato offerta/consuntivo/fattura e milestone | **IMPLEMENTED** |
-| [`wallet`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py) | `WalletYear`, `WalletActivity`, `WalletSourceLot`, `WalletAllocation`, `WalletFundingTranche` | Gestione capienza residua per anno, alimentazione lotti, allocazioni e catena FIFO di tranches | **IMPLEMENTED** |
-| [`canone`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/canone/models.py) | `Canone`, `CanoneSubactivity` | Gestione organico allargato semestrale/trimestrale, uffici (EA, SA, TA, CROSS), target settimanale | **IMPLEMENTED** |
-| [`ppm`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/ppm/models.py) | `PpmSnapshot`, `PpmSnapshotRow`, `ImportProfile` | Archiviazione snapshot estratti PPM, profili di mappatura dinamica e quadratura | **IMPLEMENTED** |
-| [`timesheets`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py) | `TimesheetEntry` | Libro mastro append-only delle consuntivazioni con target esclusivo e meccanismo di storno | **IMPLEMENTED** |
-| [`anomalies`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py) | `Anomaly` | Registro discrepanze e violazioni di business con ciclo di vita (aperta, verifica, risolta, accettata) | **IMPLEMENTED** |
-| [`imports`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/imports/models.py) | `ImportBatch`, `ImportIssue`, `WorkbookSheetSnapshot`, `WorkbookDatasetSnapshot` | Gestione transazionale dei batch di caricamento, logging degli scarti e tracciatura lossless Excel | **IMPLEMENTED** |
+| [`core`](../../backend/core/models.py) | `TrackedModel`, `AppSettings`, `RoleCapabilityOverride`, `AdminAuditEvent`, `VerifiableMixin` | Base infrastrutturale di auditing, parametri contabili globali, autorizzazioni e affidabilità | **IMPLEMENTED** |
+| [`directory`](../../backend/directory/models.py) | `Organization`, `Person` | Anagrafica persone e strutture con normalizzazione fonetica/lessicale e collision key | **IMPLEMENTED** |
+| [`projects`](../../backend/projects/models.py) | `Project`, `BillingMilestone` | Contratti di progetto, budget in gg, scadenze, stato offerta/consuntivo/fattura e milestone | **IMPLEMENTED** |
+| [`wallet`](../../backend/wallet/models.py) | `WalletYear`, `WalletActivity`, `WalletSourceLot`, `WalletAllocation`, `WalletFundingTranche` | Gestione capienza residua per anno, alimentazione lotti, allocazioni e catena FIFO di tranches | **IMPLEMENTED** |
+| [`canone`](../../backend/canone/models.py) | `Canone`, `CanoneSubactivity` | Gestione organico allargato semestrale/trimestrale, uffici (EA, SA, TA, CROSS), target settimanale | **IMPLEMENTED** |
+| [`ppm`](../../backend/ppm/models.py) | `PpmSnapshot`, `PpmSnapshotRow`, `ImportProfile` | Archiviazione snapshot estratti PPM, profili di mappatura dinamica e quadratura | **IMPLEMENTED** |
+| [`timesheets`](../../backend/timesheets/models.py) | `TimesheetEntry` | Libro mastro append-only delle consuntivazioni con target esclusivo e meccanismo di storno | **IMPLEMENTED** |
+| [`anomalies`](../../backend/anomalies/models.py) | `Anomaly` | Registro discrepanze e violazioni di business con ciclo di vita (aperta, verifica, risolta, accettata) | **IMPLEMENTED** |
+| [`imports`](../../backend/imports/models.py) | `ImportBatch`, `ImportIssue`, `WorkbookSheetSnapshot`, `WorkbookDatasetSnapshot` | Gestione transazionale dei batch di caricamento, logging degli scarti e tracciatura lossless Excel | **IMPLEMENTED** |
 
 ---
 
 ## 2. Pattern Architetturali Fondamentali del Data Layer
 
 ### 2.1 TrackedModel: Identità, Temporizzazione, Auditing e Concorrenza Ottimistica
-Tutte le entità di dominio concrete ereditano dalla classe astratta [`TrackedModel`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L67-L106):
+Tutte le entità di dominio concrete ereditano dalla classe astratta [`TrackedModel`](../../backend/core/models.py#L67-L106):
 
 ```python
 # backend/core/models.py
@@ -59,11 +59,11 @@ class TrackedModel(models.Model):
 ```
 
 - **Identificatore Immutabile**: Utilizzo esclusivo di UUIDv4 come chiave primaria, eliminando enumerazioni prevedibili e collisioni in fase di merge.
-- **Tracciamento Autore**: I campi `created_by` e `updated_by` vengono valorizzati automaticamente all'interno del metodo `save()` estraendo l'identità dell'utente autenticato dalla variabile di contesto (`get_current_user()`, [`backend/core/current_user.py#L19-L20`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/current_user.py#L19-L20)).
+- **Tracciamento Autore**: I campi `created_by` e `updated_by` vengono valorizzati automaticamente all'interno del metodo `save()` estraendo l'identità dell'utente autenticato dalla variabile di contesto (`get_current_user()`, [`backend/core/current_user.py#L19-L20`](../../backend/core/current_user.py#L19-L20)).
 - **Concorrenza Ottimistica**: Il campo intero `version` parte da `1` e si incrementa di un'unità a ogni mutazione di record esistente (`self.version = (self.version or 0) + 1`). Questo garantisce la rilevazione immediata di conflitti di scrittura (lost updates) in scenari ad alta concorrenza.
 
 ### 2.2 VerifiableMixin: Tracciamento Granulare dell'Incertezza del Dato
-Implementato in [`VerifiableMixin`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L182-L233) ed ereditato da `Project` e `WalletAllocation`:
+Implementato in [`VerifiableMixin`](../../backend/core/models.py#L182-L233) ed ereditato da `Project` e `WalletAllocation`:
 
 - **Affidabilità Formale (`reliability`)**: Assume i valori dell'enum `Reliability` (`CERTO`, `DA_VERIFICARE`).
 - **Punti di Verifica Strutturati (`verification_points`)**: Array JSON di dizionari generati con schema standard:
@@ -79,30 +79,30 @@ Implementato in [`VerifiableMixin`](file:///c:/Users/gianvito.bleve/OneDrive%20-
 - **Risoluzione Vincolata (`mark_verification_point`)**: Per chiudere un punto di verifica è obbligatorio specificare una nota di commento non vuota. Quando l'ultimo punto aperto passa a `VERIFICATO`, il mixin promuove automaticamente lo stato `reliability` a `CERTO` (`backend/core/models.py#L229-L232`).
 
 ### 2.3 ImportedRecordMixin: Provenienza e Supporto al Rollback Atomico
-Implementato in [`backend/imports/models.py#L97-L111`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/imports/models.py#L97-L111):
-- Aggiunge a ogni modello collegato la foreign key facoltativa `import_batch` verso [`ImportBatch`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/imports/models.py#L31-L76).
+Implementato in [`backend/imports/models.py#L97-L111`](../../backend/imports/models.py#L97-L111):
+- Aggiunge a ogni modello collegato la foreign key facoltativa `import_batch` verso [`ImportBatch`](../../backend/imports/models.py#L31-L76).
 - Consente al motore di import di tracciare la precisa transazione di caricamento che ha originato o aggiornato il record.
 - In caso di rollback del batch, il motore può identificare e cancellare o ripristinare esattamente le righe afferenti allo specifico lotto di importazione.
 
 ### 2.4 Ledger Append-Only: Immutabilità Assoluta e Storni Contabili
-La gestione contabile dei consuntivi in [`TimesheetEntry`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L34-L170) adotta un'architettura rigorosamente append-only:
+La gestione contabile dei consuntivi in [`TimesheetEntry`](../../backend/timesheets/models.py#L34-L170) adotta un'architettura rigorosamente append-only:
 
 1. **Blocco Applicativo**: L'override di `save()` intercetta modifiche a istanze non-nuove sollevando `ValidationError("I consuntivi sono append-only...")` (`backend/timesheets/models.py#L147-L151`). Il metodo `delete()` blocca la cancellazione incondizionatamente (`backend/timesheets/models.py#L153-L156`).
 2. **Blocco Database Invalicabile (PostgreSQL Trigger)**:
-   La migrazione [`backend/timesheets/migrations/0002_append_only_trigger.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/migrations/0002_append_only_trigger.py) installa la procedura PL/pgSQL `timesheets_append_only()` associata ai trigger `timesheet_entry_no_update` e `timesheet_entry_no_delete`. Qualsiasi operazione `UPDATE` o `DELETE` su `timesheets_timesheetentry` fallisce con errore `42501`.
+   La migrazione [`backend/timesheets/migrations/0002_append_only_trigger.py`](../../backend/timesheets/migrations/0002_append_only_trigger.py) installa la procedura PL/pgSQL `timesheets_append_only()` associata ai trigger `timesheet_entry_no_update` e `timesheet_entry_no_delete`. Qualsiasi operazione `UPDATE` o `DELETE` su `timesheets_timesheetentry` fallisce con errore `42501`.
 3. **Eccezione Transazionale Controllata per i Rollback (`allow_ledger_mutation`)**:
    L'unica deroga ammessa è l'impostazione della variabile di sessione transazionale PostgreSQL:
    ```sql
    SET LOCAL "supplier_ledger.allow_ledger_mutation" = 'on'
    ```
-   Tale eccezione è gestita tramite il context manager [`allow_ledger_mutation`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/mutations.py#L27-L72), che limita strettamente l'operatività ai batch di tipo `SEED_JSON` o `WORKBOOK_JSON` durante una transazione attiva `transaction.atomic()`. Per batch di tipo PPM la mutazione diretta è esplicitamente proibita (decisione D-14), richiedendo esclusivamente storni contabili.
+   Tale eccezione è gestita tramite il context manager [`allow_ledger_mutation`](../../backend/timesheets/mutations.py#L27-L72), che limita strettamente l'operatività ai batch di tipo `SEED_JSON` o `WORKBOOK_JSON` durante una transazione attiva `transaction.atomic()`. Per batch di tipo PPM la mutazione diretta è esplicitamente proibita (decisione D-14), richiedendo esclusivamente storni contabili.
 4. **Meccanismo di Storno (`build_reversal`)**: Per correggere o rettificare un movimento, l'applicazione invoca `build_reversal()`, creando un nuovo movimento avente le medesime coordinate, giornate con segno opposto (`days = -self.days`), causale `source = TimesheetSource.STORNO` e puntatore referenziale `reverses` impostato al record originario (`backend/timesheets/models.py#L158-L170`).
 
 ---
 
 ## 3. Campi Economici e Rappresentazione delle Giornate/Uomo (`DaysField`)
 
-Tutte le grandezze quantitative del dominio (budget, giornate erogate, consuntivi, capacità di wallet, quote di tranche) utilizzano la classe custom [`DaysField`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/fields.py#L15-L28).
+Tutte le grandezze quantitative del dominio (budget, giornate erogate, consuntivi, capacità di wallet, quote di tranche) utilizzano la classe custom [`DaysField`](../../backend/core/fields.py#L15-L28).
 
 ```python
 # backend/core/fields.py
@@ -120,8 +120,8 @@ class DaysField(models.DecimalField):
 ### Specifiche e Razionale
 - **Rappresentazione DB**: `DECIMAL(8,4)` (capienza massima: 9999.9999 giornate, con risoluzione al diecimilensimo di giornata).
 - **Esclusione dei Float**: I numeri in virgola mobile (`float`) introducono artefatti di approssimazione binaria inaccettabili in una contabilità bancaria. Ogni valore in memoria è istanza di `decimal.Decimal`.
-- **Granularità PPM**: Configurata in [`AppSettings.ppm_granularity_days`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L118-L123) al valore predefinito `Decimal("0.0625")`. Poiché la giornata lavorativa convenzionale è pari a 8 ore (`hours_per_day = 8.00`), `0.0625 gg * 8 h = 0.5 ore` (30 minuti). Tutti i consuntivi provenienti da PPM sono multipli esatti di mezz'ora.
-- **Tolleranza di Riconciliazione**: Definita in [`AppSettings.reconciliation_tolerance_days`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L124-L129) a `Decimal("0.0100")` (pari a 0.08 ore, ovvero 4.8 minuti). Differenze di quadratura inferiori a tale soglia sono considerate scarti fisiologici di arrotondamento e compensate tramite `WalletYear.reconciliation_adjustment_days`.
+- **Granularità PPM**: Configurata in [`AppSettings.ppm_granularity_days`](../../backend/core/models.py#L118-L123) al valore predefinito `Decimal("0.0625")`. Poiché la giornata lavorativa convenzionale è pari a 8 ore (`hours_per_day = 8.00`), `0.0625 gg * 8 h = 0.5 ore` (30 minuti). Tutti i consuntivi provenienti da PPM sono multipli esatti di mezz'ora.
+- **Tolleranza di Riconciliazione**: Definita in [`AppSettings.reconciliation_tolerance_days`](../../backend/core/models.py#L124-L129) a `Decimal("0.0100")` (pari a 0.08 ore, ovvero 4.8 minuti). Differenze di quadratura inferiori a tale soglia sono considerate scarti fisiologici di arrotondamento e compensate tramite `WalletYear.reconciliation_adjustment_days`.
 
 ---
 
@@ -130,7 +130,7 @@ class DaysField(models.DecimalField):
 ### 4.1 Modulo `core`
 
 #### 4.1.1 `AppSettings`
-*Definizione*: [`backend/core/models.py#L108-L164`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L108-L164)  
+*Definizione*: [`backend/core/models.py#L108-L164`](../../backend/core/models.py#L108-L164)  
 *Ereditarietà*: `TrackedModel`  
 *Descrizione*: Parametri di configurazione contabile e finanziaria globali dell'applicazione, implementato come singleton (un solo record nel DB).
 
@@ -151,7 +151,7 @@ class DaysField(models.DecimalField):
 - `get_solo()` (classmethod): Restituisce l'unica istanza o la crea se mancante.
 
 #### 4.1.2 `RoleCapabilityOverride`
-*Definizione*: [`backend/core/models.py#L17-L35`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L17-L35)  
+*Definizione*: [`backend/core/models.py#L17-L35`](../../backend/core/models.py#L17-L35)  
 *Ereditarietà*: `models.Model` (con PK standard intera autonoma)  
 *Descrizione*: Tabella per sovrascrivere o definire puntualmente le autorizzazioni (capability) per ruolo applicativo.
 
@@ -166,7 +166,7 @@ class DaysField(models.DecimalField):
 *Vincoli*: `UniqueConstraint(fields=("role", "capability"), name="core_unique_role_capability")`.
 
 #### 4.1.3 `AdminAuditEvent`
-*Definizione*: [`backend/core/models.py#L37-L60`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L37-L60)  
+*Definizione*: [`backend/core/models.py#L37-L60`](../../backend/core/models.py#L37-L60)  
 *Ereditarietà*: `models.Model`  
 *Descrizione*: Registro append-only delle operazioni di amministrazione e configurazione del sistema.
 
@@ -187,7 +187,7 @@ class DaysField(models.DecimalField):
 ### 4.2 Modulo `directory`
 
 #### 4.2.1 `Organization`
-*Definizione*: [`backend/directory/models.py#L18-L31`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/directory/models.py#L18-L31)  
+*Definizione*: [`backend/directory/models.py#L18-L31`](../../backend/directory/models.py#L18-L31)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Struttura organizzativa / azienda (Committente o Fornitore).
 
@@ -201,7 +201,7 @@ class DaysField(models.DecimalField):
 | `history` | `HistoricalRecords` | shadow table | - | - | Tabelle storiche `historicaldirectory_organization` |
 
 #### 4.2.2 `Person`
-*Definizione*: [`backend/directory/models.py#L41-L85`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/directory/models.py#L41-L85)  
+*Definizione*: [`backend/directory/models.py#L41-L85`](../../backend/directory/models.py#L41-L85)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Persona fisica associata a un'organizzazione (referenti cliente, PM fornitore, architetti).
 
@@ -228,7 +228,7 @@ class DaysField(models.DecimalField):
 ### 4.3 Modulo `projects`
 
 #### 4.3.1 `Project`
-*Definizione*: [`backend/projects/models.py#L64-L228`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L64-L228)  
+*Definizione*: [`backend/projects/models.py#L64-L228`](../../backend/projects/models.py#L64-L228)  
 *Ereditarietà*: `TrackedModel`, `VerifiableMixin`, `ImportedRecordMixin`  
 *Descrizione*: Entità centrale rappresentante un'iniziativa contrattualizzata, con budget, date, stati e tracking economico.
 
@@ -266,7 +266,7 @@ class DaysField(models.DecimalField):
 - `project_end_after_start`: `planned_end_date IS NULL OR start_date IS NULL OR planned_end_date >= start_date`
 - `project_closed_requires_date`: `timesheet_status != 'CHIUSO' OR actual_closure_date IS NOT NULL OR import_batch_id IS NOT NULL`
 - Indici su: `timesheet_status`, `billing_status`, `contract_type`.
-- Trigger DB PostgreSQL: `trg_project_closed_requires_seed_batch` ([`backend/projects/migrations/0004_project_closed_workbook_seed_trigger.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/migrations/0004_project_closed_workbook_seed_trigger.py)).
+- Trigger DB PostgreSQL: `trg_project_closed_requires_seed_batch` ([`backend/projects/migrations/0004_project_closed_workbook_seed_trigger.py`](../../backend/projects/migrations/0004_project_closed_workbook_seed_trigger.py)).
 
 *Validazioni di Dominio (`clean`)*:
 - Se `timesheet_status == ATTIVO`, `offer_status` deve essere `ACCETTATA`.
@@ -274,7 +274,7 @@ class DaysField(models.DecimalField):
 - `actual_closure_date` non può essere anteriore a `start_date`.
 
 #### 4.3.2 `BillingMilestone`
-*Definizione*: [`backend/projects/models.py#L230-L291`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L230-L291)  
+*Definizione*: [`backend/projects/models.py#L230-L291`](../../backend/projects/models.py#L230-L291)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Milestone del piano di fatturazione associata a un progetto.
 
@@ -301,7 +301,7 @@ class DaysField(models.DecimalField):
 ### 4.4 Modulo `wallet`
 
 #### 4.4.1 `WalletYear`
-*Definizione*: [`backend/wallet/models.py#L43-L60`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L43-L60)  
+*Definizione*: [`backend/wallet/models.py#L43-L60`](../../backend/wallet/models.py#L43-L60)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Contenitore contabile annuale delle disponibilità di giornate non consuntivate dei progetti chiusi o rilasciate.
 
@@ -315,7 +315,7 @@ class DaysField(models.DecimalField):
 | `history` | `HistoricalRecords` | shadow table | - | - | Tabelle storiche `historicalwallet_walletyear` |
 
 #### 4.4.2 `WalletActivity`
-*Definizione*: [`backend/wallet/models.py#L62-L119`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L62-L119)  
+*Definizione*: [`backend/wallet/models.py#L62-L119`](../../backend/wallet/models.py#L62-L119)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Attività o iniziativa bersaglio a cui possono essere allocate giornate attinte dal wallet.
 
@@ -337,7 +337,7 @@ class DaysField(models.DecimalField):
 *Validazioni (`clean`)*: Se `kind == ActivityKind.PROGETTO`, il campo `project` deve essere obbligatoriamente valorizzato.
 
 #### 4.4.3 `WalletSourceLot`
-*Definizione*: [`backend/wallet/models.py#L121-L161`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L121-L161)  
+*Definizione*: [`backend/wallet/models.py#L121-L161`](../../backend/wallet/models.py#L121-L161)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Lotto di alimentazione del wallet generato dal residuo non consuntivato di un progetto chiuso (o rilasciato).
 
@@ -360,7 +360,7 @@ class DaysField(models.DecimalField):
 - `wallet_source_project_per_year`: `UniqueConstraint(fields=("wallet_year", "source_project"))`
 
 #### 4.4.4 `WalletAllocation`
-*Definizione*: [`backend/wallet/models.py#L163-L268`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L163-L268)  
+*Definizione*: [`backend/wallet/models.py#L163-L268`](../../backend/wallet/models.py#L163-L268)  
 *Ereditarietà*: `TrackedModel`, `VerifiableMixin`, `ImportedRecordMixin`  
 *Descrizione*: Impegno formale di giornate dal wallet a favore di un'attività/progetto bersaglio.
 
@@ -394,7 +394,7 @@ class DaysField(models.DecimalField):
 - `save()`: auto-popola `initial_allocated_days` al primo salvataggio e valorizza `requires_source_attribution` se `source_project` è assente e non vi sono tranche.
 
 #### 4.4.5 `WalletFundingTranche`
-*Definizione*: [`backend/wallet/models.py#L270-L319`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/wallet/models.py#L270-L319)  
+*Definizione*: [`backend/wallet/models.py#L270-L319`](../../backend/wallet/models.py#L270-L319)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Quota atomica di allocazione collegata a uno specifico lotto sorgente secondo la sequenza contabile FIFO.
 
@@ -423,7 +423,7 @@ class DaysField(models.DecimalField):
 ### 4.5 Modulo `canone`
 
 #### 4.5.1 `Canone`
-*Definizione*: [`backend/canone/models.py#L49-L128`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/canone/models.py#L49-L128)  
+*Definizione*: [`backend/canone/models.py#L49-L128`](../../backend/canone/models.py#L49-L128)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Contratto quadro periodico (tipicamente semestrale o trimestrale) per organico allargato.
 
@@ -452,7 +452,7 @@ class DaysField(models.DecimalField):
 - `semester_bounds(semester)`: metodo statico che restituisce le date limite convenzionali (es. `2026-S1` -> `2026-01-01` / `2026-06-30`).
 
 #### 4.5.2 `CanoneSubactivity`
-*Definizione*: [`backend/canone/models.py#L130-L194`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/canone/models.py#L130-L194)  
+*Definizione*: [`backend/canone/models.py#L130-L194`](../../backend/canone/models.py#L130-L194)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Sotto-attività operativa nell'ambito dell'organico allargato, clusterizzata per ufficio di architettura.
 
@@ -483,7 +483,7 @@ class DaysField(models.DecimalField):
 ### 4.6 Modulo `ppm`
 
 #### 4.6.1 `PpmSnapshot`
-*Definizione*: [`backend/ppm/models.py#L36-L67`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/ppm/models.py#L36-L67)  
+*Definizione*: [`backend/ppm/models.py#L36-L67`](../../backend/ppm/models.py#L36-L67)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Snapshot persistito e immutabile di un file estratto dal sistema PPM aziendale.
 
@@ -505,7 +505,7 @@ class DaysField(models.DecimalField):
 *Indici*: `(kind, -extracted_at)`.
 
 #### 4.6.2 `PpmSnapshotRow`
-*Definizione*: [`backend/ppm/models.py#L69-L127`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/ppm/models.py#L69-L127)  
+*Definizione*: [`backend/ppm/models.py#L69-L127`](../../backend/ppm/models.py#L69-L127)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Singola riga analitica appartenente a uno snapshot PPM.
 
@@ -529,7 +529,7 @@ class DaysField(models.DecimalField):
 *Logiche*: `save()` popola automaticamente `normalized_code = normalize_project_code(self.project_code)` eliminando spazi, underscore e prefissi `BMED-`.
 
 #### 4.6.3 `ImportProfile`
-*Definizione*: [`backend/ppm/models.py#L129-L157`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/ppm/models.py#L129-L157)  
+*Definizione*: [`backend/ppm/models.py#L129-L157`](../../backend/ppm/models.py#L129-L157)  
 *Ereditarietà*: `TrackedModel`  
 *Descrizione*: Profilo di mappatura delle colonne PPM configurabile da interfaccia per gestire variazioni di layout nel file Excel del fornitore.
 
@@ -548,7 +548,7 @@ class DaysField(models.DecimalField):
 ### 4.7 Modulo `timesheets`
 
 #### 4.7.1 `TimesheetEntry`
-*Definizione*: [`backend/timesheets/models.py#L34-L170`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L34-L170)  
+*Definizione*: [`backend/timesheets/models.py#L34-L170`](../../backend/timesheets/models.py#L34-L170)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Riga contabile elementare append-only di consuntivo (giornate erogate).
 
@@ -578,7 +578,7 @@ class DaysField(models.DecimalField):
 ### 4.8 Modulo `anomalies`
 
 #### 4.8.1 `Anomaly`
-*Definizione*: [`backend/anomalies/models.py#L49-L310`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/models.py#L49-L310)  
+*Definizione*: [`backend/anomalies/models.py#L49-L310`](../../backend/anomalies/models.py#L49-L310)  
 *Ereditarietà*: `TrackedModel`, `ImportedRecordMixin`  
 *Descrizione*: Violazione di business rule, incoerenza contabile o disallineamento rilevato automaticamente dai controlli.
 
@@ -624,7 +624,7 @@ class DaysField(models.DecimalField):
 ### 4.9 Modulo `imports`
 
 #### 4.9.1 `ImportBatch`
-*Definizione*: [`backend/imports/models.py#L31-L76`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/imports/models.py#L31-L76)  
+*Definizione*: [`backend/imports/models.py#L31-L76`](../../backend/imports/models.py#L31-L76)  
 *Ereditarietà*: `TrackedModel`  
 *Descrizione*: Registro transazionale del caricamento di un file o sorgente dati esterna.
 
@@ -648,7 +648,7 @@ class DaysField(models.DecimalField):
 - `can_rollback`: True solo se `status == APPLIED`.
 
 #### 4.9.2 `ImportIssue`
-*Definizione*: [`backend/imports/models.py#L78-L95`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/imports/models.py#L78-L95)  
+*Definizione*: [`backend/imports/models.py#L78-L95`](../../backend/imports/models.py#L78-L95)  
 *Ereditarietà*: `TrackedModel`  
 *Descrizione*: Notifica o anomalia di parsing riscontrata durante l'elaborazione di un batch.
 
@@ -662,7 +662,7 @@ class DaysField(models.DecimalField):
 | `message` | `TextField` | `text` | No / No | - | Descrizione del problema |
 
 #### 4.9.3 `WorkbookSheetSnapshot` e `WorkbookDatasetSnapshot`
-*Definizione*: [`backend/imports/models.py#L113-L151`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/imports/models.py#L113-L151)  
+*Definizione*: [`backend/imports/models.py#L113-L151`](../../backend/imports/models.py#L113-L151)  
 *Ereditarietà*: `TrackedModel`  
 *Descrizione*: Copia raw, non decurtata e interrogabile, dei singoli fogli e dataset tabellari contenuti nel file Excel caricato.
 
@@ -924,7 +924,7 @@ erDiagram
 ## 7. Stati Applicativi e Macchine a Stati (State Transitions)
 
 ### 7.1 Stati Progetto e Disaccoppiamento Ortogonale (Regola R1)
-Il modello [`Project`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/projects/models.py#L64-L228) implementa tre dimensioni di stato tra loro indipendenti:
+Il modello [`Project`](../../backend/projects/models.py#L64-L228) implementa tre dimensioni di stato tra loro indipendenti:
 
 ```mermaid
 flowchart TD
@@ -1015,11 +1015,11 @@ Questo genera tabelle parallele nel database (es. `historicalprojects_project`),
 - Timestamp dell'evento e motivo storico (`history_change_reason`).
 
 ### 8.2 Audit delle Operazioni Amministrative (`AdminAuditEvent`)
-Registra gli eventi ad alto impatto (modifica configurazioni `AppSettings`, variazioni di capability dei ruoli in `RoleCapabilityOverride`, applicazione o rollback di batch di import) in [`AdminAuditEvent`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L37-L60).
+Registra gli eventi ad alto impatto (modifica configurazioni `AppSettings`, variazioni di capability dei ruoli in `RoleCapabilityOverride`, applicazione o rollback di batch di import) in [`AdminAuditEvent`](../../backend/core/models.py#L37-L60).
 I record sono immutabili e non includono dati segreti, ma descrivono in formato JSON `details` il diff tra stato precedente e nuovo stato.
 
 ### 8.3 Iniezione dell'Utente Corrente via `ContextVar`
-Il file [`backend/core/current_user.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/current_user.py) garantisce l'isolamento asincrono e thread-safe dell'identità dell'utente autenticato:
+Il file [`backend/core/current_user.py`](../../backend/core/current_user.py) garantisce l'isolamento asincrono e thread-safe dell'identità dell'utente autenticato:
 - Utilizza `_current_user: ContextVar[Any | None] = ContextVar("current_user", default=None)`.
 - Un middleware HTTP popola tale variabile all'inizio della richiesta via `set_current_user(request.user)`.
 - Il context manager `acting_as(user)` consente di eseguire comandi batch o di management da terminale mantenendo la corretta attribuzione nei log di audit.

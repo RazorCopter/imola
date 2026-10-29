@@ -74,9 +74,9 @@ Ogni attività del backlog è classificata in base a una severità rigorosa orie
 
 Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seguenti 6 gate:
 1. **Gate Stabilità Stack**: Avvio dello stack Docker (`db`, `backend`, `frontend`, `nginx`) con status `healthy` e zero loop di crash per oltre 72 ore consecutive.
-2. **Gate Integrità Dati**: Esecuzione pulita di `make seed` sul dataset v4 ufficiale ([`data/seed/seed_imola_v4_2026-10-09.json`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/data/seed/seed_imola_v4_2026-10-09.json)) con riconciliazione contabile bit-a-bit e quadratura dei KPI.
+2. **Gate Integrità Dati**: Esecuzione pulita di `make seed` sul dataset v4 ufficiale ([`data/seed/seed_imola_v4_2026-10-09.json`](../../data/seed/seed_imola_v4_2026-10-09.json)) con riconciliazione contabile bit-a-bit e quadratura dei KPI.
 3. **Gate Suite E2E Reale**: 100% di esiti positivi su tutti gli spec Playwright eseguiti contro lo stack Nginx + Gunicorn reale, senza intercettazioni mockate lato client.
-4. **Gate Collaudo Umano**: Approvazione e firma formale della checklist dei 12 capitoli operativi ([`docs/MANUAL_VALIDATION_FASE7.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/MANUAL_VALIDATION_FASE7.md)) da parte degli utenti rappresentativi dei 4 ruoli applicativi.
+4. **Gate Collaudo Umano**: Approvazione e firma formale della checklist dei 12 capitoli operativi ([`docs/MANUAL_VALIDATION_FASE7.md`](../../docs/MANUAL_VALIDATION_FASE7.md)) da parte degli utenti rappresentativi dei 4 ruoli applicativi.
 5. **Gate Sicurezza e Audit**: Verifica del blocco totale all'eliminazione dell'ultimo amministratore, integrità della tabella di audit immutabile e test di penetrazione di base su endpoint protetti.
 6. **Gate Ripristino di Emergenza**: Esecuzione con successo di una simulazione di backup e restore completo (`make backup` / `make reset` / restore) con verifica della consistenza dei dati ripristinati.
 
@@ -93,7 +93,7 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P0`
 *   **Titolo**: Investigazione e risoluzione del crash/loop di riavvio del container backend Django
 *   **Descrizione Operativa**:
-    Identificare la causa radice del crash continuo del container backend Docker documentato in [`outputs/SOL_UX_GAP_ANALYSIS.md#L21`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/outputs/SOL_UX_GAP_ANALYSIS.md#L21) (ticket `SOL-BE`) e [`outputs/UX_REDESIGN_FINAL_REPORT.md#L31`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/outputs/UX_REDESIGN_FINAL_REPORT.md#L31). Il problema riguarda modifiche pregresse e importazioni circolari o eccezioni a livello di modulo nel file [`backend/api/admin_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py) (es. invocazioni di `apps.get_models()` o dipendenze cross-app prima che il Django Registry sia completamente popolato, oppure fallimenti silenziosi nei metodi di dry-run degli import batch). Bonificare il codice per garantire avvio stabile del processo Gunicorn/Uvicorn sia in ambiente Docker Compose che nello sviluppo locale.
+    Identificare la causa radice del crash continuo del container backend Docker documentato in [`outputs/SOL_UX_GAP_ANALYSIS.md#L21`](../../outputs/SOL_UX_GAP_ANALYSIS.md#L21) (ticket `SOL-BE`) e [`outputs/UX_REDESIGN_FINAL_REPORT.md#L31`](../../outputs/UX_REDESIGN_FINAL_REPORT.md#L31). Il problema riguarda modifiche pregresse e importazioni circolari o eccezioni a livello di modulo nel file [`backend/api/admin_views.py`](../../backend/api/admin_views.py) (es. invocazioni di `apps.get_models()` o dipendenze cross-app prima che il Django Registry sia completamente popolato, oppure fallimenti silenziosi nei metodi di dry-run degli import batch). Bonificare il codice per garantire avvio stabile del processo Gunicorn/Uvicorn sia in ambiente Docker Compose che nello sviluppo locale.
 *   **Motivazione Architetturale o di Business**:
     Un container backend instabile impedisce qualsiasi esecuzione di test end-to-end su stack reale, blocca le API amministrative e rende impossibile l'erogazione del servizio in ambiente di collaudo o produzione.
 *   **File e Componenti Coinvolti**:
@@ -118,7 +118,7 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P0`
 *   **Titolo**: Esecuzione e verbalizzazione della validazione manuale formale umana da browser (Fase 7)
 *   **Descrizione Operativa**:
-    Condurre una sessione formale di verifica utente da interfaccia grafica browser (Chrome/Edge/Firefox) seguendo pedissequamente i 12 capitoli predisposti nel documento [`docs/MANUAL_VALIDATION_FASE7.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/MANUAL_VALIDATION_FASE7.md). La verifica deve essere condotta con i 4 profili demo deterministici (`demo_admin`, `demo_responsabile`, `demo_referente`, `demo_fornitore`) con password `Demo-Local-2026!`, verificando il rispetto delle capability per ciascun ruolo su:
+    Condurre una sessione formale di verifica utente da interfaccia grafica browser (Chrome/Edge/Firefox) seguendo pedissequamente i 12 capitoli predisposti nel documento [`docs/MANUAL_VALIDATION_FASE7.md`](../../docs/MANUAL_VALIDATION_FASE7.md). La verifica deve essere condotta con i 4 profili demo deterministici (`demo_admin`, `demo_responsabile`, `demo_referente`, `demo_fornitore`) con password `Demo-Local-2026!`, verificando il rispetto delle capability per ciascun ruolo su:
     1. Login Admin
     2. Login Responsabile BMED
     3. Login Referente BMED
@@ -136,7 +136,7 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **File e Componenti Coinvolti**:
     *   Tutte le viste frontend (`frontend/src/features/*`)
     *   Dataset demo generato da `python manage.py load_demo_data --run-checks`
-    *   Documento di verbalizzazione [`docs/MANUAL_VALIDATION_FASE7.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/MANUAL_VALIDATION_FASE7.md)
+    *   Documento di verbalizzazione [`docs/MANUAL_VALIDATION_FASE7.md`](../../docs/MANUAL_VALIDATION_FASE7.md)
 *   **Dipendenze**: `ACT-P0-01`, `ACT-P0-04`.
 *   **Criteri di Accettazione (DoD)**:
     1. Tutte le 12 checkbox di `docs/MANUAL_VALIDATION_FASE7.md` contrassegnate come superate (`[x]`).
@@ -153,7 +153,7 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P0`
 *   **Titolo**: Esecuzione della suite di test E2E Playwright contro lo stack reale Docker (senza mock)
 *   **Descrizione Operativa**:
-    Eseguire la suite end-to-end con Playwright ([`frontend/e2e/`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/e2e)) direttamente contro il reverse proxy Nginx (`http://localhost:8080`) e il backend Django WSGI reale, avvalendosi del comando ufficiale `make e2e` o invocando Playwright nel container frontend. Eliminare l'utilizzo di script isolati o mock fixtures (`ux_preview_workspace.mjs`) per le asserzioni critiche di sistema. Verificare specificamente:
+    Eseguire la suite end-to-end con Playwright ([`frontend/e2e/`](../../frontend/e2e)) direttamente contro il reverse proxy Nginx (`http://localhost:8080`) e il backend Django WSGI reale, avvalendosi del comando ufficiale `make e2e` o invocando Playwright nel container frontend. Eliminare l'utilizzo di script isolati o mock fixtures (`ux_preview_workspace.mjs`) per le asserzioni critiche di sistema. Verificare specificamente:
     *   `phase3.spec.ts` (navigazione e filtri base)
     *   `phase4.spec.ts` (motore anomalie e controlli automatici)
     *   `phase6.spec.ts` (riconciliazione PPM e importazioni)
@@ -183,11 +183,11 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P0`
 *   **Titolo**: Allineamento del target `make seed` al file seed v4 ufficiale (`seed_imola_v4_2026-10-09.json`)
 *   **Descrizione Operativa**:
-    Correggere la discrepanza rilevata nel [`Makefile#L3`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/Makefile#L3) e [`Makefile#L34`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/Makefile#L34), dove la variabile `SEED` fa riferimento al percorso inesistente `/srv/seed/seed_imola_2026-10-16.json`, provocando il fallimento immediato del comando `make seed`. Aggiornare la variabile predefinita e i messaggi di help al dataset effettivo più recente presente nel repository: `data/seed/seed_imola_v4_2026-10-09.json` (o percorso container `/srv/seed/seed_imola_v4_2026-10-09.json`). Aggiornare contestualmente i commenti nel `Makefile` e nella documentazione di deployment.
+    Correggere la discrepanza rilevata nel [`Makefile#L3`](../../Makefile#L3) e [`Makefile#L34`](../../Makefile#L34), dove la variabile `SEED` fa riferimento al percorso inesistente `/srv/seed/seed_imola_2026-10-16.json`, provocando il fallimento immediato del comando `make seed`. Aggiornare la variabile predefinita e i messaggi di help al dataset effettivo più recente presente nel repository: `data/seed/seed_imola_v4_2026-10-09.json` (o percorso container `/srv/seed/seed_imola_v4_2026-10-09.json`). Aggiornare contestualmente i commenti nel `Makefile` e nella documentazione di deployment.
 *   **Motivazione Architetturale o di Business**:
     Il comando `make seed` rappresenta la procedura standard di provisioning per riprodurre lo stato contabile aziendale. L'attuale puntamento a un file inesistente blocca l'allestimento di nuovi nodi applicativi o container di collaudo.
 *   **File e Componenti Coinvolti**:
-    *   [`Makefile`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/Makefile#L3-L38)
+    *   [`Makefile`](../../Makefile#L3-L38)
     *   `data/seed/seed_imola_v4_2026-10-09.json`
     *   Documentazione in [`docs/assestmant/12_DEPLOYMENT_OPERATIONS.md`](12_DEPLOYMENT_OPERATIONS.md)
 *   **Dipendenze**: Nessuna.
@@ -210,7 +210,7 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P1`
 *   **Titolo**: Chiusura dei gap operativi UX/UI identificati nell'audit Sol
 *   **Descrizione Operativa**:
-    Completare l'implementazione delle correzioni UX/UI rimaste in stato `NOT_STARTED` nel documento [`outputs/SOL_UX_GAP_ANALYSIS.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/outputs/SOL_UX_GAP_ANALYSIS.md):
+    Completare l'implementazione delle correzioni UX/UI rimaste in stato `NOT_STARTED` nel documento [`outputs/SOL_UX_GAP_ANALYSIS.md`](../../outputs/SOL_UX_GAP_ANALYSIS.md):
     *   *SOL-03 (Import)*: Invalidare immediatamente l'anteprima (preview) e disabilitare il pulsante di conferma ("Applica Importazione") quando l'utente sostituisce o seleziona un file diverso rispetto a quello per cui è stato calcolato l'hash di dry-run.
     *   *SOL-04 (Organico Allargato)*: Riorganizzare la scheda Organico Allargato isolando i form di inserimento all'interno di sezioni collassabili o drawer dedicati; azzerare lo stato dei form al cambio di canone selezionato per evitare sovrascritture incrociate di consuntivi.
     *   *SOL-05 (Wallet Drawer)*: Trasformare il pannello di dettaglio dell'allocazione wallet da colonna affiancata (che restringe la tabella dei residui e causa overflow a 1024px) in un Drawer modale accessibile conforme a Radix UI, preservando i calcoli FIFO e l'input cumulativo.
@@ -241,17 +241,17 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P1`
 *   **Titolo**: Chiusura della Decisione Architetturale D-01: policy e logica per le giornate di canone non consuntivate
 *   **Descrizione Operativa**:
-    Formalizzare la risoluzione della decisione architetturale aperta [`docs/DECISIONI_APERTE.md#D-01`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/DECISIONI_APERTE.md#L28-L35). Definire e implementare d'intesa con il committente BMED la regola di chiusura contabile del semestre di canone:
+    Formalizzare la risoluzione della decisione architetturale aperta [`docs/DECISIONI_APERTE.md#D-01`](../../docs/DECISIONI_APERTE.md#L28-L35). Definire e implementare d'intesa con il committente BMED la regola di chiusura contabile del semestre di canone:
     1. *Politica Standard (Decadenza)*: Se a fine semestre rimangono giornate non consuntivate, esse decadono contabilmente e non transitano nel wallet. Il sistema marca il semestre come "CONSOLIDATO_CHIUSO", congelando il consuntivo effettivo e valorizzando l'indicatore di sotto-utilizzo canone.
     2. *Politica di Recupero (Rollover Opzionale)*: Qualora autorizzato formalmente dal Responsabile BMED, predisporre una funzione amministrativa transazionale per generare una tranche di accredito eccezionale nel wallet dell'anno successivo con causale `RECUPERO_CANONE_<SEMESTRE>`, tracciata rigorosamente nell'Audit Log.
-    3. Aggiornare il modulo [`backend/domain/canone_status.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/canone_status.py) e il check automatico [`backend/domain/checks/canone_underuse.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks/canone_underuse.py) per riflettere lo stato immutabile dei canoni archiviati.
+    3. Aggiornare il modulo [`backend/domain/canone_status.py`](../../backend/domain/canone_status.py) e il check automatico [`backend/domain/checks/canone_underuse.py`](../../backend/domain/checks/canone_underuse.py) per riflettere lo stato immutabile dei canoni archiviati.
 *   **Motivazione Architetturale o di Business**:
     Evita ambiguità legali e contabili tra committente e fornitore su somme ingenti a fine anno (il monte canone annuale ammonta a centinaia di giornate/persona) e impedisce che anomalie di sotto-utilizzo rimangano permanentemente aperte su semestri passati.
 *   **File e Componenti Coinvolti**:
-    *   [`backend/domain/canone_status.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/canone_status.py)
-    *   [`backend/domain/checks/canone_underuse.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/checks/canone_underuse.py)
+    *   [`backend/domain/canone_status.py`](../../backend/domain/canone_status.py)
+    *   [`backend/domain/checks/canone_underuse.py`](../../backend/domain/checks/canone_underuse.py)
     *   `backend/canone/models.py` (eventuale stato di consolidamento `is_finalized`)
-    *   [`docs/DECISIONI_APERTE.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/DECISIONI_APERTE.md)
+    *   [`docs/DECISIONI_APERTE.md`](../../docs/DECISIONI_APERTE.md)
 *   **Dipendenze**: Nessuna.
 *   **Criteri di Accettazione (DoD)**:
     1. Documento `docs/DECISIONI_APERTE.md` aggiornato con lo stato `RISOLTA` per la decisione D-01, recante la data di approvazione BMED.
@@ -268,7 +268,7 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P1`
 *   **Titolo**: Finalizzazione del workflow di Coda di Revisione e sblocco crediti spendibili
 *   **Descrizione Operativa**:
-    Completare l'integrazione del flusso della **Coda di Revisione** ([`docs/DECISIONI_APERTE.md#D-03`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/DECISIONI_APERTE.md#L47-L70)) che raccoglie i 12 progetti con residui da verificare (3 progetti `CHIUSO` senza data effettiva e 9 progetti con stato `DA_VERIFICARE`).
+    Completare l'integrazione del flusso della **Coda di Revisione** ([`docs/DECISIONI_APERTE.md#D-03`](../../docs/DECISIONI_APERTE.md#L47-L70)) che raccoglie i 12 progetti con residui da verificare (3 progetti `CHIUSO` senza data effettiva e 9 progetti con stato `DA_VERIFICARE`).
     Implementare l'azione transazionale completa tramite l'endpoint `POST /api/v1/projects/<uuid:pk>/validate-closure`:
     1. L'utente con ruolo Responsabile o Admin inserisce o conferma la data di chiusura effettiva (`data_chiusura_consuntivazione`).
     2. Il sistema convalida che non vi siano consuntivi registrati con data successiva alla data di chiusura.
@@ -278,8 +278,8 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Motivazione Architetturale o di Business**:
     Nel dataset di produzione esistono decine di giornate/uomo bloccate come crediti potenziali. Senza questo flusso operativo, l'azienda non può utilizzare i residui maturati per finanziare nuove attività a wallet.
 *   **File e Componenti Coinvolti**:
-    *   [`backend/domain/residuals.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/residuals.py)
-    *   [`backend/api/domain_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py) (viste `ProjectReviewQueueView`, `ProjectValidateClosureView`, `ProjectConfirmReviewView`)
+    *   [`backend/domain/residuals.py`](../../backend/domain/residuals.py)
+    *   [`backend/api/domain_views.py`](../../backend/api/domain_views.py) (viste `ProjectReviewQueueView`, `ProjectValidateClosureView`, `ProjectConfirmReviewView`)
     *   `frontend/src/features/revisione/RevisionePage.tsx`
 *   **Dipendenze**: `ACT-P0-01`.
 *   **Criteri di Accettazione (DoD)**:
@@ -303,7 +303,7 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P2`
 *   **Titolo**: Scomposizione del file monolitico `backend/api/domain_views.py` (94 KB) in package modulare
 *   **Descrizione Operativa**:
-    Il file [`backend/api/domain_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py) ha raggiunto dimensioni insostenibili (94.449 byte, oltre 2.300 righe di codice), concentrando logiche di presentazione e serializzazione eterogenee.
+    Il file [`backend/api/domain_views.py`](../../backend/api/domain_views.py) ha raggiunto dimensioni insostenibili (94.449 byte, oltre 2.300 righe di codice), concentrando logiche di presentazione e serializzazione eterogenee.
     Ristrutturare l'architettura creando il package `backend/api/views/` con moduli specializzati per dominio funzionale:
     *   `backend/api/views/project_views.py`: `ProjectListCreateView`, `ProjectFormOptionsView`, `ProjectBalancesView`, `ProjectLedgerView`, `ProjectTimesheetDetailView`, `ProjectDetailUpdateView`, `ProjectConfirmReviewView`, `ProjectValidateClosureView`, `ProjectReviewQueueView`.
     *   `backend/api/views/wallet_views.py`: `WalletBalanceView`, `WalletFlowView`, `WalletAssigneeSummaryView`, `WalletAllocationCreateView`, `WalletAllocationOptionsView`, `WalletAllocationDetailUpdateView`, `WalletAllocationAdjustView`.
@@ -315,9 +315,9 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Motivazione Architetturale o di Business**:
     Migliora la manutenibilità del codice, riduce drasticamente i conflitti di merge tra sviluppatori paralleli e velocizza la navigazione statica dell'IDE e l'analisi con linter/type checker.
 *   **File e Componenti Coinvolti**:
-    *   [`backend/api/domain_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py)
+    *   [`backend/api/domain_views.py`](../../backend/api/domain_views.py)
     *   `backend/api/views/*.py` (nuovo package)
-    *   [`backend/api/urls.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py)
+    *   [`backend/api/urls.py`](../../backend/api/urls.py)
 *   **Dipendenze**: `ACT-P0-01`.
 *   **Criteri di Accettazione (DoD)**:
     1. Nessun modulo nella cartella `backend/api/views/` supera i 25 KB di dimensione.
@@ -335,7 +335,7 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P2`
 *   **Titolo**: Scomposizione dei componenti React monolitici `CanonePage.tsx` (52 KB) e `AdminPage.tsx` (42 KB)
 *   **Descrizione Operativa**:
-    I componenti di pagina [`frontend/src/features/canone/CanonePage.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/canone/CanonePage.tsx) (1.181 righe, 52.258 byte) e [`frontend/src/features/admin/AdminPage.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/admin/AdminPage.tsx) (1.165 righe, 42.759 byte) violano il principio di singola responsabilità (SRP), accorpando renderizzazione di grafici, modali, schede multiple, gestione di form e logica di rete.
+    I componenti di pagina [`frontend/src/features/canone/CanonePage.tsx`](../../frontend/src/features/canone/CanonePage.tsx) (1.181 righe, 52.258 byte) e [`frontend/src/features/admin/AdminPage.tsx`](../../frontend/src/features/admin/AdminPage.tsx) (1.165 righe, 42.759 byte) violano il principio di singola responsabilità (SRP), accorpando renderizzazione di grafici, modali, schede multiple, gestione di form e logica di rete.
     Decomporre i file in sub-componenti atomici dedicati:
     *   *Canone*:
         *   `features/canone/components/CanoneHeader.tsx` (selettore semestre, badge di stato)
@@ -353,8 +353,8 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Motivazione Architetturale o di Business**:
     Riduce il re-rendering superfluo del Virtual DOM, migliora le performance percepite su browser a risorse limitate, isola lo stato dei form e consente il test unitario mirato dei singoli componenti visivi.
 *   **File e Componenti Coinvolti**:
-    *   [`frontend/src/features/canone/CanonePage.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/canone/CanonePage.tsx)
-    *   [`frontend/src/features/admin/AdminPage.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/admin/AdminPage.tsx)
+    *   [`frontend/src/features/canone/CanonePage.tsx`](../../frontend/src/features/canone/CanonePage.tsx)
+    *   [`frontend/src/features/admin/AdminPage.tsx`](../../frontend/src/features/admin/AdminPage.tsx)
     *   Cartelle `frontend/src/features/canone/components/` e `frontend/src/features/admin/components/`
 *   **Dipendenze**: `ACT-P1-01`.
 *   **Criteri di Accettazione (DoD)**:
@@ -374,18 +374,18 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P2`
 *   **Titolo**: Bonifica del routing API, rimozione endpoint deprecati e consolidamento trailing-slash
 *   **Descrizione Operativa**:
-    In [`backend/api/urls.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py) coesistono configurazioni ridondanti e percorsi legacy che creano confusione nello schema OpenAPI:
-    1. *Rimozione Endpoint Deprecato*: Rimuovere la route `projects/<uuid:pk>/release-to-wallet` ([`backend/api/urls.py#L187-L190`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py#L187-L190)) e la relativa vista [`ReleaseProjectToWalletView`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py#L682-L697) che risponde permanentemente con HTTP 409 `PROJECT_WALLET_RELEASE_DEPRECATED`.
+    In [`backend/api/urls.py`](../../backend/api/urls.py) coesistono configurazioni ridondanti e percorsi legacy che creano confusione nello schema OpenAPI:
+    1. *Rimozione Endpoint Deprecato*: Rimuovere la route `projects/<uuid:pk>/release-to-wallet` ([`backend/api/urls.py#L187-L190`](../../backend/api/urls.py#L187-L190)) e la relativa vista [`ReleaseProjectToWalletView`](../../backend/api/domain_views.py#L682-L697) che risponde permanentemente con HTTP 409 `PROJECT_WALLET_RELEASE_DEPRECATED`.
     2. *Consolidamento URL Duplicati*: Eliminare i doppi percorsi alternativi generati per ovviare a inconsistenze di trailing-slash o convenzioni di naming storiche:
        *   `allocations` vs `wallet/allocations`
        *   `allocations/options` vs `wallet/allocation-options`
        *   Rotte con e senza barra finale (`admin/reset-data/`, `canoni/`, `wallet/allocations/<uuid:pk>/`).
        Uniformare lo standard OpenAPI con la configurazione standard di DRF / Django `APPEND_SLASH = False` ed endpoint canonici senza trailing slash.
 *   **Motivazione Architetturale o di Business**:
-    Uno schema API pulito riduce la superficie di attacco, elimina codice morto e disallineamenti tra documentazione Swagger ([`/api/v1/docs`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py#L236)) e implementazione client.
+    Uno schema API pulito riduce la superficie di attacco, elimina codice morto e disallineamenti tra documentazione Swagger ([`/api/v1/docs`](../../backend/api/urls.py#L236)) e implementazione client.
 *   **File e Componenti Coinvolti**:
-    *   [`backend/api/urls.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py)
-    *   [`backend/api/domain_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py)
+    *   [`backend/api/urls.py`](../../backend/api/urls.py)
+    *   [`backend/api/domain_views.py`](../../backend/api/domain_views.py)
     *   `frontend/src/lib/api.ts` o client Axios/Fetch del frontend
 *   **Dipendenze**: `ACT-P2-01`.
 *   **Criteri di Accettazione (DoD)**:
@@ -405,7 +405,7 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P2`
 *   **Titolo**: Task runner asincrono leggero per import massivi e motore controlli
 *   **Descrizione Operativa**:
-    Attualmente, le operazioni di importazione seed/PPM ([`SeedImportView`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py#L55), [`PpmImportView`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py#L93)) e l'esecuzione del motore di controllo regole ([`ChecksRunView`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py#L624)) vengono eseguite in modo sincrono nel ciclo richiesta/risposta HTTP di Django. Con file Excel PPM di grandi dimensioni (>5 MB) o migliaia di righe contabili, l'elaborazione rischia di superare il timeout di Gunicorn (120 secondi) o del reverse proxy Nginx, interrompendo la connessione con errore HTTP 504 Gateway Timeout.
+    Attualmente, le operazioni di importazione seed/PPM ([`SeedImportView`](../../backend/api/admin_views.py#L55), [`PpmImportView`](../../backend/api/admin_views.py#L93)) e l'esecuzione del motore di controllo regole ([`ChecksRunView`](../../backend/api/domain_views.py#L624)) vengono eseguite in modo sincrono nel ciclo richiesta/risposta HTTP di Django. Con file Excel PPM di grandi dimensioni (>5 MB) o migliaia di righe contabili, l'elaborazione rischia di superare il timeout di Gunicorn (120 secondi) o del reverse proxy Nginx, interrompendo la connessione con errore HTTP 504 Gateway Timeout.
     Implementare un task runner asincrono a basso impatto architetturale, compatibile con i vincoli del NAS Synology (senza obbligo di broker esterni complessi come RabbitMQ):
     *   *Opzione Raccomandata*: Adozione di **Django-Q2** con broker basato su database relazionale PostgreSQL nativo (`ORM broker`).
     *   La vista HTTP avvia il task in background, restituisce immediatamente un `task_id` con stato HTTP 202 Accepted.
@@ -440,7 +440,7 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P3`
 *   **Titolo**: Ottimizzazione layout responsive e tabelle dense su viewport tablet (1024x768 e inferiori)
 *   **Descrizione Operativa**:
-    Completare la matrice responsive evidenziata nel gap `SOL-11` di [`outputs/SOL_UX_GAP_ANALYSIS.md#L17`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/outputs/SOL_UX_GAP_ANALYSIS.md#L17). Le tabelle contabili dense (Analisi Costi, Progetti, Riconciliazione, Consuntivi Canone) e le toolbar di intestazione presentano problemi di visualizzazione e overflow su schermi da 1024px e 1366px.
+    Completare la matrice responsive evidenziata nel gap `SOL-11` di [`outputs/SOL_UX_GAP_ANALYSIS.md#L17`](../../outputs/SOL_UX_GAP_ANALYSIS.md#L17). Le tabelle contabili dense (Analisi Costi, Progetti, Riconciliazione, Consuntivi Canone) e le toolbar di intestazione presentano problemi di visualizzazione e overflow su schermi da 1024px e 1366px.
     Interventi specifici:
     1. Implementare scrolling orizzontale isolato per il solo contenitore della tabella (`overflow-x-auto`) con intestazioni e prima colonna (Codice Progetto / Identificativo) bloccate (`sticky left-0`).
     2. Riorganizzare i filtri e le toolbar in griglie responsive flessibili (`flex-wrap` / `grid-cols-1 sm:grid-cols-2 md:grid-cols-4`).
@@ -500,17 +500,17 @@ Il passaggio formale in produzione richiede il soddisfacimento congiunto dei seg
 *   **Priorità**: `P4`
 *   **Titolo**: Implementazione del provider di autenticazione federata Microsoft Entra ID (OIDC)
 *   **Descrizione Operativa**:
-    Completare l'astrazione del provider di autenticazione predisposta nel file [`backend/core/auth/providers.py#L62-L73`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/auth/providers.py#L62-L73) dove la classe `EntraIdOidcProvider` solleva attualmente `NotImplementedError`.
+    Completare l'astrazione del provider di autenticazione predisposta nel file [`backend/core/auth/providers.py#L62-L73`](../../backend/core/auth/providers.py#L62-L73) dove la classe `EntraIdOidcProvider` solleva attualmente `NotImplementedError`.
     Implementare l'integrazione OpenID Connect (OIDC) per il Single Sign-On (SSO) con l'Identity Provider di Banca Mediolanum:
     1. Introdurre la libreria standard (es. `authlib` o `mozilla-django-oidc`).
     2. Configurare i parametri Azure/Entra ID: `TENANT_ID`, `CLIENT_ID`, `CLIENT_SECRET`, `AUTHORIZATION_ENDPOINT`, `TOKEN_ENDPOINT`, `JWKS_URI`.
     3. Implementare il flusso Authorization Code Grant con validazione crittografica della firma del JWT ID Token.
-    4. Sviluppare il mapping dinamico dai claim dei gruppi Entra ID (`roles` o `groups`) ai ruoli applicativi di Supplier Ledger definiti in [`backend/core/roles.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/roles.py) (`Admin`, `Responsabile BMED`, `Referente BMED`, `Fornitore`).
+    4. Sviluppare il mapping dinamico dai claim dei gruppi Entra ID (`roles` o `groups`) ai ruoli applicativi di Supplier Ledger definiti in [`backend/core/roles.py`](../../backend/core/roles.py) (`Admin`, `Responsabile BMED`, `Referente BMED`, `Fornitore`).
     5. Preservare il provider locale (`LocalSessionProvider`) come fallback di emergenza per manutenzione disconnessa.
 *   **Motivazione Architetturale o di Business**:
     Standardizzazione della sicurezza aziendale, eliminazione della gestione locale delle password, revoca centralizzata degli accessi al cambio di mansione o uscita del personale.
 *   **File e Componenti Coinvolti**:
-    *   [`backend/core/auth/providers.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/auth/providers.py)
+    *   [`backend/core/auth/providers.py`](../../backend/core/auth/providers.py)
     *   `backend/api/auth_views.py`
     *   `backend/config/settings.py`
     *   `frontend/src/features/auth/LoginPage.tsx` (aggiunta pulsante "Accedi con Microsoft")
@@ -649,7 +649,7 @@ Il rilascio della piattaforma è articolato su un arco temporale di **4 settiman
 
 ### 5.1 Protocollo di Collaudo Formale (UAT Protocol)
 
-Prima dell'autorizzazione al deployment, deve essere completata la sessione formale di collaudo basata su [`docs/MANUAL_VALIDATION_FASE7.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/MANUAL_VALIDATION_FASE7.md) secondo il seguente protocollo operativo:
+Prima dell'autorizzazione al deployment, deve essere completata la sessione formale di collaudo basata su [`docs/MANUAL_VALIDATION_FASE7.md`](../../docs/MANUAL_VALIDATION_FASE7.md) secondo il seguente protocollo operativo:
 
 1. **Allestimento Ambiente di Staging**:
    * Esecuzione di `make reset` per garantire un database completamente pulito.

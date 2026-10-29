@@ -6,15 +6,15 @@
 > **Stato di Revisione**: Formale, Verificato e Riconciliato
 > **Single Source of Truth (SSoT)**: Codice Sorgente Applicativo (`backend/`, `frontend/`)
 > **Documenti Correlati**:
-> - [`01_REPOSITORY_INVENTORY.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/01_REPOSITORY_INVENTORY.md)
-> - [`02_FUNCTIONAL_DOMAIN_MODEL.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/02_FUNCTIONAL_DOMAIN_MODEL.md)
-> - [`04_WORKFLOW_CATALOG.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/04_WORKFLOW_CATALOG.md)
-> - [`06_DATA_MODEL.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/06_DATA_MODEL.md)
-> - [`07_API_CATALOG.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/07_API_CATALOG.md)
-> - [`08_BUSINESS_RULES.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/08_BUSINESS_RULES.md)
-> - [`09_SECURITY_AUTHORIZATION.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/09_SECURITY_AUTHORIZATION.md)
-> - [`17_EVIDENCE_INDEX.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/17_EVIDENCE_INDEX.md)
-> - [`18_ASSESSMENT_CONSISTENCY_REPORT.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/assestmant/18_ASSESSMENT_CONSISTENCY_REPORT.md)
+> - [`01_REPOSITORY_INVENTORY.md`](./01_REPOSITORY_INVENTORY.md)
+> - [`02_FUNCTIONAL_DOMAIN_MODEL.md`](./02_FUNCTIONAL_DOMAIN_MODEL.md)
+> - [`04_WORKFLOW_CATALOG.md`](./04_WORKFLOW_CATALOG.md)
+> - [`06_DATA_MODEL.md`](./06_DATA_MODEL.md)
+> - [`07_API_CATALOG.md`](./07_API_CATALOG.md)
+> - [`08_BUSINESS_RULES.md`](./08_BUSINESS_RULES.md)
+> - [`09_SECURITY_AUTHORIZATION.md`](./09_SECURITY_AUTHORIZATION.md)
+> - [`17_EVIDENCE_INDEX.md`](./17_EVIDENCE_INDEX.md)
+> - [`18_ASSESSMENT_CONSISTENCY_REPORT.md`](./18_ASSESSMENT_CONSISTENCY_REPORT.md)
 
 ---
 
@@ -24,7 +24,7 @@
 Il sistema **Supplier Ledger** adotta un modello concettuale a doppio livello per la definizione e l'esercizio delle proprie capacit operative:
 
 1. **Livello di Sicurezza (Canonical Security Capabilities - CBAC)**:
-   - Definite a livello di kernel in [`backend/core/capabilities.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/capabilities.py#L25-L43) e riflesse specularmente nel client TypeScript in [`frontend/src/lib/permissions.ts`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/lib/permissions.ts#L3-L19).
+   - Definite a livello di kernel in [`backend/core/capabilities.py`](../../backend/core/capabilities.py#L25-L43) e riflesse specularmente nel client TypeScript in [`frontend/src/lib/permissions.ts`](../../frontend/src/lib/permissions.ts#L3-L19).
    - Costituiscono l'insieme atomico ed immutabile di **15 permessi canonici** (come formalizzato nella risoluzione dell'incongruenza **INC-01** in `18_ASSESSMENT_CONSISTENCY_REPORT.md`).
    - Governano l'accesso granulare a livello HTTP (DRF Permission Classes) e condizionano dinamicamente la visibilit e l'interattivit dell'interfaccia utente React (men, pulsanti di azione, dialoghi modali e tab protetti).
 

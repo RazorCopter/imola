@@ -35,29 +35,29 @@ quadrantChart
 
 ### 1.1 Punti di Forza Riconosciuti della Codebase
 1. **Core di Dominio Contabile e Precisione Numerica**:
-   - Tutte le grandezze temporali e monetarie utilizzano [`Decimal`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L160-L162) a 4 cifre decimali (`DAYS_DECIMAL_PLACES = 4`), azzerando gli errori di approssimazione in virgola mobile (standard IEEE 754).
-   - Coercizione sistematica delle grandezze decimali in stringhe JSON serializzate tramite [`DaysJSONRenderer`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L136) per prevenire troncamenti nei client browser.
+   - Tutte le grandezze temporali e monetarie utilizzano [`Decimal`](../../backend/config/settings/base.py#L160-L162) a 4 cifre decimali (`DAYS_DECIMAL_PLACES = 4`), azzerando gli errori di approssimazione in virgola mobile (standard IEEE 754).
+   - Coercizione sistematica delle grandezze decimali in stringhe JSON serializzate tramite [`DaysJSONRenderer`](../../backend/config/settings/base.py#L136) per prevenire troncamenti nei client browser.
 2. **Integrità Contabile Append-Only**:
-   - Il registro di consuntivazione ([`TimesheetEntry`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L18-L85)) è vincolato da un trigger PostgreSQL non aggirabile (`timesheet_entry_append_only_trg`), impedendo `UPDATE` o `DELETE` fisici su righe storicizzate.
-   - Le correzioni avvengono unicamente mediante storni contabili espliciti ([`reverses`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/models.py#L48)).
+   - Il registro di consuntivazione ([`TimesheetEntry`](../../backend/timesheets/models.py#L18-L85)) è vincolato da un trigger PostgreSQL non aggirabile (`timesheet_entry_append_only_trg`), impedendo `UPDATE` o `DELETE` fisici su righe storicizzate.
+   - Le correzioni avvengono unicamente mediante storni contabili espliciti ([`reverses`](../../backend/timesheets/models.py#L48)).
 3. **Motore di Rilevazione Anomalie Completo (18 Regole)**:
-   - Presenza di 18 controlli di coerenza eseguiti dal runner idempotente ([`backend/anomalies/runner.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/runner.py#L91-L146)), con gestione della fingerprint univoca e modello di supersessione dei seed storici.
+   - Presenza di 18 controlli di coerenza eseguiti dal runner idempotente ([`backend/anomalies/runner.py`](../../backend/anomalies/runner.py#L91-L146)), con gestione della fingerprint univoca e modello di supersessione dei seed storici.
 4. **Tracciabilità e Audit Bilaterale**:
-   - Adozione del modello astratto [`TrackedModel`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/models.py#L67-L106) e `django-simple-history` su 17 modelli di dominio, che garantisce l'archiviazione di autore, data e versione per ogni mutazione.
+   - Adozione del modello astratto [`TrackedModel`](../../backend/core/models.py#L67-L106) e `django-simple-history` su 17 modelli di dominio, che garantisce l'archiviazione di autore, data e versione per ogni mutazione.
 
 ---
 
 ### 1.2 Aree di Debito Tecnico e Fragilità Strutturali
 1. **Monoliti nel Layer di Presentazione e API**:
-   - Il file [`backend/api/domain_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py) raggruppa 38 controller eterogenei in 2.067 righe (94.4 KB).
-   - Componenti React mastodontici sul frontend come [`CanonePage.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/canone/CanonePage.tsx) (1.168 righe) e [`AdminPage.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/admin/AdminPage.tsx) (1.150 righe), che uniscono visualizzazione, routing interno, form modali multipli e gestione dello stato.
+   - Il file [`backend/api/domain_views.py`](../../backend/api/domain_views.py) raggruppa 38 controller eterogenei in 2.067 righe (94.4 KB).
+   - Componenti React mastodontici sul frontend come [`CanonePage.tsx`](../../frontend/src/features/canone/CanonePage.tsx) (1.168 righe) e [`AdminPage.tsx`](../../frontend/src/features/admin/AdminPage.tsx) (1.150 righe), che uniscono visualizzazione, routing interno, form modali multipli e gestione dello stato.
 2. **Assenza di Elaborazione Asincrona (No Celery/Redis)**:
    - L'importazione di pesanti file Excel PPM e seed v4 (oltre 2 MB con decine di migliaia di celle), nonché l'esecuzione sequenziale dei 18 controlli di conformità, avvengono interamente nel ciclo sincrono richiesta/risposta HTTP. Tale configurazione espone il sistema al timeout forzato di Gunicorn (120s) e Nginx (300s).
 3. **Configurazioni e Script Disallineati**:
-   - [`Makefile`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/Makefile#L3) e [`backend/config/settings/base.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L165-L173) referenziano un file `seed_imola_2026-10-16.json` inesistente sul filesystem.
-   - Formule di business e calcoli di bilancio duplicati tra il package `domain/` e lo script di proiezione offline [`scripts/workbook_application_projection.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/scripts/workbook_application_projection.py).
+   - [`Makefile`](../../Makefile#L3) e [`backend/config/settings/base.py`](../../backend/config/settings/base.py#L165-L173) referenziano un file `seed_imola_2026-10-16.json` inesistente sul filesystem.
+   - Formule di business e calcoli di bilancio duplicati tra il package `domain/` e lo script di proiezione offline [`scripts/workbook_application_projection.py`](../../scripts/workbook_application_projection.py).
 4. **Fragilità Operative e Falso Senso di Sicurezza sul Testing**:
-   - I test browser E2E (suite Sol Playwright) poggiano interamente sull'intercettazione mock delle chiamate HTTP tramite [`frontend/e2e/sol/fixtures.ts`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/e2e/sol/fixtures.ts#L27), non testando in alcun modo l'integrazione reale con il container Docker Python/Django e PostgreSQL.
+   - I test browser E2E (suite Sol Playwright) poggiano interamente sull'intercettazione mock delle chiamate HTTP tramite [`frontend/e2e/sol/fixtures.ts`](../../frontend/e2e/sol/fixtures.ts#L27), non testando in alcun modo l'integrazione reale con il container Docker Python/Django e PostgreSQL.
    - La cartella di lavoro non risulta essere un repository Git attivo, lasciando il codice esposto a modifiche non tracciate o perdite accidentali.
 
 ---
@@ -99,13 +99,13 @@ flowchart TD
 | **ID Debito** | **DEBT-01** |
 | **Titolo** | File API Monolitico ad alta concentrazione di responsabilità |
 | **Categoria** | Architettura del Codice / Monolite di Presentazione |
-| **Evidenza Sorgente** | [`backend/api/domain_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py#L1-L2067) (94.4 KB, 2.067 righe, 38 classi di vista) |
+| **Evidenza Sorgente** | [`backend/api/domain_views.py`](../../backend/api/domain_views.py#L1-L2067) (94.4 KB, 2.067 righe, 38 classi di vista) |
 | **Severità** | **Alta** |
 | **Priorità** | **P1** |
 | **Stato Implementativo** | **IMPLEMENTED** (funzionante ma strutturalmente ingestibile) |
 
 #### Descrizione Tecnica Approfondita
-Il modulo [`backend/api/domain_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py) aggrega in un unico file 38 distinte classi derivate da `DocumentedAPIView` / `APIView`. Il file copre 9 sottodomini applicativi concettualmente disgiunti:
+Il modulo [`backend/api/domain_views.py`](../../backend/api/domain_views.py) aggrega in un unico file 38 distinte classi derivate da `DocumentedAPIView` / `APIView`. Il file copre 9 sottodomini applicativi concettualmente disgiunti:
 1. *Impostazioni & Costi*: `SettingsView`, `CostAnalysisView` (L43-L135).
 2. *Dashboard & Ricerca*: `DashboardView`, `CommandSearchView` (L137-L200, L1280-L1360).
 3. *Gestione Progetti*: `ProjectListCreateView`, `ProjectBalancesView`, `ProjectLedgerView`, `ProjectTimesheetDetailView`, `ProjectReviewQueueView`, `ProjectDetailUpdateView`, `ProjectFormOptionsView`, `ProjectConfirmReviewView`, `ProjectValidateClosureView`, `ReleaseProjectToWalletView` (L202-L620, L682-L697, L1480-L1750).
@@ -130,7 +130,7 @@ Scomporre il file in un package modulare `backend/api/views/` organizzato per do
 - `backend/api/views/reconciliation.py`
 - `backend/api/views/exports.py`
 - `backend/api/views/system.py` (settings, dashboard, search, audit)
-Mantenere in `backend/api/domain_views.py` solo re-export di retrocompatibilità se necessario, aggiornando [`backend/api/urls.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py).
+Mantenere in `backend/api/domain_views.py` solo re-export di retrocompatibilità se necessario, aggiornando [`backend/api/urls.py`](../../backend/api/urls.py).
 
 ---
 
@@ -141,7 +141,7 @@ Mantenere in `backend/api/domain_views.py` solo re-export di retrocompatibilità
 | **ID Debito** | **DEBT-02** |
 | **Titolo** | Componenti React monolitici con concentrazione di sub-panel e stati interni |
 | **Categoria** | Architettura Frontend / Monolite di Componente |
-| **Evidenza Sorgente** | [`frontend/src/features/canone/CanonePage.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/canone/CanonePage.tsx) (52.3 KB, 1.168 righe)<br/>[`frontend/src/features/admin/AdminPage.tsx`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/src/features/admin/AdminPage.tsx) (42.8 KB, 1.150 righe) |
+| **Evidenza Sorgente** | [`frontend/src/features/canone/CanonePage.tsx`](../../frontend/src/features/canone/CanonePage.tsx) (52.3 KB, 1.168 righe)<br/>[`frontend/src/features/admin/AdminPage.tsx`](../../frontend/src/features/admin/AdminPage.tsx) (42.8 KB, 1.150 righe) |
 | **Severità** | **Alta** |
 | **Priorità** | **P1** |
 | **Stato Implementativo** | **PARTIAL** (funzionanti ma non conformi ai principi di modularità React) |
@@ -189,13 +189,13 @@ I due componenti principali di Canone e Amministrazione violano il principio di 
 | **ID Debito** | **DEBT-03** |
 | **Titolo** | Duplicazione delle route API con alias ridondanti e trailing slash inconsistenti |
 | **Categoria** | Architettura API / Routing e Standardizzazione REST |
-| **Evidenza Sorgente** | [`backend/api/urls.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py#L65-L73), [`#L116-L174`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py#L116-L174), [`#L202-L205`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py#L202-L205) |
+| **Evidenza Sorgente** | [`backend/api/urls.py`](../../backend/api/urls.py#L65-L73), [`#L116-L174`](../../backend/api/urls.py#L116-L174), [`#L202-L205`](../../backend/api/urls.py#L202-L205) |
 | **Severità** | **Media** |
 | **Priorità** | **P2** |
 | **Stato Implementativo** | **IMPLEMENTED** (funzionante ma tecnicamente ridondante) |
 
 #### Descrizione Tecnica Approfondita
-In [`backend/api/urls.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py) sono censite 12 route duplicate esplicite per compensare incongruenze dei client relative al trailing slash o a prefissi URL eterogenei:
+In [`backend/api/urls.py`](../../backend/api/urls.py) sono censite 12 route duplicate esplicite per compensare incongruenze dei client relative al trailing slash o a prefissi URL eterogenei:
 - Reset dati: `admin/reset-data` vs `admin/reset-data/` (L65, L70).
 - Dettaglio Allocazione: `wallet/allocations/<uuid:pk>` vs `wallet/allocations/<uuid:pk>/` vs `allocations/<uuid:pk>` vs `allocations/<uuid:pk>/` (L116, L121, L126, L131).
 - Creazione Allocazione: `allocations` vs `allocations/` vs `wallet/allocations` vs `wallet/allocations/` (L141, L146, L151, L156).
@@ -221,13 +221,13 @@ In [`backend/api/urls.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%
 | **ID Debito** | **DEBT-04** |
 | **Titolo** | Presenza di endpoint legacy disabilitato che restituisce HTTP 409 fisso |
 | **Categoria** | Qualità del Codice / Dead Code & Legacy API |
-| **Evidenza Sorgente** | [`backend/api/urls.py#L187-L190`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py#L187-L190), [`backend/api/domain_views.py#L682-L697`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py#L682-L697) |
+| **Evidenza Sorgente** | [`backend/api/urls.py#L187-L190`](../../backend/api/urls.py#L187-L190), [`backend/api/domain_views.py#L682-L697`](../../backend/api/domain_views.py#L682-L697) |
 | **Severità** | **Bassa** |
 | **Priorità** | **P3** |
 | **Stato Implementativo** | **IMPLEMENTED** (funziona restituendo errore deterministico) |
 
 #### Descrizione Tecnica Approfondita
-La classe [`ReleaseProjectToWalletView`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py#L682-L697) è stata disattivata a seguito della formalizzazione della regola contabile per cui un progetto attivo non può riversare arbitrariamente residui nel wallet (il residuo entra nel wallet solo alla chiusura formale del progetto con data effettiva).
+La classe [`ReleaseProjectToWalletView`](../../backend/api/domain_views.py#L682-L697) è stata disattivata a seguito della formalizzazione della regola contabile per cui un progetto attivo non può riversare arbitrariamente residui nel wallet (il residuo entra nel wallet solo alla chiusura formale del progetto con data effettiva).
 Tuttavia, anziché rimuovere la route, è stato mantenuto un endpoint che intercetta la richiesta HTTP `POST` e restituisce incondizionatamente un errore HTTP 409 Conflict:
 ```python
 class ReleaseProjectToWalletView(DocumentedAPIView):
@@ -248,10 +248,10 @@ class ReleaseProjectToWalletView(DocumentedAPIView):
 
 #### Impatto su Manutenibilità, Performance ed Evoluzione
 - Confonde gli integratori di terze parti e lo sviluppatore frontend, apparendo nello schema OpenAPI come operazione valida.
-- Costringe la suite di test a mantenere una verifica esplicita per asserire che l'endpoint ritorni 409 ([`backend/tests/test_phase2_refinements.py:40`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/tests/test_phase2_refinements.py#L40)).
+- Costringe la suite di test a mantenere una verifica esplicita per asserire che l'endpoint ritorni 409 ([`backend/tests/test_phase2_refinements.py:40`](../../backend/tests/test_phase2_refinements.py#L40)).
 
 #### Soluzione Tecnica Proposta (Remediation)
-- Rimuovere la route da [`backend/api/urls.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/urls.py) e la classe da `domain_views.py`.
+- Rimuovere la route da [`backend/api/urls.py`](../../backend/api/urls.py) e la classe da `domain_views.py`.
 - Aggiornare i test unitari rimuovendo il test di retrocompatibilità o sostituendolo con un'asserzione di HTTP 404 Not Found.
 
 ---
@@ -263,7 +263,7 @@ class ReleaseProjectToWalletView(DocumentedAPIView):
 | **ID Debito** | **DEBT-05** |
 | **Titolo** | Assenza di elaborazione asincrona per importazioni massive ed esecuzione controlli |
 | **Categoria** | Architettura di Sistema / Concorrenza & Throughput |
-| **Evidenza Sorgente** | [`docker-compose.yml#L20-L54`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docker-compose.yml#L20-L54) (nessun container Redis/RabbitMQ/Celery);<br/>[`backend/api/admin_views.py#L55-L160`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py#L55-L160) (`SeedImportView`, `PpmImportView`);<br/>[`backend/api/domain_views.py#L624-L643`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py#L624-L643) (`ChecksRunView`);<br/>[`deploy/nginx.conf#L35`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/deploy/nginx.conf#L35) (`proxy_read_timeout 300s`);<br/>[`docker-compose.yml#L53`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docker-compose.yml#L53) (Gunicorn `--timeout 120`). |
+| **Evidenza Sorgente** | [`docker-compose.yml#L20-L54`](../../docker-compose.yml#L20-L54) (nessun container Redis/RabbitMQ/Celery);<br/>[`backend/api/admin_views.py#L55-L160`](../../backend/api/admin_views.py#L55-L160) (`SeedImportView`, `PpmImportView`);<br/>[`backend/api/domain_views.py#L624-L643`](../../backend/api/domain_views.py#L624-L643) (`ChecksRunView`);<br/>[`deploy/nginx.conf#L35`](../../deploy/nginx.conf#L35) (`proxy_read_timeout 300s`);<br/>[`docker-compose.yml#L53`](../../docker-compose.yml#L53) (Gunicorn `--timeout 120`). |
 | **Severità** | **Critica** |
 | **Priorità** | **P0** |
 | **Stato Implementativo** | **NOT_IMPLEMENTED** |
@@ -273,7 +273,7 @@ Il sistema non include alcun gestore di code asincrone (Celery, Dramatiq o Djang
 Di conseguenza, tutte le operazioni computazionalmente onerose vengono eseguite **in-process** all'interno del worker WSGI sincrono di Gunicorn nel ciclo richiesta/risposta HTTP:
 1. **Import Seed JSON**: Parsing di file JSON da oltre 2 MB contenenti l'intero snapshot di progetti, allocazioni e consuntivi, validazione dello schema, hashing crittografico e inserimento a database.
 2. **Import PPM Excel**: Parsing di file `.xlsx` o `.pdf` multi-foglio tramite `openpyxl`, estrazione tabellare, matching dei codici progetto e inserimento delle righe di snapshot.
-3. **Esecuzione Controlli Idempotenti**: Invocazione sincrona dei 18 controlli di integrità tramite [`run_checks()`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/runner.py#L91-L146), il quale blocca l'intero database all'interno di una transazione atomica (`@transaction.atomic`) per l'intera durata della scansione.
+3. **Esecuzione Controlli Idempotenti**: Invocazione sincrona dei 18 controlli di integrità tramite [`run_checks()`](../../backend/anomalies/runner.py#L91-L146), il quale blocca l'intero database all'interno di una transazione atomica (`@transaction.atomic`) per l'intera durata della scansione.
 
 ```mermaid
 sequenceDiagram
@@ -315,16 +315,16 @@ sequenceDiagram
 | **ID Debito** | **DEBT-06** |
 | **Titolo** | Duplicazione delle formule di ripartizione e bilancio contabile nello script di proiezione offline |
 | **Categoria** | Duplicazione del Codice / Domain Logic Sprawl |
-| **Evidenza Sorgente** | [`scripts/workbook_application_projection.py#L367-L436`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/scripts/workbook_application_projection.py#L367-L436);<br/>[`backend/domain/`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/domain/) (regole di ripartizione FIFO e target Canone) |
+| **Evidenza Sorgente** | [`scripts/workbook_application_projection.py#L367-L436`](../../scripts/workbook_application_projection.py#L367-L436);<br/>[`backend/domain/`](../../backend/domain/) (regole di ripartizione FIFO e target Canone) |
 | **Severità** | **Media** |
 | **Priorità** | **P2** |
 | **Stato Implementativo** | **IMPLEMENTED** (due implementazioni parallele disallineabili) |
 
 #### Descrizione Tecnica Approfondita
-Nello script [`scripts/workbook_application_projection.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/scripts/workbook_application_projection.py) (523 righe), impiegato per proiettare i dataset estratti dall'Excel originale nel formato `seed_v1`, le logiche contabili essenziali sono state riscritte da zero in Python puro con tipi `float` anziché richiamare i moduli di dominio Django:
+Nello script [`scripts/workbook_application_projection.py`](../../scripts/workbook_application_projection.py) (523 righe), impiegato per proiettare i dataset estratti dall'Excel originale nel formato `seed_v1`, le logiche contabili essenziali sono state riscritte da zero in Python puro con tipi `float` anziché richiamare i moduli di dominio Django:
 - **Ordinamento e Consumo FIFO del Wallet** (righe 367-391): L'attribuzione delle tranche per anno provenienza, data conferimento e sequenza di consumo riproduce la logica di `backend/wallet/services.py`.
 - **Formule Target e Forecast del Canone** (righe 428-436): Formula lineare `base_gg + (gg_per_settimana * settimane_trascorse)` codificata cablando `6.69` gg/settimana e `26`/`15` settimane trascorse.
-- **Normalizzazione delle Grandezze Numeriche**: Funzione `_number()` nello script che utilizza `round(value, 4)` e `float` invece di [`Decimal`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L160).
+- **Normalizzazione delle Grandezze Numeriche**: Funzione `_number()` nello script che utilizza `round(value, 4)` e `float` invece di [`Decimal`](../../backend/config/settings/base.py#L160).
 
 #### Impatto su Manutenibilità, Performance ed Evoluzione
 - Se una regola contabile o una formula di deroga cambia nel backend, lo script offline continua a generare seed v1 secondo la vecchia convenzione, creando discrepanze al primo import.
@@ -342,13 +342,13 @@ Centralizzare le funzioni pure di calcolo contabile (FIFO, proiezioni, normalizz
 | **ID Debito** | **DEBT-07** |
 | **Titolo** | Provider di autenticazione enterprise Microsoft Entra ID stubbato con NotImplementedError |
 | **Categoria** | Sicurezza & Autenticazione / Integrazione Esterna |
-| **Evidenza Sorgente** | [`backend/core/auth/providers.py#L62-L73`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/auth/providers.py#L62-L73) |
+| **Evidenza Sorgente** | [`backend/core/auth/providers.py#L62-L73`](../../backend/core/auth/providers.py#L62-L73) |
 | **Severità** | **Alta** |
 | **Priorità** | **P1** |
 | **Stato Implementativo** | **NOT_IMPLEMENTED** |
 
 #### Descrizione Tecnica Approfondita
-Sebbene l'architettura di autenticazione preveda un pattern Provider elegante ([`backend/core/auth/providers.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/auth/providers.py)), la classe [`EntraIdOidcProvider`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/auth/providers.py#L62) è un mero segnaposto privo di logica reale:
+Sebbene l'architettura di autenticazione preveda un pattern Provider elegante ([`backend/core/auth/providers.py`](../../backend/core/auth/providers.py)), la classe [`EntraIdOidcProvider`](../../backend/core/auth/providers.py#L62) è un mero segnaposto privo di logica reale:
 ```python
 class EntraIdOidcProvider:
     """Segnaposto per l'accesso federato: non implementato in v1."""
@@ -368,7 +368,7 @@ Se la variabile d'ambiente `AUTH_PROVIDER` viene impostata a `entra_id` in produ
 Implementare il flusso OpenID Connect (Authorization Code Flow con PKCE):
 1. Integrare la libreria `authlib` o `mozilla-django-oidc`.
 2. Configurare gli endpoint di discovery Entra ID (`/.well-known/openid-configuration`), `client_id`, `client_secret` e `tenant_id`.
-3. Mappare i claim dei ruoli o gruppi Azure AD (`groups` o `roles`) sui 4 ruoli applicativi di sistema (`admin`, `responsabile_bmed`, `referente_bmed`, `fornitore`) tramite [`backend/core/roles.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/roles.py).
+3. Mappare i claim dei ruoli o gruppi Azure AD (`groups` o `roles`) sui 4 ruoli applicativi di sistema (`admin`, `responsabile_bmed`, `referente_bmed`, `fornitore`) tramite [`backend/core/roles.py`](../../backend/core/roles.py).
 
 ---
 
@@ -379,22 +379,22 @@ Implementare il flusso OpenID Connect (Authorization Code Flow con PKCE):
 | **ID Debito** | **DEBT-08** |
 | **Titolo** | Percorso file seed predefinito punta a un file inesistente sul filesystem |
 | **Categoria** | Configurazione / DevOps & Automation |
-| **Evidenza Sorgente** | [`Makefile#L3`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/Makefile#L3);<br/>[`backend/config/settings/base.py#L165-L173`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L165-L173);<br/>Directory [`data/seed/`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/data/seed/) |
+| **Evidenza Sorgente** | [`Makefile#L3`](../../Makefile#L3);<br/>[`backend/config/settings/base.py#L165-L173`](../../backend/config/settings/base.py#L165-L173);<br/>Directory [`data/seed/`](../../data/seed/) |
 | **Severità** | **Media** |
 | **Priorità** | **P2** |
 | **Stato Implementativo** | **PARTIAL** (configurazione puntata su risorsa non presente) |
 
 #### Descrizione Tecnica Approfondita
-Nel [`Makefile`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/Makefile#L3) la variabile di default è valorizzata come:
+Nel [`Makefile`](../../Makefile#L3) la variabile di default è valorizzata come:
 ```makefile
 SEED ?= /srv/seed/seed_imola_2026-10-16.json
 ```
-Similmente, in [`backend/config/settings/base.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L165-L173):
+Similmente, in [`backend/config/settings/base.py`](../../backend/config/settings/base.py#L165-L173):
 ```python
 _seed_in_app = Path("/app/data/seed/seed_imola_2026-10-16.json")
 _seed_in_repo = REPO_DIR / "data" / "seed" / "seed_imola_2026-10-16.json"
 ```
-Tuttavia, l'ispezione della directory [`data/seed/`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/data/seed/) mostra esclusivamente la presenza di:
+Tuttavia, l'ispezione della directory [`data/seed/`](../../data/seed/) mostra esclusivamente la presenza di:
 - `seed_imola_v3_2026-10-09.json` (2.110.582 byte)
 - `seed_imola_v4_2026-10-09.json` (2.175.187 byte)
 Il file `seed_imola_2026-10-16.json` non esiste.
@@ -422,7 +422,7 @@ Aggiornare il `Makefile` e `backend/config/settings/base.py` per puntare al seed
 
 #### Descrizione Tecnica Approfondita
 Non esiste alcun descrittore di pipeline CI/CD nel repository.
-La verifica del codice (linter Ruff, type checker Mypy, unit test Pytest, test frontend Vitest e build Docker) è interamente demandata alla disciplina manuale del singolo sviluppatore tramite i comandi del [`Makefile`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/Makefile#L48-L60) (`make test`, `make lint`).
+La verifica del codice (linter Ruff, type checker Mypy, unit test Pytest, test frontend Vitest e build Docker) è interamente demandata alla disciplina manuale del singolo sviluppatore tramite i comandi del [`Makefile`](../../Makefile#L48-L60) (`make test`, `make lint`).
 
 #### Impatto su Manutenibilità, Performance ed Evoluzione
 - Rischio continuo di introduzione di codice difettoso, incompatibilità di build Docker o regressioni funzionali non intercettate prima del merge.
@@ -445,7 +445,7 @@ Predisporre un workflow GitHub Actions (`.github/workflows/ci.yml`) o GitLab CI 
 | **ID Debito** | **DEBT-10** |
 | **Titolo** | Assenza di rate limiting e throttling su upload, export pesanti ed esecuzione controlli |
 | **Categoria** | Sicurezza Operativa / Throttling & DoS Protection |
-| **Evidenza Sorgente** | [`backend/core/throttles.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/throttles.py#L1-L6);<br/>[`backend/config/settings/base.py#L147-L148`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L147-L148);<br/>[`backend/api/auth_views.py#L52`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/auth_views.py#L52) |
+| **Evidenza Sorgente** | [`backend/core/throttles.py`](../../backend/core/throttles.py#L1-L6);<br/>[`backend/config/settings/base.py#L147-L148`](../../backend/config/settings/base.py#L147-L148);<br/>[`backend/api/auth_views.py#L52`](../../backend/api/auth_views.py#L52) |
 | **Severità** | **Media** |
 | **Priorità** | **P2** |
 | **Stato Implementativo** | **PARTIAL** (attivo solo su login) |
@@ -459,12 +459,12 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {"login": env("LOGIN_THROTTLE_RATE", "10/min")},
 }
 ```
-In [`backend/core/throttles.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/throttles.py) esiste un'unica classe `LoginRateThrottle`.
+In [`backend/core/throttles.py`](../../backend/core/throttles.py) esiste un'unica classe `LoginRateThrottle`.
 Tutti gli altri endpoint applicativi ad altissimo consumo computazionale ne sono privi:
-- Upload file Seed e PPM: [`SeedImportView`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py#L55), [`PpmImportView`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py#L93).
-- Esecuzione controlli: [`ChecksRunView`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py#L624).
-- Generazione export XLSX e JSON: [`ExportExcelView`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py#L1390), [`ExportJsonView`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py#L1365).
-- Generazione dump e restore database: [`DatabaseBackupView`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/database_backup.py#L80).
+- Upload file Seed e PPM: [`SeedImportView`](../../backend/api/admin_views.py#L55), [`PpmImportView`](../../backend/api/admin_views.py#L93).
+- Esecuzione controlli: [`ChecksRunView`](../../backend/api/domain_views.py#L624).
+- Generazione export XLSX e JSON: [`ExportExcelView`](../../backend/api/domain_views.py#L1390), [`ExportJsonView`](../../backend/api/domain_views.py#L1365).
+- Generazione dump e restore database: [`DatabaseBackupView`](../../backend/api/database_backup.py#L80).
 
 #### Impatto su Manutenibilità, Performance ed Evoluzione
 Un utente autenticato (anche con ruolo a bassa fiducia o sessione compromessa) può innescare decine di esportazioni pesanti o esecuzioni di controlli in parallelo, esaurendo la memoria RAM del container backend e mandando in crash l'intero runtime WSGI (Application-level Denial of Service).
@@ -485,13 +485,13 @@ Un utente autenticato (anche con ruolo a bassa fiducia o sessione compromessa) p
 | **ID Debito** | **DEBT-11** |
 | **Titolo** | Alcuni endpoint di aggregazione e liste storiche trasferiscono payload integrali non paginati |
 | **Categoria** | Performance Backend & Consumo Risorse Client |
-| **Evidenza Sorgente** | [`backend/api/domain_views.py#L225`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py#L225) (`ProjectBalancesView`);<br/>[`backend/api/domain_views.py#L700`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/domain_views.py#L700) (`WalletFlowView`) |
+| **Evidenza Sorgente** | [`backend/api/domain_views.py#L225`](../../backend/api/domain_views.py#L225) (`ProjectBalancesView`);<br/>[`backend/api/domain_views.py#L700`](../../backend/api/domain_views.py#L700) (`WalletFlowView`) |
 | **Severità** | **Media** |
 | **Priorità** | **P2** |
 | **Stato Implementativo** | **PARTIAL** |
 
 #### Descrizione Tecnica Approfondita
-Mentre DRF imposta [`StandardCursorPagination`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/base.py#L137) globalmente, diverse viste specializzate serializzano liste complete calcolate in memoria:
+Mentre DRF imposta [`StandardCursorPagination`](../../backend/config/settings/base.py#L137) globalmente, diverse viste specializzate serializzano liste complete calcolate in memoria:
 - `ProjectBalancesView`: Restituisce tutti i progetti con relativi consuntivi aggregati, allocazioni e residui calcolati a runtime.
 - `WalletFlowView`: Serializza l'intera storia delle allocazioni annuali e dei relativi finanziamenti senza paginazione server-side.
 
@@ -510,13 +510,13 @@ Introdurre paginazione server-side basata su cursore o offset per le tabelle di 
 | **ID Debito** | **DEBT-12** |
 | **Titolo** | Fallback predefiniti non sicuri per variabili d'ambiente critiche in ambiente di produzione |
 | **Categoria** | Sicurezza delle Configurazioni / Secret Management |
-| **Evidenza Sorgente** | [`docker-compose.yml#L34-L35`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docker-compose.yml#L34-L35);<br/>[`backend/config/settings/prod.py#L1-L30`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/prod.py) |
+| **Evidenza Sorgente** | [`docker-compose.yml#L34-L35`](../../docker-compose.yml#L34-L35);<br/>[`backend/config/settings/prod.py#L1-L30`](../../backend/config/settings/prod.py) |
 | **Severità** | **Media** |
 | **Priorità** | **P2** |
 | **Stato Implementativo** | **PARTIAL** |
 
 #### Descrizione Tecnica Approfondita
-In [`docker-compose.yml`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docker-compose.yml#L34) le impostazioni di sicurezza dei cookie presentano fallback permissivi se non esplicitamente valorizzati nel file `.env`:
+In [`docker-compose.yml`](../../docker-compose.yml#L34) le impostazioni di sicurezza dei cookie presentano fallback permissivi se non esplicitamente valorizzati nel file `.env`:
 ```yaml
 COOKIE_SECURE: ${COOKIE_SECURE:-False}
 SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-True}
@@ -527,7 +527,7 @@ Se un amministratore esegue il deploy omettendo `COOKIE_SECURE=True`, i cookie d
 Rischio di intercettazione della sessione amministrativa in ambienti on-premises non configurati con estremo rigore.
 
 #### Soluzione Tecnica Proposta (Remediation)
-Impostare `COOKIE_SECURE = True` in [`backend/config/settings/prod.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/config/settings/prod.py) come valore tassativo non sovrascrivibile, consentendo `False` unicamente nel profilo di sviluppo `dev.py`.
+Impostare `COOKIE_SECURE = True` in [`backend/config/settings/prod.py`](../../backend/config/settings/prod.py) come valore tassativo non sovrascrivibile, consentendo `False` unicamente nel profilo di sviluppo `dev.py`.
 
 ---
 
@@ -568,10 +568,10 @@ graph TD
 | **Probabilità** | **Alta** |
 | **Impatto** | **Alto** |
 | **Severità Globale** | **CRITICA** |
-| **Evidenza Sorgente** | [`frontend/e2e/sol/fixtures.ts#L7-L65`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/e2e/sol/fixtures.ts#L7-L65);<br/>[`outputs/SOL_UX_GAP_ANALYSIS.md#L3`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/outputs/SOL_UX_GAP_ANALYSIS.md#L3);<br/>[`outputs/UX_REDESIGN_FINAL_REPORT.md#L31`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/outputs/UX_REDESIGN_FINAL_REPORT.md#L31) |
+| **Evidenza Sorgente** | [`frontend/e2e/sol/fixtures.ts#L7-L65`](../../frontend/e2e/sol/fixtures.ts#L7-L65);<br/>[`outputs/SOL_UX_GAP_ANALYSIS.md#L3`](../../outputs/SOL_UX_GAP_ANALYSIS.md#L3);<br/>[`outputs/UX_REDESIGN_FINAL_REPORT.md#L31`](../../outputs/UX_REDESIGN_FINAL_REPORT.md#L31) |
 
 #### Scenario di Rischio Concreto
-I 73 test eseguiti dal subagente Sol e integrati nella suite browser di Playwright poggiano interamente sulla funzione [`installFixtures(page)`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/frontend/e2e/sol/fixtures.ts#L7):
+I 73 test eseguiti dal subagente Sol e integrati nella suite browser di Playwright poggiano interamente sulla funzione [`installFixtures(page)`](../../frontend/e2e/sol/fixtures.ts#L7):
 ```typescript
 await page.route('**/api/v1/**', async route => {
     ...
@@ -605,10 +605,10 @@ Il browser non invia alcuna chiamata HTTP reale al backend Gunicorn, né interag
 | **Probabilità** | **Alta** |
 | **Impatto** | **Medio** |
 | **Severità Globale** | **ALTA** |
-| **Evidenza Sorgente** | [`docs/MANUAL_VALIDATION_FASE7.md#L10-L88`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/MANUAL_VALIDATION_FASE7.md#L10-L88) |
+| **Evidenza Sorgente** | [`docs/MANUAL_VALIDATION_FASE7.md#L10-L88`](../../docs/MANUAL_VALIDATION_FASE7.md#L10-L88) |
 
 #### Scenario di Rischio Concreto
-Il documento [`docs/MANUAL_VALIDATION_FASE7.md`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docs/MANUAL_VALIDATION_FASE7.md#L10) recita espressamente:
+Il documento [`docs/MANUAL_VALIDATION_FASE7.md`](../../docs/MANUAL_VALIDATION_FASE7.md#L10) recita espressamente:
 > *"Stato: checklist predisposta ma **non eseguita**. Le caselle devono essere selezionate dall'utente durante la verifica personale da browser."*
 Tutte le caselle di controllo da riga 14 a riga 88 risultano spuntate come non eseguite (`- [ ]`):
 - Login per ciascuno dei 4 ruoli (Admin, Responsabile BMED, Referente, Fornitore);
@@ -639,10 +639,10 @@ Se il sistema viene rilasciato in produzione senza questa validazione umana:
 | **Probabilità** | **Media** |
 | **Impatto** | **Medio** |
 | **Severità Globale** | **MEDIA** |
-| **Evidenza Sorgente** | [`outputs/SOL_UX_GAP_ANALYSIS.md#L21`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/outputs/SOL_UX_GAP_ANALYSIS.md#L21) (`SOL-BE: Backend in riavvio per modifica preesistente esclusa`);<br/>[`outputs/UX_REDESIGN_FINAL_REPORT.md#L31`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/outputs/UX_REDESIGN_FINAL_REPORT.md#L31) (`Il backend locale continua a riavviarsi; il file backend/api/admin_views.py ha modifiche preesistenti...`) |
+| **Evidenza Sorgente** | [`outputs/SOL_UX_GAP_ANALYSIS.md#L21`](../../outputs/SOL_UX_GAP_ANALYSIS.md#L21) (`SOL-BE: Backend in riavvio per modifica preesistente esclusa`);<br/>[`outputs/UX_REDESIGN_FINAL_REPORT.md#L31`](../../outputs/UX_REDESIGN_FINAL_REPORT.md#L31) (`Il backend locale continua a riavviarsi; il file backend/api/admin_views.py ha modifiche preesistenti...`) |
 
 #### Scenario di Rischio Concreto
-Nei report di avanzamento UX redatti durante le sessioni precedenti, è stato esplicitamente verbalizzato un comportamento anomalo dell'ambiente Docker: il container `backend` entra in uno stato di crash/restart ciclico a causa di modifiche non completate o conflitti di importazione residenti in [`backend/api/admin_views.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py).
+Nei report di avanzamento UX redatti durante le sessioni precedenti, è stato esplicitamente verbalizzato un comportamento anomalo dell'ambiente Docker: il container `backend` entra in uno stato di crash/restart ciclico a causa di modifiche non completate o conflitti di importazione residenti in [`backend/api/admin_views.py`](../../backend/api/admin_views.py).
 Poiché il file contiene import dinamici all'interno dei metodi (`from ppm.models import PpmSnapshot, ...`, `from timesheets.mutations import ...`), eventuali dipendenze circolari o mancate inizializzazioni delle app Django esplodono a runtime all'avvio di Gunicorn o durante il check di bootstrap.
 
 #### Conseguenze Operative
@@ -665,7 +665,7 @@ Poiché il file contiene import dinamici all'interno dei metodi (`from ppm.model
 | **Probabilità** | **Alta** |
 | **Impatto** | **Alto** |
 | **Severità Globale** | **CRITICA** |
-| **Evidenza Sorgente** | [`deploy/nginx.conf#L35`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/deploy/nginx.conf#L35);<br/>[`docker-compose.yml#L53`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/docker-compose.yml#L53);<br/>[`backend/anomalies/runner.py#L91-L146`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/runner.py#L91-L146) |
+| **Evidenza Sorgente** | [`deploy/nginx.conf#L35`](../../deploy/nginx.conf#L35);<br/>[`docker-compose.yml#L53`](../../docker-compose.yml#L53);<br/>[`backend/anomalies/runner.py#L91-L146`](../../backend/anomalies/runner.py#L91-L146) |
 
 #### Scenario di Rischio Concreto
 Quando l'amministratore carica un file di seed v4 reale (2.2 MB) o un export PPM con decine di fogli di lavoro e oltre 10.000 righe, oppure richiede il ricalcolo forzato di tutte le 18 regole di anomalia:
@@ -696,10 +696,10 @@ Quando l'amministratore carica un file di seed v4 reale (2.2 MB) o un export PPM
 | **Probabilità** | **Media** |
 | **Impatto** | **Alto** |
 | **Severità Globale** | **ALTA** |
-| **Evidenza Sorgente** | [`backend/api/database_backup.py#L39-L70`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/database_backup.py#L39-L70);<br/>[`backend/core/management/commands/backup_db.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/core/management/commands/backup_db.py) |
+| **Evidenza Sorgente** | [`backend/api/database_backup.py#L39-L70`](../../backend/api/database_backup.py#L39-L70);<br/>[`backend/core/management/commands/backup_db.py`](../../backend/core/management/commands/backup_db.py) |
 
 #### Scenario di Rischio Concreto
-Il sistema prevede ottimi comandi CLI (`backup_db`, `restore_db`) e una coppia di endpoint API dedicati ([`database_backup.py`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/database_backup.py)). Tuttavia emergono tre vulnerabilità operative:
+Il sistema prevede ottimi comandi CLI (`backup_db`, `restore_db`) e una coppia di endpoint API dedicati ([`database_backup.py`](../../backend/api/database_backup.py)). Tuttavia emergono tre vulnerabilità operative:
 1. **Nessun Cron / Schedulatore Autonomo**: Lo stack Docker non include un container cron; se l'amministratore non configura un task pianificato esterno nell'OS Synology o su crontab host, i backup non vengono mai eseguiti in automatico.
 2. **Dipendenza dai Binari Client nel Container Backend**: `create_dump` e `restore_dump` eseguono un subprocess chiamando i binari `pg_dump` e `pg_restore`. Se l'immagine Docker del backend non include esattamente i `postgresql16-client` compilati per la stessa major version del DB, l'operazione fallisce con errore di compatibilità cataloghi.
 3. **Restore Sincrono con Connessioni Attive**: Eseguire il restore del database mentre altri utenti o worker sono connessi a PostgreSQL genera lock e fallimenti nella direttiva `--clean --if-exists`, lasciando il database in uno stato ibrido corrotto.
@@ -723,15 +723,15 @@ Il sistema prevede ottimi comandi CLI (`backup_db`, `restore_db`) e una coppia d
 | **Probabilità** | **Bassa** |
 | **Impatto** | **Critico** |
 | **Severità Globale** | **ALTA** |
-| **Evidenza Sorgente** | [`backend/api/admin_views.py#L651-L750`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py#L651-L750) (`AdminDataResetView`);<br/>[`backend/timesheets/mutations.py#L1-L80`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/mutations.py#L1-L80) |
+| **Evidenza Sorgente** | [`backend/api/admin_views.py#L651-L750`](../../backend/api/admin_views.py#L651-L750) (`AdminDataResetView`);<br/>[`backend/timesheets/mutations.py#L1-L80`](../../backend/timesheets/mutations.py#L1-L80) |
 
 #### Scenario di Rischio Concreto
-La vista [`AdminDataResetView`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/api/admin_views.py#L651) consente di svuotare completamente il database di tutte le tabelle applicative (`TimesheetEntry`, `Project`, `WalletAllocation`, `Canone`, `Anomaly`, ecc.).
+La vista [`AdminDataResetView`](../../backend/api/admin_views.py#L651) consente di svuotare completamente il database di tutte le tabelle applicative (`TimesheetEntry`, `Project`, `WalletAllocation`, `Canone`, `Anomaly`, ecc.).
 Gli sviluppatori hanno implementato una robusta difesa a triplo strato:
 1. Permesso riservato a utenti con capability `data.reset` (solo Admin);
 2. Generazione di un token HMAC crittografico valido massimo 300 secondi (`TimestampSigner`);
 3. Obbligo di digitare esattamente la parola d'ordine `ELIMINA`.
-Inoltre, per aggirare il trigger PostgreSQL append-only su `TimesheetEntry`, la vista invoca il context manager speciale [`allow_ledger_mutation()`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/timesheets/mutations.py#L1-L80), disattivando temporaneamente la protezione contabile.
+Inoltre, per aggirare il trigger PostgreSQL append-only su `TimesheetEntry`, la vista invoca il context manager speciale [`allow_ledger_mutation()`](../../backend/timesheets/mutations.py#L1-L80), disattivando temporaneamente la protezione contabile.
 
 #### Conseguenze Operative
 Nonostante le protezioni, mantenere un endpoint HTTP esposto capace di azzerare i bilanci contabili presenta gravi rischi:
@@ -760,7 +760,7 @@ Nonostante le protezioni, mantenere un endpoint HTTP esposto capace di azzerare 
 | **Evidenza Sorgente** | Comando shell `git status` restituisce: `fatal: not a git repository (or any of the parent directories): .git` |
 
 #### Scenario di Rischio Concreto
-La cartella `c:\Users\gianvito.bleve\OneDrive - Banca Mediolanum SPA\Documenti\Progetti\imola` risiede all'interno di una cartella sincronizzata da Microsoft OneDrive, ma **non possiede la sottocartella `.git`**.
+La cartella `c:\Users\gianv\Documents\Progetti\Imola` risiede all'interno di una cartella sincronizzata da Microsoft OneDrive, ma **non possiede la sottocartella `.git`**.
 Non è presente alcuno storico di versionamento locale, nessun tracciamento dei branch (`main`, `develop`), nessun tag di release e nessun commit hash associabile allo stato dell'applicazione.
 
 #### Conseguenze Operative
@@ -788,10 +788,10 @@ Non è presente alcuno storico di versionamento locale, nessun tracciamento dei 
 | **Probabilità** | **Media** |
 | **Impatto** | **Alto** |
 | **Severità Globale** | **ALTA** |
-| **Evidenza Sorgente** | [`backend/anomalies/runner.py#L91-L146`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/runner.py#L91-L146) |
+| **Evidenza Sorgente** | [`backend/anomalies/runner.py#L91-L146`](../../backend/anomalies/runner.py#L91-L146) |
 
 #### Scenario di Rischio Concreto
-La funzione [`run_checks()`](file:///c:/Users/gianvito.bleve/OneDrive%20-%20Banca%20Mediolanum%20SPA/Documenti/Progetti/imola/backend/anomalies/runner.py#L91) è decorata con `@transaction.atomic`.
+La funzione [`run_checks()`](../../backend/anomalies/runner.py#L91) è decorata con `@transaction.atomic`.
 Durante l'esecuzione, il runner:
 1. Itera sequenzialmente su tutte le 18 regole di validazione;
 2. Esegue query pesanti di join e aggregazione su `Project`, `TimesheetEntry`, `WalletAllocation`, `CanoneSubactivity`;
