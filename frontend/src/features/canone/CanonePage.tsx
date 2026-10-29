@@ -140,6 +140,12 @@ function ActivityProgress({ activity }: { activity: Subactivity }) {
   );
 }
 
+const domainCardClasses: Record<string, string> = {
+  TA: "border-red-300/70 bg-gradient-to-r from-red-100/90 via-red-50/40 to-transparent dark:border-red-800/60 dark:from-red-950/75 dark:via-red-950/25",
+  EA: "border-emerald-300/70 bg-gradient-to-r from-emerald-100/90 via-emerald-50/40 to-transparent dark:border-emerald-800/60 dark:from-emerald-950/75 dark:via-emerald-950/25",
+  SA: "border-orange-300/70 bg-gradient-to-r from-orange-100/90 via-orange-50/40 to-transparent dark:border-orange-800/60 dark:from-orange-950/75 dark:via-orange-950/25",
+};
+
 const fieldClass = "h-9 rounded-md border border-input bg-background px-3 text-sm";
 const buttonClass =
   "rounded-md border border-input px-3 py-2 text-sm hover:bg-muted disabled:opacity-50";
@@ -213,6 +219,7 @@ export function CanonePage() {
   const [creatingActivity, setCreatingActivity] = useState(false);
   const [activityTab, setActivityTab] = useState("Panoramica");
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
+  const [activityDomain, setActivityDomain] = useState("");
   const [timesheetActivity, setTimesheetActivity] = useState<string | null>(null);
   const [timesheetForm, setTimesheetForm] = useState({ data: "", giornate: "", descrizione: "" });
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetRow | null>(null);
@@ -270,9 +277,17 @@ export function CanonePage() {
       return true;
     });
   }, [detail.data?.subactivities, appliedFilters.office, appliedFilters.search]);
+  const visibleSubactivities = useMemo(
+    () =>
+      filteredSubactivities.filter(
+        (row) => !activityDomain || row.office.trim().toUpperCase() === activityDomain,
+      ),
+    [filteredSubactivities, activityDomain],
+  );
   const detailIsCurrent = detail.data?.id === canoneId;
   useEffect(() => {
     setSelectedActivity(null);
+    setActivityDomain("");
     setCreatingActivity(false);
     setTimesheetActivity(null);
     setEditingTimesheet(null);
@@ -833,18 +848,51 @@ export function CanonePage() {
                       )}
                     </p>
                   </div>
-                  {filteredSubactivities.length === 0 ? (
+                  {!selectedActivity && (
+                    <div
+                      className="flex flex-wrap items-center gap-2"
+                      role="group"
+                      aria-label="Filtro rapido dominio attività"
+                    >
+                      <span className="mr-1 text-sm font-medium">Dominio:</span>
+                      {(
+                        [
+                          ["", "Tutti"],
+                          ["TA", "TA"],
+                          ["EA", "EA"],
+                          ["SA", "SA"],
+                          ["CROSS", "CROSS"],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <Button
+                          key={label}
+                          type="button"
+                          aria-pressed={activityDomain === value}
+                          onClick={() => setActivityDomain(value)}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${activityDomain === value ? "border-accent bg-accent text-accent-foreground" : "border-border bg-card text-muted-foreground hover:bg-muted"}`}
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                      <span className="ml-1 text-xs text-muted-foreground" role="status">
+                        {visibleSubactivities.length} / {filteredSubactivities.length} attività
+                      </span>
+                    </div>
+                  )}
+                  {visibleSubactivities.length === 0 ? (
                     <p className="rounded border border-dashed p-4 text-center text-sm text-muted-foreground">
                       Nessuna attività trovata per i filtri selezionati.
                     </p>
                   ) : (
-                    filteredSubactivities
+                    visibleSubactivities
                       .filter((row) => !selectedActivity || row.id === selectedActivity)
                       .map((row) => (
                         <div
                           key={row.id}
                           className={
-                            selectedActivity ? "space-y-3 rounded border p-3" : "rounded border p-2"
+                            selectedActivity
+                              ? "space-y-3 rounded border p-3"
+                              : `rounded border p-2 ${domainCardClasses[row.office.trim().toUpperCase()] ?? "bg-card"}`
                           }
                         >
                           {!selectedActivity ? (

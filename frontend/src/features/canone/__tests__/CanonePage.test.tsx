@@ -165,6 +165,25 @@ describe("CanonePage", () => {
     expect(screen.queryByRole("button", { name: "Nuovo canone" })).not.toBeInTheDocument();
   });
 
+  it("filtra rapidamente le attività per dominio senza ricaricare il canone", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("button", { name: /Analisi/ });
+    expect(screen.getByRole("button", { name: /Analisi/ }).parentElement).toHaveClass(
+      "dark:from-emerald-950/75",
+    );
+    expect(screen.getByRole("button", { name: /Disegno Solution/ }).parentElement).toHaveClass(
+      "dark:from-orange-950/75",
+    );
+    const calls = getMock.mock.calls.length;
+    await user.click(screen.getByRole("button", { name: "SA", pressed: false }));
+    expect(screen.queryByRole("button", { name: /Analisi/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Disegno Solution/ })).toBeInTheDocument();
+    expect(getMock.mock.calls.length).toBe(calls);
+    await user.click(screen.getByRole("button", { name: "Tutti" }));
+    expect(screen.getByRole("button", { name: /Analisi/ })).toBeInTheDocument();
+  });
+
   it("applica filtri e abilita CRUD con canone.manage", async () => {
     const user = userEvent.setup();
     renderPage(["canone.manage"]);
