@@ -173,7 +173,7 @@ describe("CanonePage", () => {
       "dark:from-emerald-950/75",
     );
     expect(screen.getByRole("button", { name: /Disegno Solution/ }).parentElement).toHaveClass(
-      "dark:from-orange-950/75",
+      "dark:from-yellow-950/75",
     );
     const calls = getMock.mock.calls.length;
     await user.click(screen.getByRole("button", { name: "SA", pressed: false }));

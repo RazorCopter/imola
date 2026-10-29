@@ -420,7 +420,7 @@
 .report-insights {
   margin-top: 16px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   border-top: 1px solid #dce6f2;
   padding-top: 14px;
@@ -777,5 +777,11 @@
   }
   .report-section-description {
     break-after: avoid;
+  }
+}
+
+@media screen and (max-width: 650px) {
+  .report-insights {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

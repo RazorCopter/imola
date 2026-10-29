@@ -143,7 +143,7 @@ function ActivityProgress({ activity }: { activity: Subactivity }) {
 const domainCardClasses: Record<string, string> = {
   TA: "border-red-300/70 bg-gradient-to-r from-red-100/90 via-red-50/40 to-transparent dark:border-red-800/60 dark:from-red-950/75 dark:via-red-950/25",
   EA: "border-emerald-300/70 bg-gradient-to-r from-emerald-100/90 via-emerald-50/40 to-transparent dark:border-emerald-800/60 dark:from-emerald-950/75 dark:via-emerald-950/25",
-  SA: "border-orange-300/70 bg-gradient-to-r from-orange-100/90 via-orange-50/40 to-transparent dark:border-orange-800/60 dark:from-orange-950/75 dark:via-orange-950/25",
+  SA: "border-yellow-300/70 bg-gradient-to-r from-yellow-100/90 via-yellow-50/40 to-transparent dark:border-yellow-800/60 dark:from-yellow-950/75 dark:via-yellow-950/25",
 };
 
 const fieldClass = "h-9 rounded-md border border-input bg-background px-3 text-sm";

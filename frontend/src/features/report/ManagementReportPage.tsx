@@ -322,7 +322,8 @@ export function ManagementReportPage() {
   const wa = sum(data.wallet, (x) => x.allocated),
     wc = sum(data.wallet, (x) => x.consumed);
   const organicoMonte = Number(data.organico_monte),
-    oc = sum(data.domains, (x) => x.consumed);
+    oc = sum(data.domains, (x) => x.consumed),
+    organicoAllocato = sum(data.domains, (x) => x.reserved);
   const economics = data.economics;
   const priced = Number(economics.kpi.daily_person_cost) > 0;
   const cost = (source: string) =>
@@ -461,8 +462,16 @@ export function ManagementReportPage() {
               <span>progetti con budget esaurito o superato</span>
             </div>
             <div>
-              <strong>{num(Math.max(0, organicoMonte - oc))} gg</strong>
+              <strong>{num(organicoMonte - oc)} gg</strong>
               <span>monte organico ancora disponibile</span>
+            </div>
+            <div>
+              <strong>{num(organicoMonte - organicoAllocato)} gg</strong>
+              <span>monte non ancora allocato</span>
+            </div>
+            <div>
+              <strong>{num(organicoAllocato - oc)} gg</strong>
+              <span>allocato e ancora da consumare</span>
             </div>
             <div>
               <strong>{data.projects.filter((x) => !x.owner).length}</strong>
@@ -475,7 +484,8 @@ export function ManagementReportPage() {
             corrente. I KPI e i domini includono i consumi delle attività chiuse. I valori sono
             espressi in giornate. Gli effort di progetti e wallet non sono sommati. I costi annuali
             includono i consuntivi anche di progetti chiusi, al netto degli storni, alla tariffa
-            corrente non storicizzata; non sono importi fatturati o pagati.
+            corrente non storicizzata; non sono importi fatturati o pagati. Il monte disponibile
+            comprende la quota non allocata e quella allocata ma non ancora consumata.
           </p>
         </section>
         <DetailSection
