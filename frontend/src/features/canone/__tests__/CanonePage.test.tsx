@@ -124,7 +124,27 @@ const detail = {
       notes: "",
       needs_review: false,
       consuntivato: "0.0000",
+      stato: "IN_CORSO",
       timesheet_count: 0,
+      consuntivi: [],
+    },
+    {
+      id: "s3",
+      version: 1,
+      office: "TA",
+      title: "Collaudo Piattaforma",
+      reserved_days: "10.0000",
+      start_date: "2026-01-01",
+      end_date: "2026-06-30",
+      remaining_reserved_days: "0.0000",
+      redmine_ref: "",
+      quarter_estimate_days: null,
+      forecast_remaining_days: "0.0000",
+      notes: "",
+      needs_review: false,
+      consuntivato: "10.0000",
+      stato: "CHIUSO",
+      timesheet_count: 1,
       consuntivi: [],
     },
   ],
@@ -182,6 +202,30 @@ describe("CanonePage", () => {
     expect(getMock.mock.calls.length).toBe(calls);
     await user.click(screen.getByRole("button", { name: "Tutti" }));
     expect(screen.getByRole("button", { name: /Analisi/ })).toBeInTheDocument();
+  });
+
+  it("filtra rapidamente le attività per stato In corso/chiuso", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("button", { name: /Analisi/ });
+    expect(screen.getByRole("button", { name: /Collaudo Piattaforma/ })).toBeInTheDocument();
+
+    // Filtra per Chiuso
+    await user.click(screen.getByRole("button", { name: "Chiuso" }));
+    expect(screen.queryByRole("button", { name: /Analisi/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Disegno Solution/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Collaudo Piattaforma/ })).toBeInTheDocument();
+
+    // Filtra per In corso
+    await user.click(screen.getByRole("button", { name: "In corso" }));
+    expect(screen.getByRole("button", { name: /Analisi/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Disegno Solution/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Collaudo Piattaforma/ })).not.toBeInTheDocument();
+
+    // Torna a Tutti gli stati
+    await user.click(screen.getByRole("button", { name: "Tutti gli stati" }));
+    expect(screen.getByRole("button", { name: /Analisi/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Collaudo Piattaforma/ })).toBeInTheDocument();
   });
 
   it("applica filtri e abilita CRUD con canone.manage", async () => {

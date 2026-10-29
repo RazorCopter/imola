@@ -220,6 +220,7 @@ export function CanonePage() {
   const [activityTab, setActivityTab] = useState("Panoramica");
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
   const [activityDomain, setActivityDomain] = useState("");
+  const [activityStatus, setActivityStatus] = useState("");
   const [timesheetActivity, setTimesheetActivity] = useState<string | null>(null);
   const [timesheetForm, setTimesheetForm] = useState({ data: "", giornate: "", descrizione: "" });
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetRow | null>(null);
@@ -279,15 +280,25 @@ export function CanonePage() {
   }, [detail.data?.subactivities, appliedFilters.office, appliedFilters.search]);
   const visibleSubactivities = useMemo(
     () =>
-      filteredSubactivities.filter(
-        (row) => !activityDomain || row.office.trim().toUpperCase() === activityDomain,
-      ),
-    [filteredSubactivities, activityDomain],
+      filteredSubactivities.filter((row) => {
+        if (activityDomain && row.office.trim().toUpperCase() !== activityDomain) {
+          return false;
+        }
+        const effectiveStatus =
+          row.stato ??
+          (Number(row.consuntivato) < Number(row.reserved_days) ? "IN_CORSO" : "CHIUSO");
+        if (activityStatus && effectiveStatus !== activityStatus) {
+          return false;
+        }
+        return true;
+      }),
+    [filteredSubactivities, activityDomain, activityStatus],
   );
   const detailIsCurrent = detail.data?.id === canoneId;
   useEffect(() => {
     setSelectedActivity(null);
     setActivityDomain("");
+    setActivityStatus("");
     setCreatingActivity(false);
     setTimesheetActivity(null);
     setEditingTimesheet(null);
@@ -850,31 +861,62 @@ export function CanonePage() {
                   </div>
                   {!selectedActivity && (
                     <div
-                      className="flex flex-wrap items-center gap-2"
+                      className="flex flex-wrap items-center gap-x-5 gap-y-2"
                       role="group"
-                      aria-label="Filtro rapido dominio attività"
+                      aria-label="Filtri rapidi attività canone"
                     >
-                      <span className="mr-1 text-sm font-medium">Dominio:</span>
-                      {(
-                        [
-                          ["", "Tutti"],
-                          ["TA", "TA"],
-                          ["EA", "EA"],
-                          ["SA", "SA"],
-                          ["CROSS", "CROSS"],
-                        ] as const
-                      ).map(([value, label]) => (
-                        <Button
-                          key={label}
-                          type="button"
-                          aria-pressed={activityDomain === value}
-                          onClick={() => setActivityDomain(value)}
-                          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${activityDomain === value ? "border-accent bg-accent text-accent-foreground" : "border-border bg-card text-muted-foreground hover:bg-muted"}`}
-                        >
-                          {label}
-                        </Button>
-                      ))}
-                      <span className="ml-1 text-xs text-muted-foreground" role="status">
+                      <div
+                        className="flex flex-wrap items-center gap-1.5"
+                        role="group"
+                        aria-label="Filtro rapido dominio attività"
+                      >
+                        <span className="mr-1 text-sm font-medium">Dominio:</span>
+                        {(
+                          [
+                            ["", "Tutti"],
+                            ["TA", "TA"],
+                            ["EA", "EA"],
+                            ["SA", "SA"],
+                            ["CROSS", "CROSS"],
+                          ] as const
+                        ).map(([value, label]) => (
+                          <Button
+                            key={label}
+                            type="button"
+                            aria-pressed={activityDomain === value}
+                            onClick={() => setActivityDomain(value)}
+                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${activityDomain === value ? "border-accent bg-accent text-accent-foreground" : "border-border bg-card text-muted-foreground hover:bg-muted"}`}
+                          >
+                            {label}
+                          </Button>
+                        ))}
+                      </div>
+                      <div
+                        className="flex flex-wrap items-center gap-1.5"
+                        role="group"
+                        aria-label="Filtro rapido stato attività"
+                      >
+                        <span className="mr-1 text-sm font-medium">Stato:</span>
+                        {(
+                          [
+                            ["", "Tutti", "Tutti gli stati"],
+                            ["IN_CORSO", "In corso", undefined],
+                            ["CHIUSO", "Chiuso", undefined],
+                          ] as const
+                        ).map(([value, label, ariaLabel]) => (
+                          <Button
+                            key={label}
+                            type="button"
+                            aria-label={ariaLabel}
+                            aria-pressed={activityStatus === value}
+                            onClick={() => setActivityStatus(value)}
+                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${activityStatus === value ? "border-accent bg-accent text-accent-foreground" : "border-border bg-card text-muted-foreground hover:bg-muted"}`}
+                          >
+                            {label}
+                          </Button>
+                        ))}
+                      </div>
+                      <span className="ml-auto text-xs text-muted-foreground" role="status">
                         {visibleSubactivities.length} / {filteredSubactivities.length} attività
                       </span>
                     </div>
