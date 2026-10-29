@@ -22,7 +22,6 @@ interface ProjectDetails extends ProjectFormData {
     slot: string;
     planned_date: string | null;
     status: string;
-    amount_days: string | null;
   }[];
 }
 
@@ -288,7 +287,6 @@ export function ProjectDetailPage() {
                             <th className="py-2 pr-4">Tranche</th>
                             <th className="py-2 pr-4">Data prevista</th>
                             <th className="py-2 pr-4">Stato</th>
-                            <th className="py-2">Giornate</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -304,13 +302,6 @@ export function ProjectDetailPage() {
                               <td className="py-3 pr-4">{item.planned_date || "?"}</td>
                               <td className="py-3 pr-4">
                                 <StatusBadge status={item.status} />
-                              </td>
-                              <td className="py-3">
-                                {item.amount_days === null ? (
-                                  "?"
-                                ) : (
-                                  <DaysValue value={item.amount_days} />
-                                )}
                               </td>
                             </tr>
                           ))}

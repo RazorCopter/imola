@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "",
-    "subtitle": "",
+    "subtitle": "Supplier management - IT Architecture",
     "loading": "",
     "empty": "",
     "retry": "",
@@ -42,16 +42,19 @@
     "sessionExpiredBody": "",
     "signInAgain": "",
     "invalidCredentials": "",
-    "workspace": "Your workspace",
-    "heroTitle": "Everything under control, together.",
-    "heroDescription": "Projects, working days and wallet in one place for clearer, more informed management.",
-    "heroFooter": "IT Architecture ? Banca Mediolanum / Imola Informatica",
+    "workspace": "IT Architecture",
+    "heroTitle": "Supplier and project management",
+    "heroDescription": "One workspace to plan activities, monitor working days and follow supplier billing.",
+    "heroFooter": "Banca Mediolanum · IT Architecture",
     "reservedArea": "Restricted area",
     "welcome": "Welcome back",
     "instructions": "Sign in with your credentials to access your workspace.",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
-    "accessNote": "Access is restricted to authorised users."
+    "accessNote": "Access is restricted to authorised users.",
+    "projectsLabel": "Projects",
+    "suppliersLabel": "Suppliers",
+    "resourcesLabel": "Working days and wallet"
   },
   "units": {
     "days": "",

@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Supplier Ledger",
-    "subtitle": "Consuntivazione e wallet - Imola Informatica",
+    "subtitle": "Gestione fornitori - Architetture IT",
     "loading": "Caricamento...",
     "empty": "Nessun dato da mostrare",
     "retry": "Riprova",
@@ -42,16 +42,19 @@
     "sessionExpiredBody": "La sessione è scaduta. Accedi di nuovo: il lavoro in corso viene conservato e l'operazione interrotta verrà ripetuta.",
     "signInAgain": "Accedi di nuovo",
     "invalidCredentials": "Credenziali non valide.",
-    "workspace": "Il tuo spazio di lavoro",
-    "heroTitle": "Tutto sotto controllo, insieme.",
-    "heroDescription": "Progetti, giornate e wallet in un unico spazio per una gestione pi? chiara e consapevole.",
-    "heroFooter": "Architetture IT ? Banca Mediolanum / Imola Informatica",
+    "workspace": "Architetture IT",
+    "heroTitle": "Gestione fornitori e progetti",
+    "heroDescription": "Uno spazio unico per pianificare le attività, monitorare le giornate e seguire la fatturazione dei fornitori.",
+    "heroFooter": "Banca Mediolanum · Architetture IT",
     "reservedArea": "Area riservata",
     "welcome": "Bentornato",
     "instructions": "Accedi con le tue credenziali per entrare nel tuo spazio di lavoro.",
     "showPassword": "Mostra password",
     "hidePassword": "Nascondi password",
-    "accessNote": "Accesso riservato agli utenti autorizzati."
+    "accessNote": "Accesso riservato agli utenti autorizzati.",
+    "projectsLabel": "Progetti",
+    "suppliersLabel": "Fornitori",
+    "resourcesLabel": "Giornate e wallet"
   },
   "units": {
     "days": "gg",
