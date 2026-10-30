@@ -20,6 +20,8 @@ export interface ProjectFormData {
   deliverable: string;
   client_owner: string | null;
   supplier_owner: string | null;
+  client_owner_name?: string | null;
+  supplier_owner_name?: string | null;
   budget_days: string;
   start_date: string | null;
   planned_end_date: string | null;
@@ -106,7 +108,9 @@ export function EditProjectDialog({
     queryKey: ["project-options"],
     queryFn: () => api.get<ProjectOptions>("/projects/options"),
     enabled: open,
-    staleTime: 5 * 60 * 1000,
+    // Niente staleTime: un referente creato in Amministrazione deve comparire alla
+    // prima apertura del form, non dopo la scadenza di una cache.
+    refetchOnMount: "always",
   });
 
   const {
@@ -155,6 +159,19 @@ export function EditProjectDialog({
     () => optionsQuery.data?.people.filter((p) => p.organization_kind === "SUPPLIER") ?? [],
     [optionsQuery.data],
   );
+  /**
+   * Le opzioni elencano solo le persone attive. Se il progetto ha gia un referente che e
+   * stato disattivato, senza questa aggiunta il campo risulterebbe vuoto e il salvataggio
+   * cancellerebbe l'assegnazione senza dirlo.
+   */
+  function withAssigned(
+    people: { id: string; name: string }[],
+    assignedId: string | null | undefined,
+    assignedName: string | null | undefined,
+  ) {
+    if (!assignedId || people.some((person) => person.id === assignedId)) return people;
+    return [...people, { id: assignedId, name: `${assignedName ?? "Referente"} (disattivato)` }];
+  }
 
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
@@ -454,7 +471,11 @@ export function EditProjectDialog({
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
                   >
                     <option value="">-- Nessun referente --</option>
-                    {clientPeople.map((person) => (
+                    {withAssigned(
+                      clientPeople,
+                      project?.client_owner,
+                      project?.client_owner_name,
+                    ).map((person) => (
                       <option key={person.id} value={person.id}>
                         {person.name}
                       </option>
@@ -479,7 +500,11 @@ export function EditProjectDialog({
                     className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
                   >
                     <option value="">-- Nessun referente --</option>
-                    {supplierPeople.map((person) => (
+                    {withAssigned(
+                      supplierPeople,
+                      project?.supplier_owner,
+                      project?.supplier_owner_name,
+                    ).map((person) => (
                       <option key={person.id} value={person.id}>
                         {person.name}
                       </option>
