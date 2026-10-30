@@ -151,6 +151,31 @@ def test_il_lotto_e_unico_e_non_si_riduce_dopo_un_impegno():
     assert WalletSourceLot.objects.get(source_project=project).capacity_days == Decimal("8.0000")
 
 
+def test_il_residuo_di_una_chiusura_passata_alimenta_il_wallet_in_uso():
+    """Chiuso nel 2025 ma valido fino al 31/12/2026: lo spende il wallet 2026."""
+    client, _ = make_client_for_role(roles.ADMIN)
+    project = ProjectFactory(
+        code="PRJ-CHIUSO-2025",
+        budget_days=Decimal("5.0000"),
+        timesheet_status=TimesheetStatus.CHIUSO,
+        actual_closure_date=date(2025, 12, 31),
+    )
+    TimesheetEntryFactory(project=project, days=Decimal("3.3700"))
+
+    lot = ensure_source_lot(project, today=date(2026, 10, 30))
+
+    assert lot is not None
+    assert lot.capacity_days == Decimal("1.6300")
+    # La provenienza resta il 2025, la capienza vive nel wallet 2026.
+    assert lot.source_year == 2025
+    assert lot.wallet_year.year == 2026
+    assert lot.effective_date == date(2025, 12, 31)
+
+    balance = client.get("/api/v1/wallet/2026/balance").json()
+    assert balance["capacita_totale_origini"] == "1.6300"
+    assert balance["residuo_wallet_non_allocato"] == "1.6300"
+
+
 def test_niente_lotto_per_residui_scaduti_canoni_o_capienza_nulla():
     scaduto = ProjectFactory(
         code="PRJ-SCADUTO",

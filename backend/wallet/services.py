@@ -99,7 +99,11 @@ def ensure_source_lot(project, *, today=None) -> WalletSourceLot | None:
         return None
 
     capacity = wallet_capacity_of(project)
-    year = project.actual_closure_date.year
+    # `source_year` dice da dove arrivano le giornate, `wallet_year` quale wallet le spende:
+    # il residuo di un progetto chiuso l'anno scorso, se ancora valido, si spende da quello
+    # corrente. Tenerlo nell'anno di chiusura lo renderebbe invisibile al wallet in uso.
+    source_year = project.actual_closure_date.year
+    wallet_year_number = max(source_year, (today or timezone.localdate()).year)
     existing = WalletSourceLot.objects.select_for_update().filter(source_project=project).first()
     if existing is not None:
         committed = source_lot_totals(existing)[0]
@@ -111,14 +115,14 @@ def ensure_source_lot(project, *, today=None) -> WalletSourceLot | None:
     if capacity <= ZERO:
         return None
 
-    wallet_year, _ = WalletYear.objects.get_or_create(year=year)
+    wallet_year, _ = WalletYear.objects.get_or_create(year=wallet_year_number)
     return WalletSourceLot.objects.create(
         wallet_year=wallet_year,
         source_project=project,
-        source_year=year,
+        source_year=source_year,
         capacity_days=capacity,
         effective_date=project.actual_closure_date,
-        external_ref=f"{AUTO_LOT_PREFIX}:{project.code}:{year}",
+        external_ref=f"{AUTO_LOT_PREFIX}:{project.code}:{wallet_year_number}",
         notes="Lotto creato alla chiusura del progetto.",
     )
 
