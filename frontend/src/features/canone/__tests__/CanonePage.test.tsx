@@ -273,6 +273,37 @@ describe("CanonePage", () => {
     expect(await screen.findByRole("button", { name: "Modifica" })).toBeInTheDocument();
   });
 
+  it("aprendo un'attività mostra solo il dettaglio operativo e torna indietro", async () => {
+    const user = userEvent.setup();
+    renderPage(["canone.manage", "timesheets.create"]);
+
+    // Nell'elenco si vede la dashboard del canone.
+    await screen.findByText("Canoni trimestrali e semestrali");
+    expect(screen.getByRole("button", { name: "Nuovo canone" })).toBeInTheDocument();
+
+    await user.click(await screen.findByRole("button", { name: /Analisi/ }));
+
+    // Aperta l'attività, la dashboard del canone si ritira.
+    expect(screen.queryByText("Canoni trimestrali e semestrali")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Nuovo canone" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Attività del canone")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Cerca attività del canone")).not.toBeInTheDocument();
+
+    // Restano l'attività e i suoi comandi operativi.
+    expect(screen.getByRole("heading", { name: "Analisi" })).toBeInTheDocument();
+    expect(screen.getByText(/Canone Organico/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Modifica attività" })).toBeInTheDocument();
+
+    // CONSUNTIVA porta sulla tab Consuntivi col form già aperto.
+    await user.click(screen.getByRole("button", { name: "CONSUNTIVA" }));
+    expect(screen.getByRole("tab", { name: "Consuntivi" })).toHaveAttribute("data-state", "active");
+    expect(screen.getByLabelText("Giornate consuntivo")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "← Tutte le attività" }));
+    expect(await screen.findByText("Canoni trimestrali e semestrali")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Collaudo Piattaforma/ })).toBeInTheDocument();
+  });
+
   it("modifica l'attività inline ed evidenzia l'eliminazione", async () => {
     const user = userEvent.setup();
     renderPage(["canone.manage"]);

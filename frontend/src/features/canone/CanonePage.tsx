@@ -157,6 +157,8 @@ const domainCardClasses: Record<string, string> = {
 const fieldClass = "h-9 rounded-md border border-input bg-background px-3 text-sm";
 const buttonClass =
   "rounded-md border border-input px-3 py-2 text-sm hover:bg-muted disabled:opacity-50";
+const primaryButtonClass =
+  "rounded-md bg-accent px-4 py-2 text-sm font-semibold uppercase tracking-wide text-accent-foreground hover:bg-accent/90 disabled:opacity-50";
 const dangerButtonClass =
   "rounded-md border border-red-700 bg-red-700 px-3 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50";
 
@@ -320,6 +322,12 @@ export function CanonePage() {
     [filteredSubactivities, activityDomain, activityStatus, activitySearch],
   );
   const detailIsCurrent = detail.data?.id === canoneId;
+  /**
+   * Con un'attivita aperta la pagina diventa operativa: resta in vista l'attivita con i
+   * suoi comandi, mentre la dashboard del canone (KPI, grafico, elenco canoni e filtri)
+   * si ritira. Si torna all'elenco con "Tutte le attivita".
+   */
+  const activityFocus = Boolean(selectedActivity);
   useEffect(() => {
     setSelectedActivity(null);
     setActivityDomain("");
@@ -479,7 +487,7 @@ export function CanonePage() {
         description={t("canone.description")}
         actions={
           <>
-            {editable && (
+            {editable && !activityFocus && (
               <Button
                 className={buttonClass}
                 onClick={() => {
@@ -503,222 +511,228 @@ export function CanonePage() {
           </>
         }
       />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <KpiCard
-          label={t("canone.plannedTotal")}
-          value={<DaysValue value={data.summary.pianificato} />}
-          tooltip={t("canone.plannedTotalTooltip")}
-        />
-        <KpiCard
-          label={t("canone.reservedActivities")}
-          value={<DaysValue value={data.summary.riservato} />}
-          tooltip={t("canone.reservedActivitiesTooltip")}
-        />
-        <KpiCard
-          label={t("canone.availableToReserve")}
-          value={<DaysValue value={data.summary.disponibile} />}
-          tooltip={t("canone.availableToReserveTooltip")}
-          tone="ok"
-        />
-        <KpiCard
-          label="Consumo del monte"
-          value={
-            Number(data.summary.pianificato) > 0
-              ? formatPercent(
-                  (Number(data.summary.consuntivato) / Number(data.summary.pianificato)) * 100,
-                )
-              : "Non calcolabile"
-          }
-          hint={`${formatDays(data.summary.consuntivato)} su ${formatDays(data.summary.pianificato)}`}
-          tooltip="Giornate consuntivate divise per il monte complessivo dei canoni visualizzati."
-        />
-        <KpiCard
-          label={t("canone.activities")}
-          value={data.summary.sottoattivita}
-          tooltip={t("canone.activitiesTooltip")}
-        />
-      </div>
-      <div
-        className="h-48 rounded-xl border bg-card p-4"
-        aria-label="Confronto pianificato, consuntivato e residuo per voce"
-      >
-        {chart.length ? (
-          <div className="mx-auto h-full max-w-4xl">
-            <AccessibleBarChart
-              data={chart}
-              xKey="name"
-              unit="days"
-              series={[
-                { key: "pianificato", label: "Pianificato", color: CHART_PALETTE.slate },
-                { key: "consuntivato", label: "Consuntivato", color: CHART_PALETTE.blue },
-                { key: "residuo", label: "Residuo", color: CHART_PALETTE.green },
-              ]}
+      {!activityFocus && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <KpiCard
+              label={t("canone.plannedTotal")}
+              value={<DaysValue value={data.summary.pianificato} />}
+              tooltip={t("canone.plannedTotalTooltip")}
+            />
+            <KpiCard
+              label={t("canone.reservedActivities")}
+              value={<DaysValue value={data.summary.riservato} />}
+              tooltip={t("canone.reservedActivitiesTooltip")}
+            />
+            <KpiCard
+              label={t("canone.availableToReserve")}
+              value={<DaysValue value={data.summary.disponibile} />}
+              tooltip={t("canone.availableToReserveTooltip")}
+              tone="ok"
+            />
+            <KpiCard
+              label="Consumo del monte"
+              value={
+                Number(data.summary.pianificato) > 0
+                  ? formatPercent(
+                      (Number(data.summary.consuntivato) / Number(data.summary.pianificato)) * 100,
+                    )
+                  : "Non calcolabile"
+              }
+              hint={`${formatDays(data.summary.consuntivato)} su ${formatDays(data.summary.pianificato)}`}
+              tooltip="Giornate consuntivate divise per il monte complessivo dei canoni visualizzati."
+            />
+            <KpiCard
+              label={t("canone.activities")}
+              value={data.summary.sottoattivita}
+              tooltip={t("canone.activitiesTooltip")}
             />
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Nessun dato per il grafico.</p>
-        )}
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight">Canoni trimestrali e semestrali</h2>
-        <p className="text-sm text-muted-foreground">
-          Seleziona un canone per consultare capacità e attività.
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-2 rounded-xl border border-border bg-card p-3">
-        <label className="sr-only" htmlFor="canone-search">
-          {t("canone.search")}
-        </label>
-        <Input
-          id="canone-search"
-          aria-label={t("canone.search")}
-          className={fieldClass}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cerca codice o titolo"
-        />
-        <label className="sr-only" htmlFor="canone-period-filter">
-          {t("canone.period")}
-        </label>
-        <Select
-          id="canone-period-filter"
-          aria-label={t("canone.period")}
-          className={fieldClass}
-          value={semester}
-          onChange={(e) => setSemester(e.target.value)}
-        >
-          <option value="">Tutti i periodi</option>
-          {data.filters.semestri.map((value) => (
-            <option key={value}>{value}</option>
-          ))}
-        </Select>
-        <label className="sr-only" htmlFor="canone-domain-filter">
-          {t("canone.domain")}
-        </label>
-        <Select
-          id="canone-domain-filter"
-          aria-label={t("canone.domain")}
-          className={fieldClass}
-          value={office}
-          onChange={(e) => setOffice(e.target.value)}
-        >
-          <option value="">Tutti i domini</option>
-          {data.filters.domini.map((value) => (
-            <option key={value}>{value}</option>
-          ))}
-        </Select>
-        <label className="sr-only" htmlFor="canone-state-filter">
-          {t("canone.state")}
-        </label>
-        <Select
-          id="canone-state-filter"
-          aria-label={t("canone.state")}
-          className={fieldClass}
-          value={state}
-          onChange={(e) => setState(e.target.value)}
-        >
-          <option value="">Tutti gli stati</option>
-          {data.filters.stati.map((value) => (
-            <option key={value}>{value}</option>
-          ))}
-        </Select>
-        <Button
-          className={buttonClass}
-          onClick={() => {
-            setSelected(null);
-            setSelectedActivity(null);
-            setTimesheetActivity(null);
-            setEditingTimesheet(null);
-            setEditingSubactivity(null);
-            setCreating(false);
-            setEditing(false);
-            setAppliedFilters({ semester, search: search.trim(), state, office });
-            setFilterRevision((value) => value + 1);
-          }}
-        >
-          {t("canone.applyFilters")}
-        </Button>
-        <Button
-          className={buttonClass}
-          onClick={() => {
-            setSemester("");
-            setSearch("");
-            setState("");
-            setOffice("");
-            setSelected(null);
-            setSelectedActivity(null);
-            setTimesheetActivity(null);
-            setEditingTimesheet(null);
-            setEditingSubactivity(null);
-            setCreating(false);
-            setEditing(false);
-            setAppliedFilters({ semester: "", search: "", state: "", office: "" });
-            setFilterRevision((value) => value + 1);
-          }}
-        >
-          {t("canone.resetFilters")}
-        </Button>
-      </div>
-      {!data.results.length ? (
-        <EmptyState
-          title="Nessuna voce trovata"
-          detail="Modifica i filtri o crea una nuova voce."
-        />
-      ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50 text-left">
-                <th className="p-3">Periodo</th>
-                <th>Periodicità</th>
-                <th>Canone</th>
-                <th>Monte</th>
-                <th>Riservato</th>
-                <th>Disponibile</th>
-                <th>Consuntivato</th>
-                <th>Stato</th>
-                <th>Attività</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.results.map((row) => (
-                <tr
-                  key={row.id}
-                  tabIndex={0}
-                  aria-selected={canoneId === row.id}
-                  className="cursor-pointer border-b hover:bg-muted/50 focus:bg-muted"
-                  onClick={() => setSelected(row.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      setSelected(row.id);
-                    }
-                  }}
-                >
-                  <td className="p-3">{row.semestre}</td>
-                  <td>{row.periodicita === "TRIMESTRALE" ? "Trimestrale" : "Semestrale"}</td>
-                  <td>{row.nome}</td>
-                  <td>
-                    <DaysValue value={row.pianificato} />
-                  </td>
-                  <td>
-                    <DaysValue value={row.riservato} />
-                  </td>
-                  <td>
-                    <DaysValue value={row.disponibile} />
-                  </td>
-                  <td>
-                    <DaysValue value={row.consuntivato} />
-                  </td>
-                  <td>
-                    <StatusBadge status={row.stato} />
-                  </td>
-                  <td>{row.sottoattivita_count}</td>
-                </tr>
+          <div
+            className="h-48 rounded-xl border bg-card p-4"
+            aria-label="Confronto pianificato, consuntivato e residuo per voce"
+          >
+            {chart.length ? (
+              <div className="mx-auto h-full max-w-4xl">
+                <AccessibleBarChart
+                  data={chart}
+                  xKey="name"
+                  unit="days"
+                  series={[
+                    { key: "pianificato", label: "Pianificato", color: CHART_PALETTE.slate },
+                    { key: "consuntivato", label: "Consuntivato", color: CHART_PALETTE.blue },
+                    { key: "residuo", label: "Residuo", color: CHART_PALETTE.green },
+                  ]}
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Nessun dato per il grafico.</p>
+            )}
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Canoni trimestrali e semestrali
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Seleziona un canone per consultare capacità e attività.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 rounded-xl border border-border bg-card p-3">
+            <label className="sr-only" htmlFor="canone-search">
+              {t("canone.search")}
+            </label>
+            <Input
+              id="canone-search"
+              aria-label={t("canone.search")}
+              className={fieldClass}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cerca codice o titolo"
+            />
+            <label className="sr-only" htmlFor="canone-period-filter">
+              {t("canone.period")}
+            </label>
+            <Select
+              id="canone-period-filter"
+              aria-label={t("canone.period")}
+              className={fieldClass}
+              value={semester}
+              onChange={(e) => setSemester(e.target.value)}
+            >
+              <option value="">Tutti i periodi</option>
+              {data.filters.semestri.map((value) => (
+                <option key={value}>{value}</option>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </Select>
+            <label className="sr-only" htmlFor="canone-domain-filter">
+              {t("canone.domain")}
+            </label>
+            <Select
+              id="canone-domain-filter"
+              aria-label={t("canone.domain")}
+              className={fieldClass}
+              value={office}
+              onChange={(e) => setOffice(e.target.value)}
+            >
+              <option value="">Tutti i domini</option>
+              {data.filters.domini.map((value) => (
+                <option key={value}>{value}</option>
+              ))}
+            </Select>
+            <label className="sr-only" htmlFor="canone-state-filter">
+              {t("canone.state")}
+            </label>
+            <Select
+              id="canone-state-filter"
+              aria-label={t("canone.state")}
+              className={fieldClass}
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+            >
+              <option value="">Tutti gli stati</option>
+              {data.filters.stati.map((value) => (
+                <option key={value}>{value}</option>
+              ))}
+            </Select>
+            <Button
+              className={buttonClass}
+              onClick={() => {
+                setSelected(null);
+                setSelectedActivity(null);
+                setTimesheetActivity(null);
+                setEditingTimesheet(null);
+                setEditingSubactivity(null);
+                setCreating(false);
+                setEditing(false);
+                setAppliedFilters({ semester, search: search.trim(), state, office });
+                setFilterRevision((value) => value + 1);
+              }}
+            >
+              {t("canone.applyFilters")}
+            </Button>
+            <Button
+              className={buttonClass}
+              onClick={() => {
+                setSemester("");
+                setSearch("");
+                setState("");
+                setOffice("");
+                setSelected(null);
+                setSelectedActivity(null);
+                setTimesheetActivity(null);
+                setEditingTimesheet(null);
+                setEditingSubactivity(null);
+                setCreating(false);
+                setEditing(false);
+                setAppliedFilters({ semester: "", search: "", state: "", office: "" });
+                setFilterRevision((value) => value + 1);
+              }}
+            >
+              {t("canone.resetFilters")}
+            </Button>
+          </div>
+          {!data.results.length ? (
+            <EmptyState
+              title="Nessuna voce trovata"
+              detail="Modifica i filtri o crea una nuova voce."
+            />
+          ) : (
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50 text-left">
+                    <th className="p-3">Periodo</th>
+                    <th>Periodicità</th>
+                    <th>Canone</th>
+                    <th>Monte</th>
+                    <th>Riservato</th>
+                    <th>Disponibile</th>
+                    <th>Consuntivato</th>
+                    <th>Stato</th>
+                    <th>Attività</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.results.map((row) => (
+                    <tr
+                      key={row.id}
+                      tabIndex={0}
+                      aria-selected={canoneId === row.id}
+                      className="cursor-pointer border-b hover:bg-muted/50 focus:bg-muted"
+                      onClick={() => setSelected(row.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setSelected(row.id);
+                        }
+                      }}
+                    >
+                      <td className="p-3">{row.semestre}</td>
+                      <td>{row.periodicita === "TRIMESTRALE" ? "Trimestrale" : "Semestrale"}</td>
+                      <td>{row.nome}</td>
+                      <td>
+                        <DaysValue value={row.pianificato} />
+                      </td>
+                      <td>
+                        <DaysValue value={row.riservato} />
+                      </td>
+                      <td>
+                        <DaysValue value={row.disponibile} />
+                      </td>
+                      <td>
+                        <DaysValue value={row.consuntivato} />
+                      </td>
+                      <td>
+                        <StatusBadge status={row.stato} />
+                      </td>
+                      <td>{row.sottoattivita_count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
       {(creating || canoneId) && (
         <aside
@@ -738,36 +752,42 @@ export function CanonePage() {
             <LoadingState />
           ) : (
             <>
-              <div className="flex justify-between">
-                <h2 className="font-semibold">
-                  {creating ? "Nuovo canone" : `${detail.data?.name} · ${detail.data?.semester}`}
-                </h2>
-                {editable && !creating && detailIsCurrent && (
-                  <div className="flex gap-2">
-                    <Button className={buttonClass} onClick={() => setEditing(!editing)}>
-                      {editing ? "Annulla" : "Modifica"}
-                    </Button>
-                    <Button
-                      className={buttonClass}
-                      disabled={remove.isPending}
-                      onClick={(event) => {
-                        deleteOpener.current = event.currentTarget;
-                        setFormError("");
-                        setDeleteConfirmation({
-                          title: "Elimina canone",
-                          description: `Confermi l'eliminazione di ${detail.data?.name}? L'operazione non pu\u00f2 essere annullata.`,
-                          confirm: () =>
-                            remove.mutate(undefined, {
-                              onSuccess: () => setDeleteConfirmation(null),
-                            }),
-                        });
-                      }}
-                    >
-                      Elimina
-                    </Button>
+              {!activityFocus && (
+                <>
+                  <div className="flex justify-between">
+                    <h2 className="font-semibold">
+                      {creating
+                        ? "Nuovo canone"
+                        : `${detail.data?.name} · ${detail.data?.semester}`}
+                    </h2>
+                    {editable && !creating && detailIsCurrent && (
+                      <div className="flex gap-2">
+                        <Button className={buttonClass} onClick={() => setEditing(!editing)}>
+                          {editing ? "Annulla" : "Modifica"}
+                        </Button>
+                        <Button
+                          className={buttonClass}
+                          disabled={remove.isPending}
+                          onClick={(event) => {
+                            deleteOpener.current = event.currentTarget;
+                            setFormError("");
+                            setDeleteConfirmation({
+                              title: "Elimina canone",
+                              description: `Confermi l'eliminazione di ${detail.data?.name}? L'operazione non pu\u00f2 essere annullata.`,
+                              confirm: () =>
+                                remove.mutate(undefined, {
+                                  onSuccess: () => setDeleteConfirmation(null),
+                                }),
+                            });
+                          }}
+                        >
+                          Elimina
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
               {(editing || creating) && (
                 <div className="grid gap-3 sm:grid-cols-3">
                   <label className="text-sm">
@@ -838,53 +858,63 @@ export function CanonePage() {
               )}
               {!creating && detail.data && (
                 <div className="space-y-3">
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <KpiCard
-                      label={t("canone.consumed")}
-                      value={<DaysValue value={detail.data.status.consuntivato} />}
-                      tooltip={t("canone.consumedTooltip")}
-                    />
-                    <KpiCard
-                      label={t("canone.forecast")}
-                      value={<DaysValue value={detail.data.status.forecast} />}
-                      hint={`${detail.data.status.percentuale_forecast}%`}
-                      tone={
-                        detail.data.status.proiezione === "Sovra-utilizzo previsto"
-                          ? "danger"
-                          : detail.data.status.proiezione === "Sotto-utilizzo previsto"
-                            ? "warn"
-                            : "ok"
-                      }
-                      tooltip={t("canone.forecastTooltip")}
-                      action={
-                        <StatusBadge status={projectionStatus(detail.data.status.proiezione)} />
-                      }
-                    />
-                    <KpiCard
-                      label={t("canone.unusedForecast")}
-                      value={<DaysValue value={detail.data.status.giornate_non_usate_previste} />}
-                      tooltip={t("canone.unusedForecastTooltip")}
-                    />
-                  </div>
+                  {!activityFocus && (
+                    <>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <KpiCard
+                          label={t("canone.consumed")}
+                          value={<DaysValue value={detail.data.status.consuntivato} />}
+                          tooltip={t("canone.consumedTooltip")}
+                        />
+                        <KpiCard
+                          label={t("canone.forecast")}
+                          value={<DaysValue value={detail.data.status.forecast} />}
+                          hint={`${detail.data.status.percentuale_forecast}%`}
+                          tone={
+                            detail.data.status.proiezione === "Sovra-utilizzo previsto"
+                              ? "danger"
+                              : detail.data.status.proiezione === "Sotto-utilizzo previsto"
+                                ? "warn"
+                                : "ok"
+                          }
+                          tooltip={t("canone.forecastTooltip")}
+                          action={
+                            <StatusBadge status={projectionStatus(detail.data.status.proiezione)} />
+                          }
+                        />
+                        <KpiCard
+                          label={t("canone.unusedForecast")}
+                          value={
+                            <DaysValue value={detail.data.status.giornate_non_usate_previste} />
+                          }
+                          tooltip={t("canone.unusedForecastTooltip")}
+                        />
+                      </div>
+                    </>
+                  )}
                   {detail.isFetching && (
                     <p className="text-xs text-muted-foreground" role="status">
                       {t("canone.updatingDetail")}
                     </p>
                   )}
-                  <div>
-                    <h3 className="text-lg font-semibold">Attività del canone</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Riservato <DaysValue value={detail.data.reserved_days} /> · disponibile da
-                      assegnare <DaysValue value={detail.data.available_days} />
-                      {appliedFilters.office && (
-                        <span>
-                          {" "}
-                          · Filtro dominio: <strong>{appliedFilters.office}</strong> (
-                          {filteredSubactivities.length} attività)
-                        </span>
-                      )}
-                    </p>
-                  </div>
+                  {!activityFocus && (
+                    <>
+                      <div>
+                        <h3 className="text-lg font-semibold">Attività del canone</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Riservato <DaysValue value={detail.data.reserved_days} /> · disponibile da
+                          assegnare <DaysValue value={detail.data.available_days} />
+                          {appliedFilters.office && (
+                            <span>
+                              {" "}
+                              · Filtro dominio: <strong>{appliedFilters.office}</strong> (
+                              {filteredSubactivities.length} attività)
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </>
+                  )}
                   {!selectedActivity && (
                     <div
                       className="flex flex-wrap items-center gap-x-5 gap-y-2"
@@ -1016,18 +1046,85 @@ export function CanonePage() {
                             </Button>
                           ) : (
                             <>
-                              <Button
-                                className={buttonClass}
-                                onClick={() => {
-                                  setSelectedActivity(null);
-                                  setEditingSubactivity(null);
-                                  setTimesheetActivity(null);
-                                  setEditingTimesheet(null);
-                                  setFormError("");
-                                }}
-                              >
-                                ← Tutte le attività
-                              </Button>
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <Button
+                                  className={buttonClass}
+                                  onClick={() => {
+                                    setSelectedActivity(null);
+                                    setEditingSubactivity(null);
+                                    setTimesheetActivity(null);
+                                    setEditingTimesheet(null);
+                                    setFormError("");
+                                  }}
+                                >
+                                  ← Tutte le attività
+                                </Button>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {canConsuntiva && detailIsCurrent && (
+                                    <Button
+                                      className={primaryButtonClass}
+                                      onClick={() => {
+                                        setActivityTab("Consuntivi");
+                                        setTimesheetActivity(row.id);
+                                        setEditingTimesheet(null);
+                                        setTimesheetForm({
+                                          data: "",
+                                          giornate: "",
+                                          descrizione: "",
+                                          utente: "",
+                                        });
+                                        setFormError("");
+                                      }}
+                                    >
+                                      CONSUNTIVA
+                                    </Button>
+                                  )}
+                                  {editable && detailIsCurrent && (
+                                    <div className="flex gap-2">
+                                      <Button
+                                        className={buttonClass}
+                                        onClick={() => {
+                                          setEditingSubactivity(row);
+                                          setSubForm({
+                                            office: row.office,
+                                            title: row.title,
+                                            redmine_ref: row.redmine_ref,
+                                            reserved_days: row.reserved_days,
+                                            start_date: row.start_date ?? "",
+                                            end_date: row.end_date ?? "",
+                                            quarter_estimate_days: row.quarter_estimate_days ?? "",
+                                            forecast_remaining_days:
+                                              row.forecast_remaining_days ?? "",
+                                            notes: row.notes,
+                                          });
+                                        }}
+                                      >
+                                        Modifica attività
+                                      </Button>
+                                      <Button
+                                        className={dangerButtonClass}
+                                        onClick={(event) => {
+                                          deleteOpener.current = event.currentTarget;
+                                          setFormError("");
+                                          setDeleteConfirmation({
+                                            title: "Elimina attivit\u00e0",
+                                            description: `Confermi l'eliminazione di ${row.title}?`,
+                                            confirm: () =>
+                                              removeSub.mutate(row, {
+                                                onSuccess: () => setDeleteConfirmation(null),
+                                              }),
+                                          });
+                                        }}
+                                      >
+                                        ELIMINA
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Canone {detail.data?.name} · {detail.data?.semester}
+                              </p>
                               <div className="flex flex-wrap items-center gap-2">
                                 <h3 className="text-lg font-semibold">{row.title}</h3>
                                 <StatusBadge
@@ -1078,47 +1175,6 @@ export function CanonePage() {
                                   </div>
                                   <p className="text-sm">Redmine: {row.redmine_ref || "\u2014"}</p>
                                   {row.notes && <p className="text-sm">{row.notes}</p>}
-                                  {editable && detailIsCurrent && (
-                                    <div className="flex gap-2">
-                                      <Button
-                                        className={buttonClass}
-                                        onClick={() => {
-                                          setEditingSubactivity(row);
-                                          setSubForm({
-                                            office: row.office,
-                                            title: row.title,
-                                            redmine_ref: row.redmine_ref,
-                                            reserved_days: row.reserved_days,
-                                            start_date: row.start_date ?? "",
-                                            end_date: row.end_date ?? "",
-                                            quarter_estimate_days: row.quarter_estimate_days ?? "",
-                                            forecast_remaining_days:
-                                              row.forecast_remaining_days ?? "",
-                                            notes: row.notes,
-                                          });
-                                        }}
-                                      >
-                                        Modifica attività
-                                      </Button>
-                                      <Button
-                                        className={dangerButtonClass}
-                                        onClick={(event) => {
-                                          deleteOpener.current = event.currentTarget;
-                                          setFormError("");
-                                          setDeleteConfirmation({
-                                            title: "Elimina attivit\u00e0",
-                                            description: `Confermi l'eliminazione di ${row.title}?`,
-                                            confirm: () =>
-                                              removeSub.mutate(row, {
-                                                onSuccess: () => setDeleteConfirmation(null),
-                                              }),
-                                          });
-                                        }}
-                                      >
-                                        ELIMINA
-                                      </Button>
-                                    </div>
-                                  )}
                                   {editingSubactivity?.id === row.id && (
                                     <div className="grid gap-2 rounded border border-primary/50 bg-muted/30 p-3 sm:grid-cols-3">
                                       <div className="flex items-center justify-between sm:col-span-3">
