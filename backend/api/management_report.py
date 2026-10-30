@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import F, Sum
 from django.utils import timezone
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
@@ -36,11 +36,14 @@ class ManagementReportView(APIView):
             date_to=today,
         )
         projects = []
+        # Ordinamenti per lettura, non per codice: le righe si raggruppano da se sotto il
+        # nome di chi ne risponde, e chi non ha un referente finisce in fondo invece di
+        # spezzare un gruppo a meta.
         for p in (
             project_balance_qs()
             .filter(timesheet_status=TimesheetStatus.ATTIVO)
             .select_related("client_owner")
-            .order_by("code")
+            .order_by(F("client_owner__full_name").asc(nulls_last=True), "code")
         ):
             projects.append(
                 {
@@ -61,7 +64,11 @@ class ManagementReportView(APIView):
                 )
             )
             .select_related("activity", "activity__client_owner", "assignee", "wallet_year")
-            .order_by("activity__code", "wallet_year__year")
+            .order_by(
+                F("assignee__full_name").asc(nulls_last=True),
+                "activity__code",
+                "wallet_year__year",
+            )
         )
         wallet = []
         for a in allocations:
@@ -86,7 +93,8 @@ class ManagementReportView(APIView):
             )
             .select_related("canone")
             .annotate(consumed=Sum("timesheet_entries__days"))
-            .order_by("office", "title")
+            # Raggruppate per dominio di appartenenza, poi per titolo.
+            .order_by(F("office").asc(nulls_last=True), "title")
         )
         activities = []
         domains = defaultdict(lambda: {"reserved": Decimal(0), "consumed": Decimal(0), "count": 0})

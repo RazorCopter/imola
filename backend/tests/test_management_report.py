@@ -108,3 +108,59 @@ def test_il_report_wallet_mostra_l_assegnatario_anche_senza_referente_bmed():
     row = next(x for x in body["wallet"] if x["code"] == "ACT-SENZA-REFERENTE")
     assert row["owner"] is None
     assert row["assignee"] == "Gabriele Cataldo"
+
+
+def test_le_sezioni_sono_ordinate_per_chiave_di_raggruppamento():
+    """Progetti per referente BMED, wallet per assegnatario, canone per dominio."""
+    client, _ = make_client_for_role(roles.ADMIN)
+    rossi = PersonFactory(full_name="Rossi Mario")
+    bianchi = PersonFactory(full_name="Bianchi Anna")
+
+    ProjectFactory(code="P-3", client_owner=rossi, budget_days=Decimal("1"))
+    ProjectFactory(code="P-1", client_owner=bianchi, budget_days=Decimal("1"))
+    ProjectFactory(code="P-2", client_owner=rossi, budget_days=Decimal("1"))
+    ProjectFactory(code="P-0", client_owner=None, budget_days=Decimal("1"))
+
+    for code, assignee in (("ACT-Z", rossi), ("ACT-A", bianchi), ("ACT-M", rossi)):
+        WalletAllocationFactory(
+            activity=WalletActivityFactory(code=code),
+            assignee=assignee,
+            source_project=None,
+            allocated_days=Decimal("1"),
+        )
+    WalletAllocationFactory(
+        activity=WalletActivityFactory(code="ACT-SENZA"),
+        assignee=None,
+        source_project=None,
+        allocated_days=Decimal("1"),
+    )
+
+    canone = CanoneFactory(start_date=date(2026, 7, 1), end_date=date(2026, 12, 31))
+    for office, title in (("TA", "Terza"), ("EA", "Prima"), ("TA", "Seconda"), ("CROSS", "Quarta")):
+        CanoneSubactivityFactory(
+            canone=canone, office=office, title=title, reserved_days=Decimal("5")
+        )
+
+    with patch("api.management_report.timezone.localdate", return_value=date(2026, 10, 29)):
+        body = client.get("/api/v1/admin/management-report").json()
+
+    # I progetti si raggruppano sotto il referente; senza referente vanno in fondo.
+    # Il canone porta con se il proprio progetto: guardo solo quelli creati qui.
+    assert [(x["owner"], x["code"]) for x in body["projects"] if x["code"].startswith("P-")] == [
+        ("Bianchi Anna", "P-1"),
+        ("Rossi Mario", "P-2"),
+        ("Rossi Mario", "P-3"),
+        (None, "P-0"),
+    ]
+    assert [(x["assignee"], x["code"]) for x in body["wallet"]] == [
+        ("Bianchi Anna", "ACT-A"),
+        ("Rossi Mario", "ACT-M"),
+        ("Rossi Mario", "ACT-Z"),
+        (None, "ACT-SENZA"),
+    ]
+    assert [(x["domain"], x["title"]) for x in body["activities"]] == [
+        ("CROSS", "Quarta"),
+        ("EA", "Prima"),
+        ("TA", "Seconda"),
+        ("TA", "Terza"),
+    ]
