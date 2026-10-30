@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { Search } from "lucide-react";
 import { AccessibleBarChart, CHART_PALETTE } from "@/components/AccessibleBarChart";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { DaysValue } from "@/components/DaysValue";
@@ -228,6 +229,7 @@ export function CanonePage() {
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
   const [activityDomain, setActivityDomain] = useState("");
   const [activityStatus, setActivityStatus] = useState("");
+  const [activitySearch, setActivitySearch] = useState("");
   const [timesheetActivity, setTimesheetActivity] = useState<string | null>(null);
   /** `utente` vuoto: il consuntivo resta intestato a chi sta scrivendo. */
   const [timesheetForm, setTimesheetForm] = useState({
@@ -305,15 +307,24 @@ export function CanonePage() {
         if (activityStatus && effectiveStatus !== activityStatus) {
           return false;
         }
+        const needle = activitySearch.trim().toLocaleLowerCase("it");
+        if (needle) {
+          // Gli stessi campi su cui cerca il filtro lato server del canone.
+          const haystack = `${row.title} ${row.office} ${row.notes} ${row.redmine_ref}`;
+          if (!haystack.toLocaleLowerCase("it").includes(needle)) {
+            return false;
+          }
+        }
         return true;
       }),
-    [filteredSubactivities, activityDomain, activityStatus],
+    [filteredSubactivities, activityDomain, activityStatus, activitySearch],
   );
   const detailIsCurrent = detail.data?.id === canoneId;
   useEffect(() => {
     setSelectedActivity(null);
     setActivityDomain("");
     setActivityStatus("");
+    setActivitySearch("");
     setCreatingActivity(false);
     setTimesheetActivity(null);
     setEditingTimesheet(null);
@@ -931,9 +942,32 @@ export function CanonePage() {
                           </Button>
                         ))}
                       </div>
+                      <label className="flex min-w-56 flex-1 items-center gap-2 rounded-md border border-input px-3">
+                        <Search className="size-4 text-muted-foreground" aria-hidden />
+                        <span className="sr-only">Cerca attività del canone</span>
+                        <Input
+                          className="h-9 w-full border-0 bg-transparent px-0 text-sm outline-none"
+                          value={activitySearch}
+                          onChange={(event) => setActivitySearch(event.target.value)}
+                          placeholder="Titolo, dominio, note o Redmine"
+                        />
+                      </label>
                       <span className="ml-auto text-xs text-muted-foreground" role="status">
                         {visibleSubactivities.length} / {filteredSubactivities.length} attività
                       </span>
+                      {(activityDomain || activityStatus || activitySearch) && (
+                        <Button
+                          type="button"
+                          className="rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                          onClick={() => {
+                            setActivityDomain("");
+                            setActivityStatus("");
+                            setActivitySearch("");
+                          }}
+                        >
+                          Azzera filtri
+                        </Button>
+                      )}
                     </div>
                   )}
                   {visibleSubactivities.length === 0 ? (

@@ -228,6 +228,33 @@ describe("CanonePage", () => {
     expect(screen.getByRole("button", { name: /Collaudo Piattaforma/ })).toBeInTheDocument();
   });
 
+  it("cerca le attività per titolo senza ricaricare il canone", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("button", { name: /Analisi/ });
+    const callsBeforeSearch = getMock.mock.calls.length;
+
+    const search = screen.getByLabelText("Cerca attività del canone");
+    await user.type(search, "collaudo");
+
+    expect(getMock.mock.calls.length).toBe(callsBeforeSearch);
+    expect(screen.getByRole("button", { name: /Collaudo Piattaforma/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Analisi/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Disegno Solution/ })).not.toBeInTheDocument();
+    expect(screen.getByText("1 / 3 attività")).toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, "SA");
+    // Cerca anche sul dominio, come il filtro lato server.
+    expect(screen.getByRole("button", { name: /Disegno Solution/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Collaudo Piattaforma/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Azzera filtri" }));
+    expect(search).toHaveValue("");
+    expect(screen.getByRole("button", { name: /Analisi/ })).toBeInTheDocument();
+    expect(screen.getByText("3 / 3 attività")).toBeInTheDocument();
+  });
+
   it("applica filtri e abilita CRUD con canone.manage", async () => {
     const user = userEvent.setup();
     renderPage(["canone.manage"]);
