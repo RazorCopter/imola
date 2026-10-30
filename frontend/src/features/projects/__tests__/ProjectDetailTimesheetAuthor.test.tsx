@@ -150,6 +150,8 @@ describe("ProjectDetailPage — autore del consuntivo", () => {
     await userEvent.click(screen.getByRole("button", { name: "Salva" }));
 
     await waitFor(() => expect(postMock).toHaveBeenCalled());
-    expect(postMock.mock.calls[0][1]).not.toHaveProperty("utente");
+    const payload = postMock.mock.calls[0]?.[1] as Record<string, unknown> | undefined;
+    expect(payload).toBeDefined();
+    expect(payload).not.toHaveProperty("utente");
   });
 });
