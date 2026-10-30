@@ -88,6 +88,75 @@ describe("ProjectsPage ed EditProjectDialog — Tranche 4", () => {
     vi.clearAllMocks();
   });
 
+  it("riassume il portafoglio nei KPI, tenendo gli sforamenti fuori dal residuo", async () => {
+    mockSession({ roles: ["admin"], is_admin: true, can_write: true, capabilities: [] });
+
+    const project = (over: Partial<Record<string, unknown>>) => ({
+      id: "p",
+      codice: "IM26001",
+      titolo: "Progetto",
+      tipo_contratto: "AQL",
+      budget: "0",
+      consuntivi_diretti: "0",
+      allocato_a_wallet: "0",
+      consumato_via_wallet: "0",
+      consumato_totale: "0",
+      residuo: "0",
+      stato_consuntivazione: "ATTIVO",
+      stato_operativo: "IN_CORSO",
+      stato_fatturazione: "DA_FATTURARE",
+      stato_offerta: "ACCETTATA",
+      stato_residuo: "VALIDO",
+      residuo_scade_il: null,
+      residuo_giorni_alla_scadenza: null,
+      residuo_motivo: "Ok",
+      spiegazione_residuo: "Ok",
+      permissions: {},
+      ...over,
+    });
+
+    getMock.mockImplementation((path: string) => {
+      if (path === "/projects/balances") {
+        return Promise.resolve({
+          count: 4,
+          results: [
+            project({ id: "a", budget: "20", consumato_totale: "12", residuo: "8" }),
+            // Sforato: il suo -2 non deve limare il residuo degli altri.
+            project({ id: "b", budget: "4", consumato_totale: "6", residuo: "-2" }),
+            // In scadenza: finisce nei residui a rischio.
+            project({
+              id: "c",
+              budget: "6",
+              consumato_totale: "1",
+              residuo: "5",
+              stato_residuo: "IN_SCADENZA",
+            }),
+            // Chiuso: fuori da tutti i totali "in corso".
+            project({
+              id: "d",
+              budget: "100",
+              consumato_totale: "100",
+              residuo: "0",
+              stato_operativo: "CHIUSO",
+            }),
+          ],
+        });
+      }
+      return Promise.reject(new Error("Unknown path"));
+    });
+
+    renderWithProviders(<ProjectsPage />);
+
+    expect(await screen.findByText("3")).toBeInTheDocument(); // progetti in corso su 4
+    expect(screen.getByText("su 4 in portafoglio")).toBeInTheDocument();
+    expect(screen.getByText("30,00 gg")).toBeInTheDocument(); // budget in corso 20+4+6
+    expect(screen.getByText("19,00 gg")).toBeInTheDocument(); // consumato 12+6+1
+    expect(screen.getByText(/63,3%/)).toBeInTheDocument();
+    expect(screen.getByText("13,00 gg")).toBeInTheDocument(); // residuo 8+5, senza il -2
+    expect(screen.getByText(/sforamento su 1 progetti/)).toBeInTheDocument();
+    expect(screen.getByText("5,00 gg")).toBeInTheDocument(); // residui a rischio
+  });
+
   it("mostra il pulsante EDIT arancione per Admin su ogni progetto", async () => {
     mockSession({
       roles: ["admin"],

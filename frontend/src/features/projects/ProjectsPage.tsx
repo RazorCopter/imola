@@ -8,10 +8,12 @@ import { useNavigate } from "react-router-dom";
 
 import { DataTable, type DataTableColumnClasses } from "@/components/DataTable";
 import { DaysValue } from "@/components/DaysValue";
+import { KpiCard } from "@/components/KpiCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
 import { api } from "@/lib/api";
+import { formatPercent } from "@/lib/format";
 import { canCreateProjects, canEditProjects, canValidateProjectClosure } from "@/lib/permissions";
 import { EditProjectDialog } from "./EditProjectDialog";
 import { NewProjectDialog } from "./NewProjectDialog";
@@ -276,6 +278,39 @@ export function ProjectsPage() {
     [query.data, search, status, order],
   );
 
+  /**
+   * Indicatori di portafoglio: deliberatamente su tutti i progetti e non sul sottoinsieme
+   * filtrato, come il canone e il wallet. La tabella ha il suo contatore di risultati.
+   */
+  const kpi = useMemo(() => {
+    const all = query.data?.results ?? [];
+    const sum = (rows: ProjectBalance[], field: keyof ProjectBalance) =>
+      rows.reduce((total, row) => total + Number(row[field] ?? 0), 0);
+    const stato = (row: ProjectBalance) => row.stato_operativo ?? row.stato_consuntivazione;
+    const inCorso = all.filter((row) => stato(row) !== "CHIUSO");
+    const daValidare = all.filter((row) => stato(row) === "CHIUSURA_DA_VALIDARE");
+    const aRischio = all.filter((row) =>
+      ["IN_SCADENZA", "SCADUTO"].includes(row.stato_residuo ?? ""),
+    );
+    const budget = sum(inCorso, "budget");
+    const consumato = sum(inCorso, "consumato_totale");
+    return {
+      totale: all.length,
+      inCorso: inCorso.length,
+      budget,
+      consumato,
+      percentuale: budget > 0 ? (consumato / budget) * 100 : null,
+      // Residui e sforamenti restano distinti, come nel bilancio del wallet: sommarli
+      // insieme farebbe sparire uno sforamento dentro il residuo di un altro progetto.
+      residuo: inCorso.reduce((total, row) => total + Math.max(0, Number(row.residuo ?? 0)), 0),
+      sforamento: inCorso.reduce((total, row) => total + Math.min(0, Number(row.residuo ?? 0)), 0),
+      progettiSforati: inCorso.filter((row) => Number(row.residuo ?? 0) < 0).length,
+      daValidare: daValidare.length,
+      aRischioGiornate: sum(aRischio, "residuo"),
+      aRischioProgetti: aRischio.length,
+    };
+  }, [query.data]);
+
   return (
     <section className="space-y-4">
       <PageHeader
@@ -284,6 +319,57 @@ export function ProjectsPage() {
         description="Budget, consumi e residui calcolati dal ledger."
         actions={<>{canCreateProjects(session) && <NewProjectDialog />}</>}
       />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <KpiCard
+          label="Progetti in corso"
+          value={kpi.inCorso}
+          hint={`su ${kpi.totale} in portafoglio`}
+          tooltip="Progetti non ancora chiusi. Il totale comprende anche i chiusi, indipendentemente dai filtri della tabella."
+        />
+        <KpiCard
+          label="Budget in corso"
+          value={<DaysValue value={kpi.budget} />}
+          hint="Monte giornate dei progetti non chiusi"
+          tooltip="Somma del budget dei progetti non ancora chiusi: le giornate su cui si sta ancora lavorando."
+        />
+        <KpiCard
+          label="Consumato"
+          value={<DaysValue value={kpi.consumato} />}
+          hint={
+            kpi.percentuale === null
+              ? "Nessun budget in corso"
+              : `${formatPercent(kpi.percentuale)} sul budget in corso`
+          }
+          tooltip="Consuntivi diretti più giornate erose tramite wallet, sui progetti non chiusi."
+        />
+        <KpiCard
+          label="Residuo da spendere"
+          value={<DaysValue value={kpi.residuo} />}
+          tone={kpi.progettiSforati > 0 ? "warn" : "ok"}
+          hint={
+            kpi.progettiSforati > 0 ? (
+              <>
+                e <DaysValue value={Math.abs(kpi.sforamento)} /> di sforamento su{" "}
+                {kpi.progettiSforati} progetti
+              </>
+            ) : (
+              "Budget meno consuntivi e quote già allocate"
+            )
+          }
+          tooltip="Giornate ancora disponibili sui progetti non chiusi: budget meno consuntivi diretti meno quote allocate al wallet. Gli sforamenti sono contati a parte, per non compensarsi con i residui altrui."
+        />
+        <KpiCard
+          label="Residui a rischio"
+          value={<DaysValue value={kpi.aRischioGiornate} />}
+          tone={kpi.aRischioGiornate > 0 ? "warn" : "neutral"}
+          hint={
+            kpi.daValidare > 0
+              ? `${kpi.aRischioProgetti} progetti · ${kpi.daValidare} chiusure da validare`
+              : `${kpi.aRischioProgetti} progetti in scadenza o scaduti`
+          }
+          tooltip="Giornate residue di progetti il cui residuo è in scadenza o già scaduto: vanno spese o conferite al wallet prima del termine."
+        />
+      </div>
       <FilterBar>
         <label className="flex min-w-64 flex-1 items-center gap-2 rounded-md border border-input px-3">
           <Search className="size-4 text-muted-foreground" aria-hidden />
