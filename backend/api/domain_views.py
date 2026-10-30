@@ -29,6 +29,7 @@ from api.project_serializers import (
     PROJECT_EDITABLE_FIELDS,
     ProjectUpdateSerializer,
 )
+from api.timesheet_authors import resolve_author
 from canone.models import Canone, CanoneSubactivity
 from core import capabilities
 from core.exceptions import DomainError, PreconditionRequired, StaleResource
@@ -395,6 +396,7 @@ class ProjectLedgerView(DocumentedAPIView):
                             if entry.created_by
                             else "Importazione"
                         ),
+                        "utente_id": entry.created_by_id,
                         "origine": entry.source,
                     }
                     for entry in timesheets
@@ -460,13 +462,17 @@ class ProjectLedgerView(DocumentedAPIView):
             period = date.fromisoformat(str(raw_period)) if raw_period else timezone.localdate()
         except ValueError:
             return Response({"data": ["Inserire una data valida."]}, status=400)
+        try:
+            author = resolve_author(request)
+        except DjangoValidationError as exc:
+            return Response(getattr(exc, "message_dict", {"detail": exc.messages}), status=400)
         entry = TimesheetEntry(
             project=project,
             period=period,
             days=days,
             source=TimesheetSource.MANUALE,
             note=description,
-            created_by=request.user,
+            created_by=author,
             updated_by=request.user,
         )
         try:
@@ -523,6 +529,7 @@ class ProjectTimesheetDetailView(DocumentedAPIView):
         entry = self.get_entry(pk, entry_pk)
         try:
             days, entry_date, description = self.parse_payload(request, entry)
+            author = resolve_author(request, default=entry.created_by)
         except DjangoValidationError as exc:
             return Response(getattr(exc, "message_dict", {"detail": exc.messages}), status=400)
         direct_without_entry = (
@@ -546,7 +553,7 @@ class ProjectTimesheetDetailView(DocumentedAPIView):
             days=days,
             source=TimesheetSource.MANUALE,
             note=description,
-            created_by=entry.created_by,
+            created_by=author,
             updated_by=request.user,
         )
         replacement.full_clean()
@@ -1240,6 +1247,7 @@ def _canone_detail(canone, office: str = "", search: str = "") -> dict:
                             (entry.created_by.get_full_name() or entry.created_by.username)
                             if entry.created_by else "Importazione"
                         ),
+                        "utente_id": entry.created_by_id,
                         "origine": entry.source,
                     }
                     for entry in row.timesheet_entries.filter(reversals__isnull=True)
@@ -1347,10 +1355,14 @@ class CanoneSubactivityTimesheetListView(DocumentedAPIView):
         consumed = row.timesheet_entries.aggregate(total=Sum("days"))["total"] or 0
         if consumed + days > row.reserved_days:
             return Response({"giornate": ["Il consuntivo supera le giornate riservate all'attività."]}, status=400)
+        try:
+            author = resolve_author(request)
+        except DjangoValidationError as exc:
+            return Response(getattr(exc, "message_dict", {"detail": exc.messages}), status=400)
         entry = TimesheetEntry(
             canone_subactivity=row, period=entry_date, days=days,
             source=TimesheetSource.MANUALE, note=description,
-            created_by=request.user, updated_by=request.user,
+            created_by=author, updated_by=request.user,
         )
         try:
             entry.full_clean()
@@ -1393,6 +1405,10 @@ class CanoneSubactivityTimesheetDetailView(DocumentedAPIView):
         consumed_without_entry = (row.timesheet_entries.aggregate(total=Sum("days"))["total"] or 0) - entry.days
         if consumed_without_entry + days > row.reserved_days:
             return Response({"giornate": ["Il consuntivo supera le giornate riservate all'attività."]}, status=400)
+        try:
+            author = resolve_author(request, default=entry.created_by)
+        except DjangoValidationError as exc:
+            return Response(getattr(exc, "message_dict", {"detail": exc.messages}), status=400)
         reversal = entry.build_reversal(note=f"Rettifica amministrativa del consuntivo {entry.id}")
         reversal.created_by = request.user
         reversal.updated_by = request.user
@@ -1401,7 +1417,7 @@ class CanoneSubactivityTimesheetDetailView(DocumentedAPIView):
         replacement = TimesheetEntry(
             canone_subactivity=row, period=entry_date, days=days,
             source=TimesheetSource.MANUALE, note=description,
-            created_by=entry.created_by, updated_by=request.user,
+            created_by=author, updated_by=request.user,
         )
         replacement.full_clean()
         replacement.save()

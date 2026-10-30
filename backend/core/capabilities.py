@@ -15,6 +15,7 @@ VALIDATE_PROJECT_CLOSURE: Final = "projects.validate_closure"
 ANNOTATE_OWN_PROJECTS: Final = "projects.annotate_own"
 CREATE_TIMESHEETS: Final = "timesheets.create"
 EDIT_TIMESHEETS: Final = "timesheets.edit"
+ASSIGN_TIMESHEET_AUTHOR: Final = "timesheets.assign_author"
 EDIT_WALLET: Final = "wallet.edit"
 MANAGE_CANONE: Final = "canone.manage"
 ADJUST_ACCOUNTING: Final = "accounting.adjust"
@@ -34,6 +35,7 @@ ALL_CAPABILITIES: Final = frozenset(
         ANNOTATE_OWN_PROJECTS,
         CREATE_TIMESHEETS,
         EDIT_TIMESHEETS,
+        ASSIGN_TIMESHEET_AUTHOR,
         EDIT_WALLET,
         MANAGE_CANONE,
         ADJUST_ACCOUNTING,
@@ -77,7 +79,14 @@ ROLE_DEFAULTS: Final = {
     ),
 }
 
-RESERVED_CAPABILITIES: Final = frozenset({RESET_DATA, MANAGE_USERS, MANAGE_PRIVILEGES})
+RESERVED_CAPABILITIES: Final = frozenset(
+    {RESET_DATA, MANAGE_USERS, MANAGE_PRIVILEGES, ASSIGN_TIMESHEET_AUTHOR}
+)
+"""Riservate ad Admin: non assegnabili agli altri ruoli nemmeno via override.
+
+`ASSIGN_TIMESHEET_AUTHOR` sta qui perché intestare un consuntivo a un altro utente
+riscrive l'autore del movimento: resta un gesto amministrativo, non delegabile.
+"""
 
 
 def capabilities_for_role(role: str) -> set[str]:

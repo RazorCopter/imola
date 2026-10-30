@@ -10,6 +10,7 @@ export const CAPABILITIES = {
   ANNOTATE_OWN_PROJECTS: "projects.annotate_own",
   CREATE_TIMESHEETS: "timesheets.create",
   EDIT_TIMESHEETS: "timesheets.edit",
+  ASSIGN_TIMESHEET_AUTHOR: "timesheets.assign_author",
   EDIT_WALLET: "wallet.edit",
   MANAGE_CANONE: "canone.manage",
   ADJUST_ACCOUNTING: "accounting.adjust",
@@ -57,6 +58,11 @@ export function canCreateTimesheets(session: Session | null): boolean {
 
 export function canEditTimesheets(session: Session | null): boolean {
   return hasCapability(session, CAPABILITIES.EDIT_TIMESHEETS, (legacy) => legacy.is_admin);
+}
+
+/** Censire un consuntivo a nome di un altro utente: riservato ad Admin. */
+export function canAssignTimesheetAuthor(session: Session | null): boolean {
+  return hasCapability(session, CAPABILITIES.ASSIGN_TIMESHEET_AUTHOR, (legacy) => legacy.is_admin);
 }
 
 export function canAdminister(session: Session | null): boolean {

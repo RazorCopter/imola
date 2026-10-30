@@ -4,7 +4,7 @@
 
 La sicurezza delle mutation è applicata dal backend tramite capability granulari. La sessione autenticata espone `capabilities` oltre ai campi legacy `roles`, `is_admin` e `can_write`. I gruppi Django restano la fonte dei ruoli assegnati agli account; la fonte di verità delle variazioni rispetto ai default è `core.RoleCapabilityOverride`, una riga per coppia ruolo/capability modificata. In assenza di riga vale il default canonico in `core.capabilities.ROLE_DEFAULTS`.
 
-Gli override sono letti dal database a ogni verifica server-side e a ogni richiesta della sessione: una modifica è quindi effettiva dalla richiesta successiva senza cache né riavvio. Admin riceve sempre l'intero catalogo; `data.reset`, `users.manage` e `privileges.manage` sono riservate e gli override per ruoli non-Admin vengono ignorati/rifiutati.
+Gli override sono letti dal database a ogni verifica server-side e a ogni richiesta della sessione: una modifica è quindi effettiva dalla richiesta successiva senza cache né riavvio. Admin riceve sempre l'intero catalogo; `data.reset`, `users.manage`, `privileges.manage` e `timesheets.assign_author` sono riservate e gli override per ruoli non-Admin vengono ignorati/rifiutati.
 
 Le PATCH dei progetti espongono `version` ed `ETag` e richiedono la versione attesa tramite `If-Match` oppure `expected_version`. Una versione superata produce `409 risorsa-obsoleta`; una versione attesa assente produce `428 precondizione-richiesta`. Lo stesso contratto è definito dal meccanismo comune per i futuri editor Wallet. Ledger e consuntivi restano append-only.
 
@@ -19,6 +19,7 @@ Le PATCH dei progetti espongono `version` ed `ETag` e richiedono la versione att
 | `projects.edit` | Sì | Sì | — | — |
 | `projects.annotate_own` | Sì | Sì | Sì | — |
 | `timesheets.create` | Sì | Sì | — | Sì |
+| `timesheets.assign_author` | Sì | — | — | — |
 | `wallet.edit` | Sì | Sì | — | — |
 | `accounting.adjust` | Sì | Sì | — | — |
 | `imports.upload` | Sì | Sì | — | Sì |
@@ -33,6 +34,7 @@ Le PATCH dei progetti espongono `version` ed `ETag` e richiedono la versione att
 | Creazione progetto | `projects.create` | Consentita anche al Fornitore. |
 | Modifica progetto | `projects.edit` | Admin e Responsabile; lock ottimistico obbligatorio. |
 | Annotazione proprio progetto | `projects.annotate_own` + object permission | Il Referente può modificare solo i campi di annotazione dei progetti associati. |
+| Censimento consuntivo a nome di un altro utente | `timesheets.assign_author` | Solo Admin: campo `utente` nel POST/PATCH dei consuntivi di progetto e canone, elenco in `GET /timesheets/authors`. Capability riservata, non delegabile. |
 | Creazione/modifica allocazioni Wallet | `wallet.edit` | Non consentita al Fornitore. |
 | Mutation contabili e conferma revisione | `accounting.adjust` | Non consentite a Referente e Fornitore. |
 | Upload PPM in dry-run | `imports.upload` | Il Fornitore può caricare, ma la richiesta `apply` è forzata a dry-run. |

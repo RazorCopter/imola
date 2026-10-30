@@ -49,6 +49,7 @@ def test_fornitore_consuntiva_progetto_e_vede_utente_descrizione_e_saldo():
         "giornate": "2.5000",
         "descrizione": "Analisi architetturale",
         "utente": user.username,
+        "utente_id": user.pk,
         "origine": "MANUALE",
     }
     balances = client.get("/api/v1/projects/balances").json()["results"]

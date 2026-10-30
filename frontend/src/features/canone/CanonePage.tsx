@@ -11,9 +11,15 @@ import { KpiCard } from "@/components/KpiCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
+import { authorLabel, useTimesheetAuthors } from "@/features/timesheets/authors";
 import { ApiError, api } from "@/lib/api";
 import { formatDays, formatPercent, parseDays } from "@/lib/format";
-import { canCreateTimesheets, canEditTimesheets, canManageCanone } from "@/lib/permissions";
+import {
+  canAssignTimesheetAuthor,
+  canCreateTimesheets,
+  canEditTimesheets,
+  canManageCanone,
+} from "@/lib/permissions";
 
 interface CanoneRow {
   id: string;
@@ -48,6 +54,7 @@ interface TimesheetRow {
   giornate: string;
   descrizione: string;
   utente: string;
+  utente_id: number | null;
   origine: string;
 }
 interface Subactivity {
@@ -222,8 +229,16 @@ export function CanonePage() {
   const [activityDomain, setActivityDomain] = useState("");
   const [activityStatus, setActivityStatus] = useState("");
   const [timesheetActivity, setTimesheetActivity] = useState<string | null>(null);
-  const [timesheetForm, setTimesheetForm] = useState({ data: "", giornate: "", descrizione: "" });
+  /** `utente` vuoto: il consuntivo resta intestato a chi sta scrivendo. */
+  const [timesheetForm, setTimesheetForm] = useState({
+    data: "",
+    giornate: "",
+    descrizione: "",
+    utente: "",
+  });
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetRow | null>(null);
+  const canChooseAuthor = canAssignTimesheetAuthor(session);
+  const timesheetAuthors = useTimesheetAuthors(canChooseAuthor);
 
   const params = new URLSearchParams({ management: "1" });
   if (appliedFilters.semester) params.set("semester", appliedFilters.semester);
@@ -397,7 +412,7 @@ export function CanonePage() {
             timesheetForm,
           ),
     onSuccess: async () => {
-      setTimesheetForm({ data: "", giornate: "", descrizione: "" });
+      setTimesheetForm({ data: "", giornate: "", descrizione: "", utente: "" });
       setEditingTimesheet(null);
       setTimesheetActivity(null);
       setFormError("");
@@ -1174,6 +1189,7 @@ export function CanonePage() {
                                             data: "",
                                             giornate: "",
                                             descrizione: "",
+                                            utente: "",
                                           });
                                           setFormError("");
                                         }}
@@ -1222,6 +1238,26 @@ export function CanonePage() {
                                           })
                                         }
                                       />
+                                      {canChooseAuthor && (
+                                        <Select
+                                          className={fieldClass}
+                                          aria-label="Utente che consuntiva"
+                                          value={timesheetForm.utente}
+                                          onChange={(e) =>
+                                            setTimesheetForm({
+                                              ...timesheetForm,
+                                              utente: e.target.value,
+                                            })
+                                          }
+                                        >
+                                          <option value="">Io ({session?.username})</option>
+                                          {(timesheetAuthors.data?.results ?? []).map((author) => (
+                                            <option key={author.id} value={String(author.id)}>
+                                              {authorLabel(author)}
+                                            </option>
+                                          ))}
+                                        </Select>
+                                      )}
                                       <Button
                                         className={buttonClass}
                                         disabled={saveTimesheet.isPending}
@@ -1273,6 +1309,9 @@ export function CanonePage() {
                                                         data: entry.data,
                                                         giornate: entry.giornate,
                                                         descrizione: entry.descrizione,
+                                                        utente: entry.utente_id
+                                                          ? String(entry.utente_id)
+                                                          : "",
                                                       });
                                                     }}
                                                   >

@@ -10,7 +10,14 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
-from api import admin_views, auth_views, database_backup, domain_views, management_report
+from api import (
+    admin_views,
+    auth_views,
+    database_backup,
+    domain_views,
+    management_report,
+    timesheet_authors,
+)
 
 router = DefaultRouter()
 
@@ -80,6 +87,11 @@ urlpatterns = [
         "anomalies/<uuid:pk>/<str:action>",
         domain_views.AnomalyActionView.as_view(),
         name="anomaly-action",
+    ),
+    path(
+        "timesheets/authors",
+        timesheet_authors.TimesheetAuthorListView.as_view(),
+        name="timesheet-authors",
     ),
     path("projects", domain_views.ProjectListCreateView.as_view(), name="project-list-create"),
     path(

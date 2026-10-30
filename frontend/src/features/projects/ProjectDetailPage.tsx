@@ -1,4 +1,4 @@
-import { Button, Input } from "@/components/Controls";
+import { Button, Input, Select } from "@/components/Controls";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Tabs from "@radix-ui/react-tabs";
@@ -9,8 +9,14 @@ import { MetricLabel } from "@/components/InfoTooltip";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/UiState";
 import { useSession } from "@/features/auth/session";
+import { authorLabel, useTimesheetAuthors } from "@/features/timesheets/authors";
 import { api } from "@/lib/api";
-import { canCreateTimesheets, canEditTimesheets, canEditProjects } from "@/lib/permissions";
+import {
+  canAssignTimesheetAuthor,
+  canCreateTimesheets,
+  canEditTimesheets,
+  canEditProjects,
+} from "@/lib/permissions";
 import { EditProjectDialog, type ProjectFormData } from "./EditProjectDialog";
 import type { ProjectBalance } from "./ProjectsPage";
 
@@ -32,6 +38,7 @@ interface ProjectLedger {
     giornate: string;
     descrizione: string;
     utente: string;
+    utente_id: number | null;
   }[];
   wallet: {
     id: string;
@@ -55,6 +62,10 @@ export function ProjectDetailPage() {
   const [days, setDays] = useState("");
   const [description, setDescription] = useState("");
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
+  /** Vuoto: il consuntivo resta intestato a chi sta scrivendo. */
+  const [authorId, setAuthorId] = useState("");
+  const canChooseAuthor = canAssignTimesheetAuthor(session);
+  const authors = useTimesheetAuthors(canChooseAuthor);
 
   const query = useQuery({
     queryKey: ["projects", "balances"],
@@ -98,10 +109,12 @@ export function ProjectDetailPage() {
         giornate: days,
         descrizione: description,
         data: entryDate,
+        ...(canChooseAuthor && authorId ? { utente: authorId } : {}),
       }),
     onSuccess: async () => {
       setDays("");
       setDescription("");
+      setAuthorId("");
       setTimesheetOpen(false);
       await Promise.all([
         client.invalidateQueries({ queryKey: ["projects", projectId, "ledger"] }),
@@ -121,10 +134,12 @@ export function ProjectDetailPage() {
         giornate: days,
         descrizione: description,
         data: entryDate,
+        ...(canChooseAuthor && authorId ? { utente: authorId } : {}),
       }),
     onSuccess: async () => {
       setDays("");
       setDescription("");
+      setAuthorId("");
       setEditingTimesheetId(null);
       setTimesheetOpen(false);
       await refreshTimesheets();
@@ -346,6 +361,7 @@ export function ProjectDetailPage() {
                 setDays("");
                 setDescription("");
                 setEntryDate(new Date().toISOString().slice(0, 10));
+                setAuthorId("");
                 setTimesheetOpen((value) => !value);
               }}
               className="rounded bg-accent px-4 py-2 text-sm font-medium text-accent-foreground"
@@ -355,7 +371,11 @@ export function ProjectDetailPage() {
           )}
           {timesheetOpen && (
             <form
-              className="grid gap-3 rounded-lg border border-border bg-card p-4 md:grid-cols-[10rem_12rem_1fr_auto] md:items-end"
+              className={`grid gap-3 rounded-lg border border-border bg-card p-4 md:items-end ${
+                canChooseAuthor
+                  ? "md:grid-cols-[8rem_10rem_14rem_1fr_auto]"
+                  : "md:grid-cols-[10rem_12rem_1fr_auto]"
+              }`}
               onSubmit={(event) => {
                 event.preventDefault();
                 if (editingTimesheetId) updateTimesheet.mutate();
@@ -386,6 +406,24 @@ export function ProjectDetailPage() {
                   className="mt-1 w-full rounded border border-input bg-background px-3 py-2"
                 />
               </label>
+              {canChooseAuthor && (
+                <label className="text-sm">
+                  Utente
+                  <Select
+                    aria-label="Utente che consuntiva"
+                    value={authorId}
+                    onChange={(event) => setAuthorId(event.target.value)}
+                    className="mt-1 w-full rounded border border-input bg-background px-3 py-2"
+                  >
+                    <option value="">Io ({session?.username})</option>
+                    {(authors.data?.results ?? []).map((author) => (
+                      <option key={author.id} value={String(author.id)}>
+                        {authorLabel(author)}
+                      </option>
+                    ))}
+                  </Select>
+                </label>
+              )}
               <label className="text-sm">
                 Descrizione
                 <Input
@@ -470,6 +508,7 @@ export function ProjectDetailPage() {
                                 setDays(entry.giornate);
                                 setDescription(entry.descrizione);
                                 setEntryDate(entry.data);
+                                setAuthorId(entry.utente_id ? String(entry.utente_id) : "");
                                 setTimesheetOpen(true);
                               }}
                               className="rounded border border-border px-2 py-1 text-xs hover:bg-muted"

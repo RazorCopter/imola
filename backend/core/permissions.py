@@ -61,6 +61,10 @@ class CanEditTimesheets(HasCapability):
     capability = capabilities.EDIT_TIMESHEETS
 
 
+class CanAssignTimesheetAuthor(HasCapability):
+    capability = capabilities.ASSIGN_TIMESHEET_AUTHOR
+
+
 class ReadOnlyOrCanCreateProjects(IsAuthenticatedRole):
     def has_permission(self, request, view) -> bool:
         if not super().has_permission(request, view):
