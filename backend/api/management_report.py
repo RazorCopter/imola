@@ -60,7 +60,7 @@ class ManagementReportView(APIView):
                     status=AllocationStatus.APERTA, is_technical=False, activity__is_technical=False
                 )
             )
-            .select_related("activity", "activity__client_owner", "wallet_year")
+            .select_related("activity", "activity__client_owner", "assignee", "wallet_year")
             .order_by("activity__code", "wallet_year__year")
         )
         wallet = []
@@ -69,7 +69,11 @@ class ManagementReportView(APIView):
                 {
                     "code": a.activity.code,
                     "title": a.activity.title,
+                    # Il referente BMED sta sull'attivita e di norma e vuoto: le attivita
+                    # create dal wallet non lo chiedono. Chi risponde delle giornate e
+                    # l'assegnatario dell'allocazione, che e anche quello che l'elenco mostra.
                     "owner": a.activity.client_owner.full_name if a.activity.client_owner else None,
+                    "assignee": a.assignee.full_name if a.assignee else None,
                     "year": a.wallet_year.year,
                     "allocated": str(a.allocated_days),
                     "consumed": str(a.consumed_days),

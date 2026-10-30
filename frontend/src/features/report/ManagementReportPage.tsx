@@ -16,6 +16,7 @@ type Wallet = {
   code: string;
   title: string;
   owner: string | null;
+  assignee: string | null;
   year: number;
   allocated: string;
   consumed: string;
@@ -540,14 +541,14 @@ export function ManagementReportPage() {
           <Table
             headings={[
               "Attività / annualità",
-              "Referente BMED",
+              "Assegnatario",
               "Riservate gg",
               "Erose / residue gg",
               "Consumo riserva",
             ]}
             rows={data.wallet.map((x) => [
               <Identity title={x.title} subtitle={`${x.code} / ${x.year}`} />,
-              x.owner || "Non assegnato",
+              x.assignee || x.owner || "Non assegnato",
               num(x.allocated),
               <Identity title={num(x.consumed)} subtitle={`${num(x.remaining)} residue`} />,
               <Effort consumed={x.consumed} total={x.allocated} />,

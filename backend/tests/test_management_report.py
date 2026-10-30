@@ -38,7 +38,10 @@ def test_report_scope_e_valori():
         actual_closure_date=date(2026, 1, 1),
     )
     activity = WalletActivityFactory(client_owner=owner)
-    allocation = WalletAllocationFactory(activity=activity, allocated_days=Decimal("8"))
+    architect = PersonFactory(full_name="Nicoletti Pietro")
+    allocation = WalletAllocationFactory(
+        activity=activity, assignee=architect, allocated_days=Decimal("8")
+    )
     TimesheetEntryFactory(wallet_allocation=allocation, days=Decimal("3"))
     canone = CanoneFactory(start_date=date(2026, 7, 1), end_date=date(2026, 12, 31))
     sub = CanoneSubactivityFactory(canone=canone, office="CROSS", reserved_days=Decimal("10"))
@@ -56,6 +59,11 @@ def test_report_scope_e_valori():
     assert not any(x["code"] == "P-CHIUSO" for x in body["projects"])
     assert Decimal(body["wallet"][0]["consumed"]) == 3
     assert Decimal(body["wallet"][0]["remaining"]) == 5
+    # Chi risponde delle giornate e l'assegnatario dell'allocazione, non solo il
+    # referente BMED dell'attivita, che per le attivita create dal wallet resta vuoto.
+    assert body["wallet"][0]["assignee"] == "Nicoletti Pietro"
+    assert body["wallet"][0]["owner"] == "Mario Rossi"
+
     assert body["domains"][0]["domain"] == "CROSS"
     assert Decimal(body["domains"][0]["remaining"]) == 6
     assert Decimal(body["domains"][0]["consumed"]) == 9
@@ -82,6 +90,21 @@ def test_report_annual_costs_exclude_history_and_future():
     economics = body["economics"]
     assert Decimal(economics["kpi"]["total_cost"]) == 500
     assert {r["source"]: Decimal(r["cost"]) for r in economics["by_source"]} == {
-        "PROJECT": Decimal("300"), "WALLET": Decimal("200")
+        "PROJECT": Decimal("300"),
+        "WALLET": Decimal("200"),
     }
     assert [r["month"] for r in economics["monthly_trend"]] == ["2026-02", "2026-03"]
+
+
+def test_il_report_wallet_mostra_l_assegnatario_anche_senza_referente_bmed():
+    client, _ = make_client_for_role(roles.ADMIN)
+    architect = PersonFactory(full_name="Gabriele Cataldo")
+    # Attivita creata dal wallet: nessun referente BMED, com'e nei dati reali.
+    activity = WalletActivityFactory(code="ACT-SENZA-REFERENTE", client_owner=None)
+    WalletAllocationFactory(activity=activity, assignee=architect, allocated_days=Decimal("4"))
+
+    body = client.get("/api/v1/admin/management-report").json()
+
+    row = next(x for x in body["wallet"] if x["code"] == "ACT-SENZA-REFERENTE")
+    assert row["owner"] is None
+    assert row["assignee"] == "Gabriele Cataldo"
