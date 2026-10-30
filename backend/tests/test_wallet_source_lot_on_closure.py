@@ -19,7 +19,7 @@ from core import roles
 from projects.models import ContractType, TimesheetStatus
 from tests.factories import PersonFactory, ProjectFactory, TimesheetEntryFactory
 from tests.test_roles_object_permissions import make_client_for_role
-from wallet.models import WalletAllocation, WalletSourceLot
+from wallet.models import WalletAllocation, WalletSourceLot, WalletYear
 from wallet.services import ensure_source_lot
 
 pytestmark = pytest.mark.django_db
@@ -174,6 +174,34 @@ def test_il_residuo_di_una_chiusura_passata_alimenta_il_wallet_in_uso():
     balance = client.get("/api/v1/wallet/2026/balance").json()
     assert balance["capacita_totale_origini"] == "1.6300"
     assert balance["residuo_wallet_non_allocato"] == "1.6300"
+
+
+def test_un_lotto_non_ancora_speso_si_riallinea_al_wallet_che_lo_spende():
+    """Un lotto creato nell'anno sbagliato non deve restare invisibile."""
+    client, _ = make_client_for_role(roles.ADMIN)
+    project = ProjectFactory(
+        code="PRJ-LOTTO-ANNO-SBAGLIATO",
+        budget_days=Decimal("2.0000"),
+        timesheet_status=TimesheetStatus.CHIUSO,
+        actual_closure_date=date(2025, 12, 31),
+    )
+    wallet_2025 = WalletYear.objects.create(year=2025)
+    lot = WalletSourceLot.objects.create(
+        wallet_year=wallet_2025,
+        source_project=project,
+        source_year=2025,
+        capacity_days=Decimal("2.0000"),
+        effective_date=date(2025, 12, 31),
+        external_ref="AUTO-CHIUSURA:PRJ-LOTTO-ANNO-SBAGLIATO:2025",
+    )
+    assert client.get("/api/v1/wallet/2026/balance").json()["capacita_totale_origini"] == "0.0000"
+
+    ensure_source_lot(project, today=date(2026, 10, 30))
+
+    lot.refresh_from_db()
+    assert lot.wallet_year.year == 2026
+    assert lot.source_year == 2025
+    assert client.get("/api/v1/wallet/2026/balance").json()["capacita_totale_origini"] == "2.0000"
 
 
 def test_niente_lotto_per_residui_scaduti_canoni_o_capienza_nulla():

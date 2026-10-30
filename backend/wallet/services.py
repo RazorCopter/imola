@@ -107,9 +107,18 @@ def ensure_source_lot(project, *, today=None) -> WalletSourceLot | None:
     existing = WalletSourceLot.objects.select_for_update().filter(source_project=project).first()
     if existing is not None:
         committed = source_lot_totals(existing)[0]
+        fields: list[str] = []
         if committed <= ZERO and existing.capacity_days != capacity:
             existing.capacity_days = capacity
-            existing.save(update_fields=["capacity_days", "updated_at", "version"])
+            fields.append("capacity_days")
+        # Finche nessuna tranche ha impegnato giornate il lotto puo ancora cambiare wallet:
+        # cosi un lotto finito nell'anno sbagliato si riallinea al wallet che lo spende,
+        # invece di restare invisibile e richiedere una correzione a mano.
+        if committed <= ZERO and existing.wallet_year.year != wallet_year_number:
+            existing.wallet_year, _ = WalletYear.objects.get_or_create(year=wallet_year_number)
+            fields.append("wallet_year")
+        if fields:
+            existing.save(update_fields=[*fields, "updated_at", "version"])
             refresh_source_lot_status(existing)
         return existing
     if capacity <= ZERO:
