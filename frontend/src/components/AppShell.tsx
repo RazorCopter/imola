@@ -63,7 +63,9 @@ export function AppShell({ onOpenCommandPalette }: { onOpenCommandPalette: () =>
     (location.pathname === "/amministrazione" ? "Amministrazione" : "nav.dashboard");
 
   return (
-    <div className="flex h-full">
+    // `overflow-hidden`: la finestra non deve avere una seconda barra di scorrimento
+    // oltre a quella di `main`, altrimenti scorrendo si porta via header e sidebar.
+    <div className="flex h-full overflow-hidden">
       <aside
         className={cn(
           "flex shrink-0 flex-col border-r border-border bg-card transition-[width]",
@@ -211,7 +213,10 @@ export function AppShell({ onOpenCommandPalette }: { onOpenCommandPalette: () =>
           </DropdownMenu.Root>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-auto p-4 md:p-7">
+        {/* `relative`: ancora qui gli elementi in position:absolute dei contenuti (per
+            esempio le etichette .sr-only), che altrimenti si riferirebbero al viewport e
+            sfuggirebbero a questo scroller allungando il documento. */}
+        <main className="relative min-h-0 flex-1 overflow-auto p-4 md:p-7">
           <div className="mx-auto w-full max-w-[1600px]">
             <Outlet />
           </div>

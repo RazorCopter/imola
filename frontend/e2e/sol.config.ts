@@ -10,6 +10,9 @@ export default defineConfig({
   reporter: [["list"], ["json", { outputFile: `${artifacts}/results.json` }]],
   outputDir: `${artifacts}/test-results`,
   use: {
+    // PW_CHANNEL permette di girare con un browser di sistema (es. msedge) quando i
+    // binari scaricati da Playwright non sono disponibili.
+    ...(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {}),
     actionTimeout: 10000,
     navigationTimeout: 15000,
     baseURL: "http://127.0.0.1:5176",
