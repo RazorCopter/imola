@@ -40,6 +40,89 @@ def refresh_source_lot_status(lot: WalletSourceLot) -> None:
         lot.save(update_fields=["status", "updated_at", "version"])
 
 
+AUTO_LOT_PREFIX = "AUTO-CHIUSURA"
+
+
+def wallet_capacity_of(project) -> Decimal:
+    """Giornate del progetto che entrano nel wallet alla chiusura.
+
+    E' la stessa grandezza che `domain.wallet_balance` attribuisce al progetto quando non
+    esistono lotti: la quota esplicitamente rilasciata, se dichiarata, altrimenti il budget
+    non consumato in diretta. Le allocazioni FIFO non hanno progetto di origine, quindi non
+    vanno sottratte qui: a scalare il lotto pensano le tranche di finanziamento.
+    """
+    from timesheets.models import TimesheetEntry
+
+    declared = quantize_days(project.released_to_wallet_days or ZERO)
+    if declared > ZERO:
+        return declared
+    direct = (
+        TimesheetEntry.objects.filter(project=project).aggregate(total=Sum("days"))["total"] or ZERO
+    )
+    return quantize_days(max(ZERO, project.budget_days - quantize_days(direct)))
+
+
+@transaction.atomic
+def ensure_source_lot(project, *, today=None) -> WalletSourceLot | None:
+    """Crea (o aggiorna) il lotto wallet del residuo di un progetto chiuso.
+
+    Senza questo lotto la capienza del wallet resta una grandezza solo calcolata: il
+    bilancio la mostra partendo dai residui dei progetti chiusi, ma `reserve_fifo` non
+    trova nulla da prelevare e ogni nuovo utilizzo viene rifiutato per capienza
+    insufficiente. Il lotto rende quel residuo una fonte reale e tracciabile.
+
+    Idempotente: un progetto ha un solo lotto per anno wallet (vincolo di unicita). La
+    capienza viene riallineata solo finche nessuna tranche ha impegnato giornate, perche
+    oltre quel punto ridurla falsificherebbe utilizzi gia registrati.
+    """
+    from django.utils import timezone
+
+    from core.models import AppSettings
+    from domain.residuals import residual_validity
+    from projects.models import ContractType, TimesheetStatus
+    from wallet.models import WalletYear
+
+    if project.contract_type == ContractType.CANONE:
+        return None
+    if project.timesheet_status != TimesheetStatus.CHIUSO or not project.actual_closure_date:
+        return None
+
+    settings_obj = AppSettings.get_solo()
+    validity = residual_validity(
+        timesheet_status=project.timesheet_status,
+        closure_date=project.actual_closure_date,
+        today=today or timezone.localdate(),
+        years_valid_after_closure=settings_obj.residual_years_after_closure,
+        expiring_window_days=settings_obj.residual_expiring_window_days,
+    )
+    if not validity.usable:
+        return None
+
+    capacity = wallet_capacity_of(project)
+    year = project.actual_closure_date.year
+    existing = WalletSourceLot.objects.select_for_update().filter(source_project=project).first()
+    if existing is not None:
+        committed = source_lot_totals(existing)[0]
+        if committed <= ZERO and existing.capacity_days != capacity:
+            existing.capacity_days = capacity
+            existing.save(update_fields=["capacity_days", "updated_at", "version"])
+            refresh_source_lot_status(existing)
+        return existing
+    if capacity <= ZERO:
+        return None
+
+    wallet_year, _ = WalletYear.objects.get_or_create(year=year)
+    return WalletSourceLot.objects.create(
+        wallet_year=wallet_year,
+        source_project=project,
+        source_year=year,
+        capacity_days=capacity,
+        effective_date=project.actual_closure_date,
+        external_ref=f"{AUTO_LOT_PREFIX}:{project.code}:{year}",
+        notes="Lotto creato alla chiusura del progetto.",
+    )
+
+
 @transaction.atomic
 def reserve_fifo(
     allocation: WalletAllocation,

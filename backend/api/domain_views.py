@@ -55,6 +55,7 @@ from domain.dashboard import dashboard_summary
 from domain.reconciliation import reconcile, reconciliation_summary
 from domain.residuals import residual_explanation, residual_validity
 from domain.wallet_balance import wallet_by_assignee, wallet_flow, wallet_year_balance
+from wallet.services import ensure_source_lot
 
 
 class DomainResponseSerializer(serializers.Serializer):
@@ -1705,6 +1706,9 @@ class ProjectDetailUpdateView(DocumentedAPIView):
         serializer.is_valid(raise_exception=True)
         project = serializer.save()
         sync_project_billing_schedule(project, user=request.user)
+        # Chiudere un progetto conferisce il suo residuo al wallet: senza il lotto la
+        # capienza resterebbe solo calcolata e il FIFO non troverebbe nulla da prelevare.
+        ensure_source_lot(project)
         return Response(
             project_detail_payload(project, request.user), headers={"ETag": make_etag(project)}
         )
@@ -1809,6 +1813,7 @@ class ProjectConfirmReviewView(DocumentedAPIView):
             ):
                 a.resolve("Data di chiusura confermata dalla coda di revisione.", request.user)
                 a.save()
+            ensure_source_lot(project)
         return Response(
             {
                 "id": project.id,
@@ -1852,6 +1857,7 @@ class ProjectValidateClosureView(DocumentedAPIView):
         project.wallet_source_lots.filter(status=SourceLotStatus.CHIUSURA_DA_VALIDARE).update(
             status=SourceLotStatus.CHIUSO
         )
+        ensure_source_lot(project)
         _audit_mutation(
             request,
             "project.closure.validate",
