@@ -330,17 +330,14 @@ export function CostAnalysisPage() {
               </p>
             )}
           </section>
-          <div className="grid gap-5 xl:grid-cols-2">
-            <AggregationTable
-              title={
-                filters.includeCanone
-                  ? "Dettaglio per progetto e canone"
-                  : t("costAnalysis.byProject")
-              }
-              rows={projectRows}
-            />
-            <AggregationTable title={t("costAnalysis.bySupplier")} rows={data.by_supplier} />
-          </div>
+          <AggregationTable
+            title={
+              filters.includeCanone
+                ? "Dettaglio per progetto e canone"
+                : t("costAnalysis.byProject")
+            }
+            rows={projectRows}
+          />
           <AggregationTable
             title={t("costAnalysis.bySource")}
             rows={data.by_source.map((row) => ({
