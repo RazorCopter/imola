@@ -17,6 +17,7 @@ from api import (
     domain_views,
     management_report,
     timesheet_authors,
+    wallet_timesheets,
 )
 
 router = DefaultRouter()
@@ -27,8 +28,16 @@ urlpatterns = [
     path("auth/session", auth_views.SessionView.as_view(), name="session"),
     path("settings", domain_views.SettingsView.as_view(), name="settings"),
     path("cost-analysis", domain_views.CostAnalysisView.as_view(), name="cost-analysis"),
-    path("admin/database/backup", database_backup.DatabaseBackupView.as_view(), name="database-backup"),
-    path("admin/database/restore", database_backup.DatabaseRestoreView.as_view(), name="database-restore"),
+    path(
+        "admin/database/backup",
+        database_backup.DatabaseBackupView.as_view(),
+        name="database-backup",
+    ),
+    path(
+        "admin/database/restore",
+        database_backup.DatabaseRestoreView.as_view(),
+        name="database-restore",
+    ),
     path("admin/imports/seed", admin_views.SeedImportView.as_view(), name="admin-seed-import"),
     path("admin/imports/ppm", admin_views.PpmImportView.as_view(), name="admin-ppm-import"),
     path("admin/imports", admin_views.ImportHistoryView.as_view(), name="admin-import-history"),
@@ -79,7 +88,11 @@ urlpatterns = [
         name="admin-reset-data-slash",
     ),
     path("dashboard", domain_views.DashboardView.as_view(), name="dashboard"),
-    path("admin/management-report", management_report.ManagementReportView.as_view(), name="management-report"),
+    path(
+        "admin/management-report",
+        management_report.ManagementReportView.as_view(),
+        name="management-report",
+    ),
     path("search", domain_views.CommandSearchView.as_view(), name="command-search"),
     path("checks/run", domain_views.ChecksRunView.as_view(), name="checks-run"),
     path("anomalies", domain_views.AnomalyListView.as_view(), name="anomaly-list"),
@@ -144,6 +157,16 @@ urlpatterns = [
         "allocations/<uuid:pk>/",
         domain_views.WalletAllocationDetailUpdateView.as_view(),
         name="allocation-detail-slash",
+    ),
+    path(
+        "wallet/allocations/<uuid:pk>/timesheets",
+        wallet_timesheets.WalletAllocationTimesheetListView.as_view(),
+        name="wallet-allocation-timesheet-list",
+    ),
+    path(
+        "wallet/allocations/<uuid:pk>/timesheets/<uuid:entry_pk>",
+        wallet_timesheets.WalletAllocationTimesheetDetailView.as_view(),
+        name="wallet-allocation-timesheet-detail",
     ),
     path(
         "allocations/<uuid:pk>/adjust",

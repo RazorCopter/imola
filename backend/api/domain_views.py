@@ -30,6 +30,7 @@ from api.project_serializers import (
     ProjectUpdateSerializer,
 )
 from api.timesheet_authors import resolve_author
+from api.wallet_timesheets import active_entries, entry_payload
 from canone.models import Canone, CanoneSubactivity
 from core import capabilities
 from core.exceptions import DomainError, PreconditionRequired, StaleResource
@@ -2211,6 +2212,7 @@ class WalletAllocationDetailUpdateView(DocumentedAPIView):
             }
             for entry in alloc.timesheet_entries.order_by("-period", "-created_at")
         ]
+        consuntivi = [entry_payload(entry) for entry in active_entries(alloc)]
         flow_detail = next(
             row for row in wallet_flow(alloc.wallet_year.year) if row["id"] == alloc.id
         )
@@ -2246,6 +2248,7 @@ class WalletAllocationDetailUpdateView(DocumentedAPIView):
             "activity_kind": alloc.activity.kind,
             "year": alloc.wallet_year.year,
             "timesheet_entries": entries,
+            "consuntivi": consuntivi,
             "funding": flow_detail.get("fonti_fifo", []),
         }
         return Response(payload, headers={"ETag": make_etag(alloc)})

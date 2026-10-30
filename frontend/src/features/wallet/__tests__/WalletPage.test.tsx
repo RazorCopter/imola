@@ -99,6 +99,17 @@ const detail = {
   activity_code: "ACT-OPEN",
   activity_title: "Attività aperta",
   year: new Date().getFullYear(),
+  consuntivi: [
+    {
+      id: "ts-1",
+      data: "2026-10-20",
+      giornate: "4.0000",
+      descrizione: "Analisi settimanale",
+      utente: "Mario Rossi",
+      utente_id: 7,
+      origine: "MANUALE",
+    },
+  ],
   funding: [
     {
       ordine: 1,
@@ -123,7 +134,8 @@ function arrange() {
   vi.mocked(api.get).mockImplementation((path: string) => {
     if (path.endsWith("/flow")) return Promise.resolve({ results: [open, closed] });
     if (path.endsWith("/assignees")) return Promise.resolve({ results: [] });
-    if (path.includes("/allocations/open/")) return Promise.resolve(detail);
+    if (path.includes("/allocations/open")) return Promise.resolve(detail);
+    if (path === "/timesheets/authors") return Promise.resolve({ results: [] });
     if (path.includes("allocation-options"))
       return Promise.resolve({
         projects: [
@@ -198,19 +210,61 @@ describe("WalletPage Tranche C", () => {
   it("seleziona la riga con tastiera e distingue i residui", async () => {
     arrange();
     const row = await screen.findByTestId("allocation-row-open");
+    // I residui delle origini stanno nella pagina di elenco, non nella voce aperta.
+    expect(screen.getByText("IM25-EXP")).toBeInTheDocument();
+
     fireEvent.keyDown(row, { key: "Enter" });
+    await userEvent.click(await screen.findByRole("tab", { name: "Modifica" }));
     expect(await screen.findByText("Residuo spendibile origine")).toBeInTheDocument();
     expect(screen.getAllByText("Residuo allocazione").length).toBeGreaterThan(0);
-    expect(screen.getByText("IM25-EXP")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Riduci al consumato" })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Chiudi dettaglio" }));
+    expect(screen.queryByText("IM25-EXP")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "← Tutte le allocazioni" }));
     expect(screen.queryByText("Residuo spendibile origine")).not.toBeInTheDocument();
+    expect(screen.getByText("IM25-EXP")).toBeInTheDocument();
+  });
+
+  it("registra un consuntivo sulla voce e la chiude rilasciando le giornate", async () => {
+    const user = userEvent.setup();
+    capabilities = ["wallet.edit", "accounting.adjust", "timesheets.create"];
+    arrange();
+    vi.mocked(api.post).mockResolvedValue({ id: "open" });
+    vi.mocked(api.patch).mockResolvedValue({ id: "open" });
+
+    await user.click(await screen.findByTestId("allocation-row-open"));
+
+    // La voce aperta prende la pagina: la dashboard del wallet si ritira.
+    expect(screen.queryByText("Capacità Monte Wallet")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Nuovo utilizzo" })).not.toBeInTheDocument();
+    expect(await screen.findByText("Analisi settimanale")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "CONSUNTIVA" }));
+    await user.type(screen.getByLabelText("Giornate consuntivo"), "2");
+    await user.type(screen.getByLabelText("Descrizione consuntivo"), "Sviluppo");
+    await user.click(screen.getByRole("button", { name: "Registra" }));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith(
+        "/wallet/allocations/open/timesheets",
+        expect.objectContaining({ giornate: "2", descrizione: "Sviluppo" }),
+      ),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Chiudi e rilascia" }));
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith(
+        "/wallet/allocations/open",
+        expect.objectContaining({ status: "CHIUSA" }),
+      ),
+    );
   });
 
   it("permette il dettaglio read-only senza wallet.edit", async () => {
     capabilities = [];
     arrange();
     await userEvent.click(await screen.findByTestId("allocation-row-open"));
+    await userEvent.click(await screen.findByRole("tab", { name: "Dettaglio" }));
     expect(await screen.findByText(/Consultazione/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Salva" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Nuovo utilizzo" })).not.toBeInTheDocument();
@@ -225,6 +279,7 @@ describe("WalletPage Tranche C", () => {
     expect(screen.getByText(/attribuite automaticamente in FIFO/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Annulla" }));
     await user.click(await screen.findByTestId("allocation-row-open"));
+    await user.click(await screen.findByRole("tab", { name: "Modifica" }));
     expect(await screen.findByRole("button", { name: "Elimina allocazione" })).toBeInTheDocument();
   });
 
@@ -233,6 +288,7 @@ describe("WalletPage Tranche C", () => {
     const invalidate = vi.spyOn(client, "invalidateQueries");
     vi.mocked(api.patch).mockResolvedValue({ ...detail, notes: "aggiornata", version: 2 });
     await userEvent.click(await screen.findByTestId("allocation-row-open"));
+    await userEvent.click(await screen.findByRole("tab", { name: "Modifica" }));
     const save = await screen.findByRole("button", { name: "Salva" });
     expect(save).toHaveClass("bg-emerald-700");
     await userEvent.clear(screen.getByLabelText("Note"));
@@ -259,6 +315,7 @@ describe("WalletPage Tranche C", () => {
     const user = userEvent.setup();
 
     await user.click(await screen.findByTestId("allocation-row-open"));
+    await user.click(await screen.findByRole("tab", { name: "Modifica" }));
     expect(await screen.findByText(/Ordine effettivo di erosione/)).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Progetto origine" })).toBeInTheDocument();
     expect(screen.getByText("IM25-OLD")).toBeInTheDocument();
