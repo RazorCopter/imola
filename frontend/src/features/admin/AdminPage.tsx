@@ -9,6 +9,7 @@ import { AlertTriangle } from "lucide-react";
 import { ErrorState, LoadingState } from "@/components/UiState";
 import { API_BASE, ApiError, api } from "@/lib/api";
 import { useSession } from "@/features/auth/session";
+import { TIMESHEET_AUTHORS_KEY } from "@/features/timesheets/authors";
 import { canResetData } from "@/lib/permissions";
 import { DeleteDatabaseDialog } from "./DeleteDatabaseDialog";
 
@@ -447,7 +448,12 @@ function UsersPanel({ data }: { data: UsersPayload }) {
   const refresh = async () => {
     setEditing(null);
     setMessage("Operazione completata.");
-    await queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
+      // Un utente nuovo (o un ruolo cambiato) muove anche gli autori proponibili
+      // nei form di consuntivazione.
+      queryClient.invalidateQueries({ queryKey: TIMESHEET_AUTHORS_KEY }),
+    ]);
   };
   const action = useMutation({
     mutationFn: async ({

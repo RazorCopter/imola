@@ -13,12 +13,17 @@ export interface TimesheetAuthor {
  * Utenti indicabili come autori di un consuntivo. L'endpoint è riservato ad Admin:
  * si interroga solo quando la sessione ha `timesheets.assign_author`.
  */
+/** Invalidata dal pannello utenti dell'area Admin dopo ogni creazione o modifica. */
+export const TIMESHEET_AUTHORS_KEY = ["timesheets", "authors"] as const;
+
 export function useTimesheetAuthors(enabled: boolean) {
   return useQuery({
-    queryKey: ["timesheets", "authors"],
+    queryKey: TIMESHEET_AUTHORS_KEY,
     queryFn: () => api.get<{ results: TimesheetAuthor[] }>("/timesheets/authors"),
     enabled,
-    staleTime: 5 * 60 * 1000,
+    // Niente staleTime: un utente appena creato deve comparire subito nel select,
+    // senza aspettare la scadenza di una cache. La lista e corta.
+    refetchOnMount: "always",
   });
 }
 
