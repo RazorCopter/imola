@@ -45,8 +45,18 @@ interface AllocationDetail {
 
 const buttonClass =
   "rounded-md border border-input px-3 py-2 text-sm hover:bg-muted disabled:opacity-50";
-const primaryButtonClass =
-  "rounded-md bg-accent px-4 py-2 text-sm font-semibold uppercase tracking-wide text-accent-foreground hover:bg-accent/90 disabled:opacity-50";
+// Comandi della voce: ognuno con il colore che gli spetta nel foglio di stile, cosi il
+// peso visivo dice da solo cosa fa. Viola accento per tornare indietro, verde per
+// registrare, arancio per modificare, rosso per l'azione che chiude e rilascia.
+const backButtonClass =
+  "rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent/90";
+const consuntivaButtonClass =
+  "rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-white hover:bg-emerald-800 disabled:opacity-50";
+const editButtonClass =
+  "rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 disabled:opacity-50";
+const closeButtonClass =
+  "rounded-md bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50";
+const primaryButtonClass = consuntivaButtonClass;
 const fieldClass = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 
 function message(error: unknown): string {
@@ -158,29 +168,29 @@ export function AllocationFocus({
   return (
     <section className="space-y-4 rounded-lg border bg-card p-4" aria-label="Voce di wallet">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button type="button" className={buttonClass} onClick={onBack}>
+        <Button type="button" className={backButtonClass} onClick={onBack}>
           ← Tutte le allocazioni
         </Button>
         <div className="flex flex-wrap items-center gap-2">
           {canConsuntiva && !closed && (
-            <Button type="button" className={primaryButtonClass} onClick={openForm}>
+            <Button type="button" className={consuntivaButtonClass} onClick={openForm}>
               CONSUNTIVA
+            </Button>
+          )}
+          {canEdit && (
+            <Button type="button" className={editButtonClass} onClick={() => setTab(detailTab)}>
+              Modifica
             </Button>
           )}
           {canEdit && !closed && (
             <Button
               type="button"
-              className={buttonClass}
+              className={closeButtonClass}
               disabled={closeAllocation.isPending}
               onClick={() => closeAllocation.mutate()}
               title="Chiude la voce e restituisce al wallet le giornate riservate non usate"
             >
               Chiudi e rilascia
-            </Button>
-          )}
-          {canEdit && (
-            <Button type="button" className={buttonClass} onClick={() => setTab(detailTab)}>
-              Modifica
             </Button>
           )}
         </div>
