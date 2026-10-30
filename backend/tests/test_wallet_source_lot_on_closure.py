@@ -14,6 +14,7 @@ from io import StringIO
 
 import pytest
 from django.core.management import call_command
+from django.utils import timezone
 
 from core import roles
 from projects.models import ContractType, TimesheetStatus
@@ -244,6 +245,7 @@ def test_comando_di_allineamento_crea_i_lotti_mancanti_ed_e_idempotente():
     dry = StringIO()
     call_command("sync_wallet_source_lots", "--dry-run", stdout=dry)
     assert "PRJ-PREESISTENTE" in dry.getvalue()
+    assert "Lotti creati: 1" in dry.getvalue()
     assert not WalletSourceLot.objects.exists()
 
     out = StringIO()
@@ -254,4 +256,35 @@ def test_comando_di_allineamento_crea_i_lotti_mancanti_ed_e_idempotente():
     again = StringIO()
     call_command("sync_wallet_source_lots", stdout=again)
     assert "Lotti creati: 0" in again.getvalue()
+    assert "gia a posto" in again.getvalue()
     assert WalletSourceLot.objects.count() == 1
+
+
+def test_il_dry_run_segnala_anche_i_lotti_da_spostare():
+    """Un lotto nell'anno sbagliato non deve passare per "invariato"."""
+    project = ProjectFactory(
+        code="PRJ-DA-SPOSTARE",
+        budget_days=Decimal("2.0000"),
+        timesheet_status=TimesheetStatus.CHIUSO,
+        actual_closure_date=date(2025, 12, 31),
+    )
+    WalletSourceLot.objects.create(
+        wallet_year=WalletYear.objects.create(year=2025),
+        source_project=project,
+        source_year=2025,
+        capacity_days=Decimal("2.0000"),
+        effective_date=date(2025, 12, 31),
+        external_ref="AUTO-CHIUSURA:PRJ-DA-SPOSTARE:2025",
+    )
+
+    dry = StringIO()
+    call_command("sync_wallet_source_lots", "--dry-run", stdout=dry)
+    assert "spostato dal wallet 2025" in dry.getvalue()
+    assert "corretti: 1" in dry.getvalue()
+    # Il dry-run non scrive: il lotto resta dov'era.
+    assert WalletSourceLot.objects.get(source_project=project).wallet_year.year == 2025
+
+    call_command("sync_wallet_source_lots", stdout=StringIO())
+    moved = WalletSourceLot.objects.get(source_project=project)
+    assert moved.wallet_year.year == timezone.localdate().year
+    assert moved.source_year == 2025
