@@ -1,5 +1,5 @@
 # Stack di produzione Imola.
-# Configurabile tramite variabili ambiente Portainer.
+# Nginx Proxy Manager gestisce l'esposizione HTTP/HTTPS.
 # I dati persistenti risiedono sotto SL_DATA_DIR.
 
 services:
@@ -82,17 +82,6 @@ services:
       - -c
       - "python manage.py migrate --noinput && python manage.py collectstatic --noinput && python manage.py bootstrap_roles && exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2 --timeout 120 --access-logfile - --error-logfile -"
 
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/auth/session')\" >/dev/null 2>&1 || test $$? -eq 1"
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-
 
   frontend:
     build:
@@ -130,12 +119,19 @@ services:
       frontend:
         condition: service_healthy
 
-    ports:
-      - "${SL_HTTP_PORT:-8080}:8080"
+    # Nessuna porta pubblicata sull'host.
+    # Nginx Proxy Manager raggiunge direttamente nginx:8080
+    # attraverso la network Docker "proxy".
+    expose:
+      - "8080"
 
     volumes:
       - ${SL_DATA_DIR:-./.docker-data}/static:/srv/static:ro
       - ${SL_DATA_DIR:-./.docker-data}/media:/srv/media:ro
+
+    networks:
+      - default
+      - proxy
 
     healthcheck:
       test:
@@ -147,3 +143,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
+
+networks:
+
+  # Network creata e gestita esternamente.
+  # Vi sono già Nginx Proxy Manager e Portainer.
+  proxy:
+    external: true
