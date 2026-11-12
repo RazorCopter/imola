@@ -16,6 +16,7 @@ from api import (
     database_backup,
     domain_views,
     management_report,
+    operational_import_views,
     timesheet_authors,
     wallet_timesheets,
 )
@@ -268,6 +269,46 @@ urlpatterns = [
     path("export/json", domain_views.ExportJsonView.as_view(), name="export-json"),
     path("export/excel", domain_views.ExportExcelView.as_view(), name="export-excel"),
     path("export/csv/<str:entity>", domain_views.ExportCsvView.as_view(), name="export-csv"),
+    path(
+        "imports/operational/preview",
+        operational_import_views.OperationalImportPreviewView.as_view(),
+        name="operational-import-preview",
+    ),
+    path(
+        "imports/operational/semestre",
+        operational_import_views.CanoneSemesterHintView.as_view(),
+        name="operational-import-semester",
+    ),
+    path(
+        "imports/operational/<uuid:pk>/mappings",
+        operational_import_views.OperationalImportMappingsView.as_view(),
+        name="operational-import-mappings",
+    ),
+    path(
+        "imports/operational/<uuid:pk>/apply",
+        operational_import_views.OperationalImportApplyView.as_view(),
+        name="operational-import-apply",
+    ),
+    path(
+        "imports/operational/<uuid:pk>",
+        operational_import_views.OperationalImportDetailView.as_view(),
+        name="operational-import-detail",
+    ),
+    path(
+        "imports/operational",
+        operational_import_views.OperationalImportListView.as_view(),
+        name="operational-import-list",
+    ),
+    path(
+        "imports/mappings/<uuid:pk>",
+        operational_import_views.ImportMappingDetailView.as_view(),
+        name="import-mapping-detail",
+    ),
+    path(
+        "imports/mappings",
+        operational_import_views.ImportMappingListCreateView.as_view(),
+        name="import-mapping-list",
+    ),
     path("schema", SpectacularAPIView.as_view(), name="schema"),
     path("docs", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
     path("", include(router.urls)),

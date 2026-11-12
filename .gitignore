@@ -5,6 +5,9 @@ data/ppm/*
 !data/ppm/.gitkeep
 data/uploads/
 backend/media/
+# estratti operativi settimanali: nominativi e descrizioni di lavoro reali
+docs/Andamento_operativo_*.xlsx
+docs/*-Situazione.xlsx
 !data/seed/.gitkeep
 
 # python

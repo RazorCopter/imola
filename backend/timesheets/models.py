@@ -25,6 +25,7 @@ class TimesheetSource(models.TextChoices):
     MANUALE = "MANUALE", "Inserimento manuale"
     SEED_INIZIALE = "SEED_INIZIALE", "Seed iniziale"
     STORNO = "STORNO", "Storno"
+    EXCEL_IMPORT = "EXCEL_IMPORT", "Estratto operativo settimanale"
 
 
 def month_start(value: date) -> date:
