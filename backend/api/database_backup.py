@@ -35,6 +35,24 @@ def _versione(strumento: str) -> str:
         return f"non disponibile ({type(exc).__name__})"
 
 
+def migrazioni_pendenti() -> list[str]:
+    """Migrazioni che il database ripristinato non ha ancora.
+
+    Un backup piu' vecchio del codice riporta indietro lo schema, e l'applicazione si
+    rompe dove si aspetta tabelle o colonne che non esistono piu' — con errori che non
+    nominano mai il ripristino come causa. Meglio dirlo subito, nella risposta.
+    """
+    from django.db.migrations.executor import MigrationExecutor
+
+    try:
+        executor = MigrationExecutor(connections["default"])
+        piano = executor.migration_plan(executor.loader.graph.leaf_nodes())
+        return [f"{migrazione.app_label}.{migrazione.name}" for migrazione, _ in piano]
+    except Exception as exc:
+        logger.warning("Impossibile verificare le migrazioni pendenti: %s", exc)
+        return []
+
+
 def ambiente_diagnostico(backup_dir: Path) -> dict[str, object]:
     """Fotografia dell'ambiente, da registrare quando un ripristino fallisce.
 
@@ -277,10 +295,26 @@ class DatabaseRestoreView(APIView):
                 },
                 status=400,
             )
+        pendenti = migrazioni_pendenti()
+        detail = (
+            "Database ripristinato. Potrebbe essere necessario effettuare " "di nuovo l'accesso."
+        )
+        if pendenti:
+            logger.warning(
+                "Il backup ripristinato precede %d migrazioni: %s",
+                len(pendenti),
+                ", ".join(pendenti),
+            )
+            detail += (
+                f" Attenzione: il backup precede {len(pendenti)} migrazioni "
+                f"({', '.join(pendenti)}). Lo schema e' tornato indietro e "
+                "l'applicazione non funziona correttamente finche' non si esegue "
+                "'manage.py migrate'."
+            )
         return Response(
             {
-                "detail": "Database ripristinato. Potrebbe essere necessario "
-                "effettuare nuovamente l'accesso.",
+                "detail": detail,
                 "backup_preventivo": previous.name,
+                "migrazioni_da_applicare": pendenti,
             }
         )

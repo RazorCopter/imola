@@ -90,3 +90,16 @@ def test_backup_and_restore_require_admin():
     request = factory.post("/", {}, format="multipart")
     force_authenticate(request, user=user)
     assert DatabaseRestoreView.as_view()(request).status_code == 400
+
+
+@pytest.mark.django_db
+def test_migrazioni_pendenti_vuote_su_database_allineato():
+    """Su un database alla pari col codice non c'e' nulla da applicare.
+
+    Il valore sta nel caso opposto: un backup piu' vecchio del codice riporta indietro
+    lo schema, e senza questa verifica l'applicazione si rompe dove cerca tabelle che
+    il ripristino ha fatto sparire, con errori che non nominano mai il ripristino.
+    """
+    from api.database_backup import migrazioni_pendenti
+
+    assert migrazioni_pendenti() == []

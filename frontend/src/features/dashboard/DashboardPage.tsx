@@ -7,7 +7,7 @@ import { ArrowUpRight, Layers3, Wallet, Users, Coins, FileText, ArrowRight } fro
 import { DonutChart, type ChartDatum } from "./DashboardCharts";
 import { api } from "@/lib/api";
 import { useSession } from "@/features/auth/session";
-import { formatDays, formatDelta, formatPercent } from "@/lib/format";
+import { formatDays, formatPercent } from "@/lib/format";
 import "./dashboard.css";
 
 type Effort = { count: number; previsto: string; consumato: string };
@@ -29,21 +29,6 @@ interface WalletBalance {
     string,
     { giornate: string; progetti: { codice: string; giornate: string }[] }
   >;
-}
-
-interface ReconciliationSummary {
-  riepilogo: {
-    stato: "ALLINEATO" | "NON_ALLINEATO" | "PARZIALE" | "NON_VERIFICABILE";
-    stato_dati: "DISPONIBILI" | "SNAPSHOT_ASSENTE" | "NESSUNA_RIGA_CONFRONTABILE";
-    righe: number;
-    righe_confrontabili: number;
-    ok: number;
-    ko: number;
-    assenti_in_ppm: number;
-    delta_totale: string | null;
-    percentuale_allineati: string | null;
-    snapshot_estratto_il: string | null;
-  };
 }
 
 interface DashboardSummary {
@@ -164,10 +149,6 @@ export function DashboardPage() {
     queryKey: ["wallet", "balance", year],
     queryFn: () => api.get<WalletBalance>(`/wallet/${year}/balance`),
   });
-  const reconciliation = useQuery({
-    queryKey: ["reconciliation", "latest"],
-    queryFn: () => api.get<ReconciliationSummary>("/reconciliation/latest"),
-  });
   const dashboard = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => api.get<DashboardSummary>("/dashboard"),
@@ -198,7 +179,6 @@ export function DashboardPage() {
       value: x.conteggio,
       color: chartColors[x.stato] ?? "#64748b",
     })) ?? [];
-  const recon = reconciliation.data?.riepilogo;
   const walletData = wallet.data;
   const visibleBillings =
     billings?.results.filter((x) => billingScope === "all" || x.classificazione === billingScope) ??
@@ -229,14 +209,13 @@ export function DashboardPage() {
           )}
         </div>
       </header>
-      {(dashboard.isError || wallet.isError || reconciliation.isError) && (
+      {(dashboard.isError || wallet.isError) && (
         <div className="dash-error" role="alert">
           Alcuni indicatori non sono disponibili.{" "}
           <button
             onClick={() => {
               void dashboard.refetch();
               void wallet.refetch();
-              void reconciliation.refetch();
             }}
           >
             Riprova
@@ -631,66 +610,6 @@ export function DashboardPage() {
             premium
             caption="Portafoglio complessivo, tutti gli stati e tutti gli anni."
           />
-        </section>
-        <section className="dash-panel">
-          <div className="dash-section-heading">
-            <div>
-              <p className="dash-eyebrow">CONFRONTO FORNITORE</p>
-              <h2>Riconciliazione</h2>
-            </div>
-            <Link to="/riconciliazione" aria-label="Apri riconciliazione">
-              <ArrowUpRight size={18} />
-            </Link>
-          </div>
-          {reconciliation.isLoading ? (
-            <Loading />
-          ) : reconciliation.isError || !recon ? (
-            <p className="dash-empty">Dati di riconciliazione non disponibili.</p>
-          ) : (
-            <>
-              <div className="dash-reconciliation">
-                <strong>
-                  {recon.delta_totale === null
-                    ? "Non disponibile"
-                    : formatDelta(recon.delta_totale)}
-                </strong>
-                <span>Scostamento giornate rispetto al fornitore</span>
-              </div>
-              <p
-                className={`dash-badge ${recon.stato === "NON_ALLINEATO" ? "is-danger" : recon.stato === "PARZIALE" ? "is-warning" : ""}`}
-              >
-                {recon.stato === "NON_VERIFICABILE"
-                  ? "Non verificabile / dati assenti"
-                  : recon.stato === "ALLINEATO"
-                    ? "Dati allineati"
-                    : recon.stato === "PARZIALE"
-                      ? "Confronto parziale"
-                      : "Scostamenti da verificare"}
-              </p>
-              <div className="dash-recon-counts">
-                <div>
-                  <strong>{recon.ok}</strong>
-                  <span>Righe allineate</span>
-                </div>
-                <div>
-                  <strong>{recon.ko}</strong>
-                  <span>Da verificare</span>
-                </div>
-                <div>
-                  <strong>{recon.assenti_in_ppm}</strong>
-                  <span>Assenti in PPM</span>
-                </div>
-              </div>
-              <p className="dash-caption">
-                {formatPercent(recon.percentuale_allineati)} allineati / {recon.righe} righe. Ultimo
-                estratto:{" "}
-                {recon.snapshot_estratto_il
-                  ? new Date(recon.snapshot_estratto_il).toLocaleDateString("it-IT")
-                  : "non disponibile"}
-                .
-              </p>
-            </>
-          )}
         </section>
       </div>
     </section>
