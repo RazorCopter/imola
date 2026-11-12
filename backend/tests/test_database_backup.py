@@ -1,5 +1,6 @@
 import subprocess
 import uuid
+from pathlib import Path
 
 import psycopg
 import pytest
@@ -57,7 +58,11 @@ def test_postgres_backup_restore_and_rollback(tmp_path, monkeypatch):
         def inject_failure(args, **kwargs):
             result = original_run(args, **kwargs)
             if args[0] == "pg_restore" and "--clean" in args:
-                kwargs["stdout"].write(b"\nSELECT * FROM nonexistent_table_for_rollback_test;\n")
+                # pg_restore scrive su un percorso reale, non su /dev/stdout: il guasto si
+                # inietta appendendo allo stesso file che poi psql applicherà.
+                generato = Path(args[args.index("--file") + 1])
+                with generato.open("ab") as handle:
+                    handle.write(b"\nSELECT * FROM nonexistent_table_for_rollback_test;\n")
             return result
 
         monkeypatch.setattr(subprocess, "run", inject_failure)

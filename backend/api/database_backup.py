@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import subprocess
 import tempfile
@@ -15,10 +16,43 @@ from rest_framework.views import APIView
 
 from core.roles import is_admin
 
+logger = logging.getLogger(__name__)
+
 
 class AdministratorOnly(BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and is_admin(request.user))
+
+
+def describe_failure(exc: Exception) -> str:
+    """Traduce in una riga il motivo per cui pg_dump, pg_restore o psql hanno ceduto.
+
+    Senza questo l'errore restava invisibile: la vista catturava l'eccezione e rispondeva
+    "Ripristino non riuscito" senza lo stderr dello strumento, che è il solo posto dove
+    sta la causa. Le due cadute tipiche sono i permessi sulla cartella dei backup, che è
+    un bind mount di proprietà di root mentre il processo gira con un utente non
+    privilegiato, e lo scarto di versione fra client e server PostgreSQL.
+    """
+    if isinstance(exc, subprocess.CalledProcessError):
+        stderr = exc.stderr
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode("utf-8", "replace")
+        comando = exc.cmd[0] if isinstance(exc.cmd, (list, tuple)) and exc.cmd else "comando"
+        dettaglio = " ".join((stderr or "").split())[:400] or "nessun dettaglio"
+        return f"{comando} è terminato con codice {exc.returncode}: {dettaglio}"
+    if isinstance(exc, FileNotFoundError):
+        return (
+            f"{exc.filename or 'strumento'} non trovato: nell'immagine manca il client "
+            "PostgreSQL (pacchetto postgresql-client)."
+        )
+    if isinstance(exc, PermissionError):
+        return (
+            f"permesso negato su {exc.filename or 'un percorso'}: la cartella dei backup "
+            "non è scrivibile dall'utente del processo."
+        )
+    if isinstance(exc, OSError):
+        return f"errore di sistema su {exc.filename or 'un percorso'}: {exc.strerror or exc}"
+    return str(exc)
 
 
 def database_config(database=None):
@@ -50,9 +84,28 @@ def validate_dump(path):
     subprocess.run(["pg_restore", "--list", str(path)], check=True, capture_output=True)
 
 
+class EmptyRestoreError(RuntimeError):
+    """pg_restore non ha prodotto istruzioni: lo schema non va distrutto."""
+
+
 def restore_dump(path, database=None):
+    """Riscrive il database con il contenuto del dump, in una sola transazione.
+
+    Due accortezze che non sono dettagli:
+
+    `--file` punta a un percorso reale e non a `/dev/stdout`. Su Linux i due casi si
+    equivalgono, su Windows no: `pg_restore.exe` non conosce `/dev/stdout` e scrive in un
+    file chiamato così, lasciando vuoto il flusso. Siccome subito dopo si esegue
+    `DROP SCHEMA public CASCADE`, il risultato era un database svuotato e non ripristinato.
+
+    Di qui il secondo controllo: se l'SQL generato non contiene istruzioni, si solleva
+    `EmptyRestoreError` **prima** di toccare lo schema. Un ripristino che non ripristina
+    deve fallire, non cancellare.
+    """
     args, env = database_config(database)
-    with tempfile.TemporaryFile(mode="w+b") as raw, tempfile.TemporaryFile(mode="w+b") as sql:
+    with tempfile.TemporaryDirectory() as temporary:
+        generato = Path(temporary) / "restore.sql"
+        filtrato = Path(temporary) / "apply.sql"
         subprocess.run(
             [
                 "pg_restore",
@@ -61,27 +114,38 @@ def restore_dump(path, database=None):
                 "--no-owner",
                 "--no-privileges",
                 "--file",
-                "/dev/stdout",
+                str(generato),
                 str(path),
             ],
-            stdout=raw,
             stderr=subprocess.PIPE,
             check=True,
         )
-        raw.seek(0)
-        sql.write(b"DROP SCHEMA public CASCADE;\nCREATE SCHEMA public;\n")
-        for line in raw:
-            if not line.startswith(b"SET transaction_timeout"):
+        with generato.open("rb") as raw, filtrato.open("wb") as sql:
+            sql.write(b"DROP SCHEMA public CASCADE;\nCREATE SCHEMA public;\n")
+            istruzioni = 0
+            for line in raw:
+                # `transaction_timeout` esiste solo da PostgreSQL 17: un dump preso con
+                # un client 17 non si applica a un server precedente senza togliere questa.
+                if line.startswith(b"SET transaction_timeout"):
+                    continue
                 sql.write(line)
-        sql.seek(0)
-        subprocess.run(
-            ["psql", *args, "--single-transaction", "--set", "ON_ERROR_STOP=1"],
-            stdin=sql,
-            env=env,
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-        )
+                spogliata = line.strip()
+                if spogliata and not spogliata.startswith(b"--"):
+                    istruzioni += 1
+        if istruzioni == 0:
+            raise EmptyRestoreError(
+                "pg_restore non ha prodotto alcuna istruzione dal backup: "
+                "ripristino interrotto senza toccare il database."
+            )
+        with filtrato.open("rb") as sql:
+            subprocess.run(
+                ["psql", *args, "--single-transaction", "--set", "ON_ERROR_STOP=1"],
+                stdin=sql,
+                env=env,
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+            )
 
 
 class DatabaseBackupView(APIView):
@@ -105,9 +169,11 @@ class DatabaseBackupView(APIView):
                 filename="imola-database.dump",
                 content_type="application/octet-stream",
             )
-        except (OSError, subprocess.SubprocessError):
+        except (OSError, subprocess.SubprocessError) as exc:
             file.close()
-            return Response({"detail": "Creazione del backup non riuscita."}, status=500)
+            motivo = describe_failure(exc)
+            logger.error("Backup del database non riuscito: %s", motivo, exc_info=True)
+            return Response({"detail": f"Creazione del backup non riuscita: {motivo}"}, status=500)
 
 
 class DatabaseRestoreView(APIView):
@@ -121,22 +187,31 @@ class DatabaseRestoreView(APIView):
         if request.data.get("confirm") != "RIPRISTINA":
             return Response({"detail": "Scrivi RIPRISTINA per confermare."}, status=400)
         backup_dir = Path(os.environ.get("BACKUP_DIR", "backups"))
+        fase = "preparazione"
         try:
             with tempfile.TemporaryDirectory() as temporary:
                 path = Path(temporary) / "upload.dump"
                 with path.open("wb") as handle:
                     for chunk in uploaded.chunks():
                         handle.write(chunk)
+                fase = "lettura del backup caricato"
                 validate_dump(path)
+                fase = f"copia preventiva in {backup_dir}"
                 backup_dir.mkdir(parents=True, exist_ok=True)
                 previous = backup_dir / f"pre-restore-{uuid4().hex}.dump"
                 create_dump(previous)
+                fase = "ripristino"
                 restore_dump(path)
-        except (OSError, subprocess.SubprocessError):
+        except (OSError, subprocess.SubprocessError, EmptyRestoreError) as exc:
+            motivo = describe_failure(exc)
+            logger.error("Ripristino non riuscito durante %s: %s", fase, motivo, exc_info=True)
             return Response(
                 {
-                    "detail": "Ripristino non riuscito. Le modifiche sono state annullate. "
-                    "Se creata, la copia preventiva resta sul server."
+                    "detail": (
+                        f"Ripristino non riuscito durante {fase}: {motivo} "
+                        "Le modifiche sono state annullate; se creata, la copia preventiva "
+                        "resta sul server."
+                    )
                 },
                 status=400,
             )

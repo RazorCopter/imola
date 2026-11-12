@@ -13,12 +13,6 @@ import { TIMESHEET_AUTHORS_KEY } from "@/features/timesheets/authors";
 import { canResetData } from "@/lib/permissions";
 import { DeleteDatabaseDialog } from "./DeleteDatabaseDialog";
 
-interface Preview {
-  mode: string;
-  confirmation_hash: string;
-  batch_id?: string | null;
-  report: Record<string, unknown>;
-}
 interface RoleOption {
   key: string;
   label: string;
@@ -168,116 +162,6 @@ function DatabaseBackupPanel() {
           </p>
         )}
       </div>
-    </section>
-  );
-}
-
-function ImportPanel({
-  kind,
-  title,
-  accept,
-}: {
-  kind: "seed" | "ppm";
-  title: string;
-  accept: string;
-}) {
-  const queryClient = useQueryClient();
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<Preview | null>(null);
-  const hasValidPreview = preview?.mode === "dry-run" && Boolean(preview.confirmation_hash);
-  const report = preview?.report as
-    | {
-        schema_version?: string;
-        esito?: string;
-        riepilogo?: Record<string, number>;
-        totali_calcolati?: Record<string, unknown>;
-      }
-    | undefined;
-  const upload = useMutation({
-    mutationFn: async (apply: boolean) => {
-      if (!file) throw new Error("File mancante");
-      const form = new FormData();
-      form.append("file", file);
-      form.append("apply", String(apply));
-      if (apply && preview) form.append("confirmation_hash", preview.confirmation_hash);
-      return api.post<Preview>(`/admin/imports/${kind}`, form);
-    },
-    onSuccess: async (result) => {
-      setPreview(result);
-      await queryClient.invalidateQueries({ queryKey: ["admin", "imports"] });
-    },
-  });
-  return (
-    <section className="rounded-xl border border-border bg-card p-5 shadow-subtle">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Selezione · Simulazione · Conferma
-      </p>
-      <h2 className="font-semibold tracking-tight">{title}</h2>
-      <Input
-        aria-label={`File per ${title}`}
-        className="mt-4 block w-full rounded-md border border-input bg-background p-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1 file:text-foreground"
-        type="file"
-        accept={accept}
-        disabled={upload.isPending}
-        onChange={(e) => {
-          setFile(e.target.files?.[0] ?? null);
-          setPreview(null);
-          upload.reset();
-        }}
-      />
-      <div className="mt-3 flex gap-2">
-        <Button
-          className="rounded border px-3 py-2 text-sm"
-          disabled={!file || upload.isPending}
-          onClick={() => upload.mutate(false)}
-        >
-          Valida e simula
-        </Button>
-        <Button
-          className="rounded border border-emerald-800 bg-emerald-700 px-3 py-2 text-sm text-white disabled:opacity-50"
-          disabled={!file || !hasValidPreview || upload.isPending}
-          onClick={() => upload.mutate(true)}
-        >
-          Conferma e applica
-        </Button>
-      </div>
-      {!hasValidPreview && (
-        <p className="mt-2 text-xs text-muted-foreground">Esegui prima “Valida e simula”.</p>
-      )}
-      {upload.isError && (
-        <p role="alert" className="mt-2 text-sm text-destructive">
-          {errorMessage(upload.error)}
-        </p>
-      )}
-      {preview && (
-        <div className="mt-3 space-y-2 rounded bg-muted p-3 text-xs">
-          <p role="status" className="font-medium">
-            Schema {report?.schema_version ?? "non indicato"} · {report?.esito ?? "elaborato"}
-          </p>
-          {report?.riepilogo && (
-            <p>
-              Creati {report.riepilogo.creati ?? 0} · aggiornati {report.riepilogo.aggiornati ?? 0}{" "}
-              · scartati {report.riepilogo.scartati ?? 0} · errori {report.riepilogo.errori ?? 0}
-            </p>
-          )}
-          {report?.totali_calcolati && (
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
-              {Object.entries(report.totali_calcolati).map(([key, value]) => (
-                <div key={key} className="contents">
-                  <dt className="text-muted-foreground">{key.replaceAll("_", " ")}</dt>
-                  <dd className="text-right font-medium">{String(value)}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-          <details>
-            <summary className="cursor-pointer">Report tecnico completo</summary>
-            <pre className="mt-2 max-h-64 overflow-auto">
-              {JSON.stringify(preview.report, null, 2)}
-            </pre>
-          </details>
-        </div>
-      )}
     </section>
   );
 }
@@ -1103,14 +987,6 @@ export function AdminPage() {
       >
         {tab === "imports" && (
           <div className="space-y-4">
-            <div className="grid gap-4 xl:grid-cols-2">
-              <ImportPanel
-                kind="seed"
-                title="Import JSON (seed v1 o workbook v2-v4)"
-                accept="application/json,.json"
-              />
-              <ImportPanel kind="ppm" title="Import PPM" accept=".xlsx,.pdf" />
-            </div>
             {session?.is_admin && <DatabaseBackupPanel />}
             <section className="rounded-lg border p-4">
               <h2 className="mb-3 font-medium">Export</h2>

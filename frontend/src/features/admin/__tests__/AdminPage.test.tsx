@@ -160,23 +160,18 @@ describe("AdminPage", () => {
     expect(await screen.findByText("Configurazione salvata.")).toBeVisible();
   });
 
-  it("mostra i tab amministrativi e abilita apply solo dopo dry-run", async () => {
-    postMock.mockResolvedValue({
-      mode: "dry-run",
-      confirmation_hash: "hash-valido",
-      report: { valid: true },
-    });
+  it("mostra i tab amministrativi e non espone piu' gli import JSON e PPM", async () => {
     const user = userEvent.setup();
-    const { container } = renderPage();
+    renderPage();
     expect(await screen.findByRole("tab", { name: "Utenti" })).toBeVisible();
     expect(screen.getByRole("tab", { name: "Referenti" })).toBeVisible();
     expect(screen.getByRole("tab", { name: "Ruoli e privilegi" })).toBeVisible();
-    const applyButtons = screen.getAllByRole("button", { name: "Conferma e applica" });
-    expect(applyButtons[0]).toBeDisabled();
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
-    await user.upload(input, new File(["{}"], "seed.json", { type: "application/json" }));
-    await user.click(screen.getAllByRole("button", { name: "Valida e simula" })[0]!);
-    await waitFor(() => expect(applyButtons[0]).toBeEnabled());
+    // I consuntivi entrano dalla pagina Importazione; il seed JSON resta solo da
+    // riga di comando e la quadratura PPM non esiste piu'.
+    await user.click(screen.getByRole("tab", { name: "Import ed export" }));
+    expect(screen.queryByText(/Import JSON/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Import PPM")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Valida e simula" })).not.toBeInTheDocument();
   });
 
   it("gestisce i referenti BMED e Imola dal tab dedicato", async () => {
