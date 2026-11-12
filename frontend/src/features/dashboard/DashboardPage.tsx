@@ -354,7 +354,7 @@ export function DashboardPage() {
             <small>Giornate da utilizzare entro la scadenza</small>
           </Link>
           <Link
-            to="/revisione"
+            to="/anomalie"
             className={
               Number(walletData?.residui_potenziali_da_verificare) > 0
                 ? "dash-priority is-warning"

@@ -11,7 +11,6 @@ import * as sessionModule from "@/features/auth/session";
 import type { Session } from "@/features/auth/session";
 import { ProjectDetailPage } from "@/features/projects/ProjectDetailPage";
 import { ProjectsPage } from "@/features/projects/ProjectsPage";
-import { ReviewQueuePage } from "@/features/review/ReviewQueuePage";
 import { WalletPage } from "@/features/wallet/WalletPage";
 import "@/i18n";
 import { api } from "@/lib/api";
@@ -71,9 +70,12 @@ describe("coerenza visibilità e navigazione per ruolo", () => {
     expect(screen.getByRole("link", { name: "Progetti" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Wallet" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Organico Allargato" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Riconciliazione PPM" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Importazione" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Anomalie" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Coda di revisione" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Riconciliazione" })).toBeInTheDocument();
+    // La quadratura PPM e la coda di revisione sono state rimosse.
+    expect(screen.queryByRole("link", { name: "Riconciliazione PPM" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Coda di revisione" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Amministrazione/i })).not.toBeInTheDocument();
   });
 
@@ -282,28 +284,5 @@ describe("coerenza visibilità e navigazione per ruolo", () => {
 
     await screen.findByRole("heading", { name: "Inbox anomalie" });
     expect(screen.queryByRole("button", { name: "Esegui controlli" })).not.toBeInTheDocument();
-  });
-
-  it("mostra indicatore di sola lettura nella coda revisione per ruoli non writer", async () => {
-    mockSession({ roles: ["referente_bmed"], can_write: false });
-    getMock.mockResolvedValue({
-      count: 1,
-      results: [
-        {
-          id: "rev-1",
-          codice: "IM-REV",
-          titolo: "Progetto revisione",
-          stato_consuntivazione: "CHIUSO",
-          data_chiusura: null,
-          data_fine_prevista: "2026-06-30",
-          motivo_revisione: "Data chiusura assente",
-        },
-      ],
-    });
-
-    renderWithProviders(<ReviewQueuePage />);
-
-    expect(await screen.findByText("Sola lettura")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Conferma revisione" })).not.toBeInTheDocument();
   });
 });

@@ -22,9 +22,14 @@ const DashboardPage = lazy(() =>
 const AnomaliesPage = lazy(() =>
   import("@/features/anomalies/AnomaliesPage").then((m) => ({ default: m.AnomaliesPage })),
 );
-const ReconciliationPage = lazy(() =>
-  import("@/features/reconciliation/ReconciliationPage").then((m) => ({
-    default: m.ReconciliationPage,
+const ImportazionePage = lazy(() =>
+  import("@/features/importazione/ImportazionePage").then((m) => ({
+    default: m.ImportazionePage,
+  })),
+);
+const RiconciliazionePage = lazy(() =>
+  import("@/features/riconciliazione/RiconciliazionePage").then((m) => ({
+    default: m.RiconciliazionePage,
   })),
 );
 const CanonePage = lazy(() =>
@@ -38,9 +43,6 @@ const ProjectsPage = lazy(() =>
 );
 const WalletPage = lazy(() =>
   import("@/features/wallet/WalletPage").then((m) => ({ default: m.WalletPage })),
-);
-const ReviewQueuePage = lazy(() =>
-  import("@/features/review/ReviewQueuePage").then((m) => ({ default: m.ReviewQueuePage })),
 );
 const AdminPage = lazy(() =>
   import("@/features/admin/AdminPage").then((m) => ({ default: m.AdminPage })),
@@ -100,9 +102,12 @@ export default function App() {
             <Route path="/wallet" element={<WalletPage />} />
             <Route path="/canone" element={<CanonePage />} />
             <Route path="/analisi-costi" element={<CostAnalysisPage />} />
-            <Route path="/riconciliazione" element={<ReconciliationPage />} />
+            <Route path="/importazione" element={<ImportazionePage />} />
+            <Route path="/riconciliazione" element={<RiconciliazionePage />} />
             <Route path="/anomalie" element={<AnomaliesPage />} />
-            <Route path="/revisione" element={<ReviewQueuePage />} />
+            {/* La coda di revisione e la quadratura PPM non esistono piu': chi arriva da un
+                segnalibro finisce sull'importazione invece che su una pagina bianca. */}
+            <Route path="/revisione" element={<Navigate to="/importazione" replace />} />
             <Route
               path="/amministrazione"
               element={canAdminister(session) ? <AdminPage /> : <Navigate to="/" replace />}

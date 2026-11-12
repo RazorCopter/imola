@@ -16,9 +16,9 @@ const ACTIONS = [
   { to: "/wallet", label: "nav.wallet" },
   { to: "/canone", label: "nav.canone" },
   { to: "/analisi-costi", label: "nav.costAnalysis" },
-  { to: "/riconciliazione", label: "nav.reconciliation" },
+  { to: "/importazione", label: "nav.import" },
+  { to: "/riconciliazione", label: "nav.reconcile" },
   { to: "/anomalie", label: "nav.anomalies" },
-  { to: "/revisione", label: "nav.review" },
   { to: "/amministrazione", label: "nav.admin" },
 ] as const;
 interface SearchResult {

@@ -5,7 +5,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   AlertTriangle,
   BarChart3,
-  ClipboardCheck,
+  Upload,
   Settings,
   Columns3,
   LayoutDashboard,
@@ -32,9 +32,9 @@ const NAV = [
   { to: "/wallet", label: "nav.wallet", icon: Wallet },
   { to: "/canone", label: "nav.canone", icon: Scale },
   { to: "/analisi-costi", label: "nav.costAnalysis", icon: BarChart3 },
-  { to: "/riconciliazione", label: "nav.reconciliation", icon: ListChecks },
+  { to: "/importazione", label: "nav.import", icon: Upload },
+  { to: "/riconciliazione", label: "nav.reconcile", icon: ListChecks },
   { to: "/anomalie", label: "nav.anomalies", icon: AlertTriangle },
-  { to: "/revisione", label: "nav.review", icon: ClipboardCheck },
 ] as const;
 
 export function AppShell({ onOpenCommandPalette }: { onOpenCommandPalette: () => void }) {

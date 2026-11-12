@@ -27,11 +27,11 @@
     "projects": "",
     "wallet": "",
     "canone": "",
-    "reconciliation": "",
     "anomalies": "",
-    "review": "",
     "admin": "",
-    "costAnalysis": "Cost Analysis"
+    "costAnalysis": "Cost Analysis",
+    "import": "Import",
+    "reconcile": "Reconciliation"
   },
   "auth": {
     "signIn": "",

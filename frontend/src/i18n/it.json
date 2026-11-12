@@ -27,11 +27,11 @@
     "projects": "Progetti",
     "wallet": "Wallet",
     "canone": "Organico Allargato",
-    "reconciliation": "Riconciliazione PPM",
     "anomalies": "Anomalie",
-    "review": "Coda di revisione",
     "admin": "Amministrazione",
-    "costAnalysis": "Analisi Costi"
+    "costAnalysis": "Analisi Costi",
+    "import": "Importazione",
+    "reconcile": "Riconciliazione"
   },
   "auth": {
     "signIn": "Accedi",
