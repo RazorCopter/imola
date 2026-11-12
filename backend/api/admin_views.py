@@ -87,7 +87,6 @@ class SeedImportView(APIView):
         )
 
 
-
 class ImportHistoryView(APIView):
     permission_classes = [IsAdmin]
 
@@ -143,9 +142,7 @@ class WorkbookDatasetDetailView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request, batch_id, dataset_pk):
-        dataset = WorkbookDatasetSnapshot.objects.filter(
-            pk=dataset_pk, batch_id=batch_id
-        ).first()
+        dataset = WorkbookDatasetSnapshot.objects.filter(pk=dataset_pk, batch_id=batch_id).first()
         if dataset is None:
             return Response({"detail": "Dataset inesistente."}, status=status.HTTP_404_NOT_FOUND)
         return Response(
@@ -547,6 +544,32 @@ class RoleCapabilitiesView(APIView):
         )
 
 
+def _delete_timesheet_entries(model) -> int:
+    """Cancella i consuntivi partendo dalle foglie, perché gli storni si proteggono.
+
+    `TimesheetEntry.reverses` punta alla riga stornata con `on_delete=PROTECT`: una
+    `delete()` su tutto il registro solleva ProtectedError, perché Django trova le righe
+    originali ancora referenziate dai loro storni. Si cancella quindi a ondate, ogni volta
+    le righe che nessun'altra riga referenzia. La catena non ha cicli — uno storno punta
+    sempre a una riga precedente — quindi a ogni passata esiste almeno una foglia.
+    """
+    totale = 0
+    while True:
+        foglie = list(model.objects.filter(reversals__isnull=True).values_list("pk", flat=True))
+        if not foglie:
+            break
+        eliminati = model.objects.filter(pk__in=foglie).delete()[0]
+        if eliminati == 0:
+            # Difesa contro un ciclo che non dovrebbe esistere: meglio un errore
+            # esplicito che un ciclo infinito dentro una transazione.
+            raise RuntimeError(
+                "Cancellazione dei consuntivi bloccata: restano righe che si referenziano "
+                "a vicenda."
+            )
+        totale += eliminati
+    return totale
+
+
 class AdminDataResetView(APIView):
     """Reset sicuro e transazionale di tutti i dati applicativi operativi (Tranche 6).
 
@@ -568,7 +591,13 @@ class AdminDataResetView(APIView):
         from ppm.models import PpmSnapshot, PpmSnapshotRow
         from projects.models import BillingMilestone, Project
         from timesheets.models import TimesheetEntry
-        from wallet.models import WalletActivity, WalletAllocation, WalletYear
+        from wallet.models import (
+            WalletActivity,
+            WalletAllocation,
+            WalletFundingTranche,
+            WalletSourceLot,
+            WalletYear,
+        )
 
         signer = TimestampSigner()
         token = signer.sign(f"{request.user.id}:data.reset")
@@ -578,6 +607,8 @@ class AdminDataResetView(APIView):
             "milestone": BillingMilestone.objects.count(),
             "consuntivi": TimesheetEntry.objects.count(),
             "allocazioni_wallet": WalletAllocation.objects.count(),
+            "tranche_wallet": WalletFundingTranche.objects.count(),
+            "lotti_wallet": WalletSourceLot.objects.count(),
             "attivita_wallet": WalletActivity.objects.count(),
             "anni_wallet": WalletYear.objects.count(),
             "canoni": Canone.objects.count(),
@@ -613,7 +644,13 @@ class AdminDataResetView(APIView):
         from projects.models import BillingMilestone, Project
         from timesheets.models import TimesheetEntry
         from timesheets.mutations import allow_ledger_mutation
-        from wallet.models import WalletActivity, WalletAllocation, WalletYear
+        from wallet.models import (
+            WalletActivity,
+            WalletAllocation,
+            WalletFundingTranche,
+            WalletSourceLot,
+            WalletYear,
+        )
 
         confirmation = str(request.data.get("confirmation", "")).strip()
         if confirmation != "ELIMINA":
@@ -662,17 +699,22 @@ class AdminDataResetView(APIView):
                 deleted_counts["anomalie"] = Anomaly.objects.all().delete()[0]
                 deleted_counts["righe_snapshot_ppm"] = PpmSnapshotRow.objects.all().delete()[0]
                 deleted_counts["snapshot_ppm"] = PpmSnapshot.objects.all().delete()[0]
-                deleted_counts["consuntivi"] = TimesheetEntry.objects.all().delete()[0]
+                deleted_counts["consuntivi"] = _delete_timesheet_entries(TimesheetEntry)
+                # Le tranche vanno prima dei lotti, che le proteggono, e prima delle
+                # allocazioni, cosi' il conteggio resta attribuibile invece di sparire
+                # dentro la cascata.
+                deleted_counts["tranche_wallet"] = WalletFundingTranche.objects.all().delete()[0]
                 deleted_counts["allocazioni_wallet"] = WalletAllocation.objects.all().delete()[0]
+                deleted_counts["lotti_wallet"] = WalletSourceLot.objects.all().delete()[0]
                 deleted_counts["attivita_wallet"] = WalletActivity.objects.all().delete()[0]
                 deleted_counts["anni_wallet"] = WalletYear.objects.all().delete()[0]
                 deleted_counts["sottoattivita_canone"] = CanoneSubactivity.objects.all().delete()[0]
                 deleted_counts["canoni"] = Canone.objects.all().delete()[0]
                 deleted_counts["milestone"] = BillingMilestone.objects.all().delete()[0]
                 deleted_counts["progetti"] = Project.objects.all().delete()[0]
-                deleted_counts["dataset_workbook"] = (
-                    WorkbookDatasetSnapshot.objects.all().delete()[0]
-                )
+                deleted_counts["dataset_workbook"] = WorkbookDatasetSnapshot.objects.all().delete()[
+                    0
+                ]
                 deleted_counts["fogli_workbook"] = WorkbookSheetSnapshot.objects.all().delete()[0]
                 deleted_counts["issues_import"] = ImportIssue.objects.all().delete()[0]
                 deleted_counts["batch_import"] = ImportBatch.objects.all().delete()[0]

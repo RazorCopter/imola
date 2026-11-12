@@ -8,6 +8,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from django.conf import settings
+from django.db import connections
 from django.http import FileResponse
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import BasePermission
@@ -22,6 +23,56 @@ logger = logging.getLogger(__name__)
 class AdministratorOnly(BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and is_admin(request.user))
+
+
+def _versione(strumento: str) -> str:
+    try:
+        esito = subprocess.run(
+            [strumento, "--version"], capture_output=True, check=True, timeout=10
+        )
+        return esito.stdout.decode("utf-8", "replace").strip()
+    except (OSError, subprocess.SubprocessError) as exc:
+        return f"non disponibile ({type(exc).__name__})"
+
+
+def ambiente_diagnostico(backup_dir: Path) -> dict[str, object]:
+    """Fotografia dell'ambiente, da registrare quando un ripristino fallisce.
+
+    Le cadute di backup e ripristino hanno due cause ricorrenti e invisibili dall'esterno:
+    la cartella dei backup non scrivibile, perche' e' un bind mount di proprieta' di root
+    mentre il processo gira con un utente non privilegiato, e lo scarto fra la versione dei
+    client PostgreSQL nell'immagine e quella del server. Registrarle qui evita di dover
+    chiedere all'operatore di eseguire comandi dentro il container.
+    """
+    dati: dict[str, object] = {
+        "pg_dump": _versione("pg_dump"),
+        "pg_restore": _versione("pg_restore"),
+        "psql": _versione("psql"),
+        "backup_dir": str(backup_dir),
+        "backup_dir_esiste": backup_dir.exists(),
+    }
+    try:
+        dati["utente_processo"] = f"uid={os.getuid()} gid={os.getgid()}"  # type: ignore[attr-defined]
+    except AttributeError:  # pragma: no cover - su Windows getuid non esiste
+        dati["utente_processo"] = "non disponibile su questa piattaforma"
+    try:
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        prova = backup_dir / f".scrittura-{uuid4().hex}"
+        prova.touch()
+        prova.unlink()
+        dati["backup_dir_scrivibile"] = True
+    except OSError as exc:
+        dati["backup_dir_scrivibile"] = False
+        dati["backup_dir_errore"] = f"{type(exc).__name__}: {exc.strerror or exc}"
+    try:
+        db = settings.DATABASES["default"]
+        with connections["default"].cursor() as cursor:
+            cursor.execute("SHOW server_version")
+            dati["server_version"] = cursor.fetchone()[0]
+        dati["database"] = f"{db['HOST']}:{db['PORT'] or 5432}/{db['NAME']}"
+    except Exception as exc:
+        dati["server_version"] = f"non interrogabile ({type(exc).__name__})"
+    return dati
 
 
 def describe_failure(exc: Exception) -> str:
@@ -172,7 +223,12 @@ class DatabaseBackupView(APIView):
         except (OSError, subprocess.SubprocessError) as exc:
             file.close()
             motivo = describe_failure(exc)
-            logger.error("Backup del database non riuscito: %s", motivo, exc_info=True)
+            logger.error(
+                "Backup del database non riuscito: %s | ambiente: %s",
+                motivo,
+                ambiente_diagnostico(Path(os.environ.get("BACKUP_DIR", "backups"))),
+                exc_info=True,
+            )
             return Response({"detail": f"Creazione del backup non riuscita: {motivo}"}, status=500)
 
 
@@ -204,7 +260,13 @@ class DatabaseRestoreView(APIView):
                 restore_dump(path)
         except (OSError, subprocess.SubprocessError, EmptyRestoreError) as exc:
             motivo = describe_failure(exc)
-            logger.error("Ripristino non riuscito durante %s: %s", fase, motivo, exc_info=True)
+            logger.error(
+                "Ripristino del database non riuscito durante %s: %s | ambiente: %s",
+                fase,
+                motivo,
+                ambiente_diagnostico(backup_dir),
+                exc_info=True,
+            )
             return Response(
                 {
                     "detail": (
