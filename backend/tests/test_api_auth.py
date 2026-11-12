@@ -198,16 +198,3 @@ class TestVisteCalcolate:
             for bucket in body["dettaglio_residui"].values()
             for project in bucket["progetti"]
         )
-
-    def test_la_riconciliazione_espone_stato_non_verificabile_senza_snapshot(self, client, manager):
-        client.force_login(manager)
-        response = client.get("/api/v1/reconciliation/latest")
-
-        assert response.status_code == 200
-        summary = response.json()["riepilogo"]
-        assert summary["stato"] == "NON_VERIFICABILE"
-        assert summary["stato_dati"] == "SNAPSHOT_ASSENTE"
-        assert summary["righe"] == 0
-        assert summary["righe_confrontabili"] == 0
-        assert summary["delta_totale"] is None
-        assert summary["percentuale_allineati"] is None

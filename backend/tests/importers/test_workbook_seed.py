@@ -181,8 +181,6 @@ def test_rebuild_v2_rende_disponibili_le_api_operative(workbook_payload):
         "/api/v1/wallet/2026/balance",
         "/api/v1/wallet/2026/flow",
         "/api/v1/canoni",
-        "/api/v1/review-queue",
-        "/api/v1/reconciliation/latest",
         "/api/v1/cost-analysis",
     ):
         response = client.get(endpoint)

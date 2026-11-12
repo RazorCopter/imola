@@ -515,8 +515,12 @@ def apply_batch(*, batch_id: Any, user: User) -> ImportBatch:
             else "Lo stesso file è già stato applicato."
         )
 
+    # `of=("self",)` è obbligatorio, non un'ottimizzazione: le tre destinazioni sono FK
+    # nullable, quindi `select_related` genera LEFT OUTER JOIN e PostgreSQL rifiuta
+    # "FOR UPDATE cannot be applied to the nullable side of an outer join". Si blocca
+    # soltanto la tabella delle righe, che è l'unica che serve bloccare qui.
     rows = list(
-        batch.operational_rows.select_for_update()
+        batch.operational_rows.select_for_update(of=("self",))
         .select_related("project", "wallet_allocation", "canone_subactivity", "author")
         .all()
     )
@@ -590,7 +594,7 @@ def _recheck_targets(rows: list[OperationalImportRow]) -> None:
             )
 
     for allocation in (
-        WalletAllocation.objects.select_for_update()
+        WalletAllocation.objects.select_for_update(of=("self",))
         .select_related("activity")
         .filter(pk__in=allocations)
     ):

@@ -11,7 +11,6 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
-from uuid import UUID
 
 from django.utils import timezone
 
@@ -20,7 +19,6 @@ from canone.models import Canone, CanoneSubactivity
 from core.models import AppSettings
 from domain.canone_status import canone_status
 from domain.money import ZERO, quantize_days
-from domain.reconciliation import latest_rows_by_project, reconcile
 from domain.residuals import ResidualState, project_balance_qs, residual_validity
 from domain.wallet_balance import allocation_balance_qs
 from projects.models import BillingMilestone, OfferStatus, Project, TimesheetStatus
@@ -140,23 +138,23 @@ def check_closed_no_date() -> Iterable[Finding]:
 
 # 4. CHK_OVERRUN_PROJECT
 def check_overrun_project() -> Iterable[Finding]:
-    latest = latest_rows_by_project()
+    """Sforamento del budget, misurato sul solo ledger interno.
+
+    Fino alla rimozione della quadratura PPM questa regola considerava anche le giornate
+    dello snapshot PPM come fonte alternativa, per segnalare uno sforamento che il ledger
+    interno non vedeva ancora. Con l'estratto operativo settimanale il ledger è la fonte, e
+    non esiste più un secondo numero da confrontare.
+    """
     for project in project_balance_qs():
         if project.timesheet_status != TimesheetStatus.ATTIVO or project.contract_type in (
             "CANONE",
             "PPM",
         ):
             continue
-        ppm_row = latest.get(project.id)
-        ppm = ppm_row.total_days if ppm_row and ppm_row.total_days is not None else Decimal("0")
-        if project.total_consumed_days > project.budget_days:
-            observed = project.total_consumed_days
-            source = "ledger interno"
-        elif ppm > project.budget_days and project.total_consumed_days == project.budget_days:
-            observed = ppm
-            source = "PPM"
-        else:
+        if project.total_consumed_days <= project.budget_days:
             continue
+        observed = project.total_consumed_days
+        source = "ledger interno"
         ratio = quantize_days(
             (observed - project.budget_days) / project.budget_days
             if project.budget_days
@@ -377,53 +375,6 @@ def check_alloc_from_expired(as_of: date | None = None) -> Iterable[Finding]:
                 )
 
 
-# 10. CHK_RECON_DELTA
-def check_recon_delta() -> Iterable[Finding]:
-    for row in reconcile():
-        if row.outcome != "KO":
-            continue
-        yield Finding(
-            "CHK_RECON_DELTA",
-            _short(row.project_code),
-            Severity.MEDIA,
-            Scope.RICONCILIAZIONE,
-            f"{_short(row.project_code)} non riconcilia: delta {row.delta} gg.",
-            row.suggested_action,
-            {
-                "project_code": _short(row.project_code),
-                "internal_days": str(row.internal_days),
-                "ppm_days": str(row.ppm_days),
-                "delta": str(row.delta),
-            },
-            project_id=row.project_id,
-        )
-
-
-# 11. CHK_MISSING_IN_PPM
-def check_missing_in_ppm() -> Iterable[Finding]:
-    for row in reconcile():
-        if not row.missing_in_ppm or row.internal_days <= 0:
-            continue
-        project = Project.objects.get(pk=UUID(str(row.project_id)))
-        if (
-            project.timesheet_status != TimesheetStatus.ATTIVO
-            or project.contract_type in ("CANONE", "PPM")
-            or project.planned_end_date is None
-            or project.planned_end_date >= timezone.localdate()
-        ):
-            continue
-        yield Finding(
-            "CHK_MISSING_IN_PPM",
-            project.code,
-            Severity.MEDIA,
-            Scope.RICONCILIAZIONE,
-            f"{_short(project.code)} ha {row.internal_days} gg interni ma non compare nel PPM.",
-            "Chiedere a Imola l'associazione nel PPM.",
-            {"project_code": project.code, "internal_days": str(row.internal_days)},
-            project_id=project.id,
-        )
-
-
 # 12. CHK_DOUBLE_COUNT
 def check_double_count() -> Iterable[Finding]:
     canone_refs = set(
@@ -572,8 +523,6 @@ RULES: dict[str, Detector] = {
     "CHK_RESIDUAL_EXPIRING": check_residual_expiring,
     "CHK_RESIDUAL_UNALLOCATED_CLOSED": check_residual_unallocated_closed,
     "CHK_ALLOC_FROM_EXPIRED": check_alloc_from_expired,
-    "CHK_RECON_DELTA": check_recon_delta,
-    "CHK_MISSING_IN_PPM": check_missing_in_ppm,
     "CHK_DOUBLE_COUNT": check_double_count,
     "CHK_CANONE_UNDERUSE": check_canone_underuse,
     "CHK_CANONE_OVERUSE": check_canone_overuse,

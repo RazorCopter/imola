@@ -40,7 +40,6 @@ urlpatterns = [
         name="database-restore",
     ),
     path("admin/imports/seed", admin_views.SeedImportView.as_view(), name="admin-seed-import"),
-    path("admin/imports/ppm", admin_views.PpmImportView.as_view(), name="admin-ppm-import"),
     path("admin/imports", admin_views.ImportHistoryView.as_view(), name="admin-import-history"),
     path(
         "admin/imports/<uuid:batch_id>/datasets",
@@ -214,12 +213,6 @@ urlpatterns = [
         domain_views.AuditHistoryView.as_view(),
         name="audit-history",
     ),
-    path("imports/ppm", domain_views.PpmImportUploadView.as_view(), name="import-ppm-upload"),
-    path(
-        "review-queue",
-        domain_views.ProjectReviewQueueView.as_view(),
-        name="review-queue",
-    ),
     path(
         "projects/<uuid:pk>/release-to-wallet",
         domain_views.ReleaseProjectToWalletView.as_view(),
@@ -261,11 +254,6 @@ urlpatterns = [
         name="canone-subactivity-timesheet-detail",
     ),
     path("canoni/<uuid:pk>/status", domain_views.CanoneStatusView.as_view(), name="canone-status"),
-    path(
-        "reconciliation/latest",
-        domain_views.ReconciliationView.as_view(),
-        name="reconciliation-latest",
-    ),
     path("export/json", domain_views.ExportJsonView.as_view(), name="export-json"),
     path("export/excel", domain_views.ExportExcelView.as_view(), name="export-excel"),
     path("export/csv/<str:entity>", domain_views.ExportCsvView.as_view(), name="export-csv"),

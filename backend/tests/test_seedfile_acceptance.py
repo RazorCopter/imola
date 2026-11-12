@@ -69,38 +69,3 @@ def test_chiusura_im24517_rende_spendibile_solo_il_suo_residuo(imported_seed: Pa
     assert balance.unallocated_valid_days == Decimal("0.0000")
     assert balance.unallocated_expiring_days == Decimal("12.3100")
 
-
-def test_review_queue_api_espone_i_dodici_progetti_esatti(authenticated_client: APIClient):
-    response = authenticated_client.get(
-        "/api/v1/review-queue", {"as_of": date(2026, 10, 16).isoformat()}
-    )
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["count"] == 12
-    assert body["da_verificare_count"] == 9
-    assert body["chiuso_senza_data_count"] == 3
-    assert [row["codice"] for row in body["results"]] == [
-        "IM24517-3313-BMED-ARCH-SOLUTION-DESIGN-CONSULENZA-AMMINISTRATO",
-        "IM25026-3313-BMED-ARCH-SOLUTION-DESIGN-INTEGRAZIONE-SCHEDA-FONDO",
-        "IM25075-3313-BMED-ARCH-SOLUTION-DESIGN-APP-FB-WAVE-2",
-        "IM25151-3313-BMED-ARCH-ICT-ASSET-LIFECYCLE-OBSOLESCENZA",
-        "IM25188-3313-BMED-ARCH-INTEGR-NOTIFICHE-PUSH-APP-MED-ALERT-SEC",
-        "IM25206-3313-BMED-ARCH-DATABRICKS-SUPERAMENTO-CRMA-DATALAB",
-        "IM25236-3313-BMED-ARCH-RAFFORZAMENTO-DATA-QUALITY-TECNICA",
-        "IM25255-3313-BMED-ARCH-ADEGUA-OSI-ORIGINATION-MONIT-CRED-ORD",
-        "IM25270-3313-BMED-ARCH-SOLUTION-DESIGN-AGILE-CREDIT",
-        "IM26034-3313-BMED-ARCH-SOLUTION-DESIGN-MIGRAZIONE-VIYA",
-        "IM26047-3313-BMED-ARCH-SOLUTION-DESIGN-MARKET-RISK-W2",
-        "IM26075-3313-BMED-ARCH-MIGRAZIONE-COMP-ARCH-OSB14",
-    ]
-
-    for row in body["results"][:9]:
-        assert row["data_chiusura_proposta"].startswith("2025-")
-        assert row["scadenza_potenziale"] == "2026-12-31"
-        if Decimal(row["residuo"]) > Decimal("0.0000"):
-            assert row["in_scadenza_entro_90gg"] is True
-            assert row["avviso_scadenza"].endswith("utilizzabili fino al 31/12/2026.")
-        else:
-            assert row["in_scadenza_entro_90gg"] is False
-            assert row["avviso_scadenza"] is None

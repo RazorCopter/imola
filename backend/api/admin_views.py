@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import tempfile
-from pathlib import Path
 
 from django.apps import apps
 from django.contrib.auth.models import Group, User
@@ -24,7 +22,6 @@ from core.permissions import CanManagePrivileges, CanManageUsers, CanResetData, 
 from directory.models import Organization, OrganizationKind, Person
 from directory.normalization import comparison_key
 from importers.batch import apply_seed, dry_run_seed, schema_paths
-from importers.ppm import apply_ppm, dry_run_ppm
 from importers.schema import validate_seed_auto
 from imports.models import ImportBatch, WorkbookDatasetSnapshot
 
@@ -89,45 +86,6 @@ class SeedImportView(APIView):
             }
         )
 
-
-class PpmImportView(APIView):
-    permission_classes = [IsAdmin]
-    parser_classes = [MultiPartParser, FormParser]
-
-    def post(self, request):
-        uploaded, raw = _uploaded_bytes(request)
-        if uploaded is None or raw is None:
-            raise serializers.ValidationError("File PPM mancante o superiore a 10 MB.")
-        suffix = Path(uploaded.name or "upload").suffix.lower()
-        if suffix not in {".xlsx", ".pdf"}:
-            raise serializers.ValidationError("Formato PPM non supportato: usare .xlsx o .pdf.")
-        content_hash = hashlib.sha256(raw).hexdigest()
-        if (
-            request.data.get("apply") == "true"
-            and request.data.get("confirmation_hash") != content_hash
-        ):
-            return Response(
-                {"detail": "Conferma non valida: ripetere il dry-run sullo stesso file."},
-                status=status.HTTP_409_CONFLICT,
-            )
-        try:
-            with tempfile.NamedTemporaryFile(suffix=suffix) as temporary:
-                temporary.write(raw)
-                temporary.flush()
-                report = (
-                    apply_ppm(temporary.name, user=request.user)
-                    if request.data.get("apply") == "true"
-                    else dry_run_ppm(temporary.name)
-                )
-        except ValueError as exc:
-            raise serializers.ValidationError(str(exc)) from exc
-        return Response(
-            {
-                "mode": "apply" if request.data.get("apply") == "true" else "dry-run",
-                "confirmation_hash": content_hash,
-                "report": _report_payload(report),
-            }
-        )
 
 
 class ImportHistoryView(APIView):

@@ -103,7 +103,6 @@ def test_export_schema_csv_ed_excel_multifoglio():
         "Progetti",
         "Wallet",
         "Canone",
-        "Riconciliazione",
         "Anomalie",
     ]
 

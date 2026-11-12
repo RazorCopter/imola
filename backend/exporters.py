@@ -14,7 +14,6 @@ from openpyxl import Workbook  # type: ignore[import-untyped]
 from anomalies.models import Anomaly
 from canone.models import Canone
 from domain.canone_status import canone_status
-from domain.reconciliation import reconcile
 from domain.residuals import project_balance_qs
 from domain.wallet_balance import allocation_balance_qs, wallet_year_balance
 from wallet.models import WalletAllocation
@@ -80,7 +79,6 @@ def export_payload() -> dict:
                 "forecast_days": status.forecast,
             }
         )
-    reconciliation = [row.as_dict() for row in reconcile()]
     anomalies = list(
         Anomaly.objects.order_by("rule_code", "detected_at").values(
             "external_ref",
@@ -99,7 +97,6 @@ def export_payload() -> dict:
             "projects": projects,
             "wallet": wallet,
             "canoni": canoni,
-            "reconciliation": reconciliation,
             "anomalies": anomalies,
         }
     )
@@ -117,8 +114,6 @@ def _csv_rows(entity: str) -> list[dict]:
         "wallet": "wallet",
         "canone": "canoni",
         "canoni": "canoni",
-        "reconciliation": "reconciliation",
-        "riconciliazione": "reconciliation",
         "anomalies": "anomalies",
         "anomalie": "anomalies",
     }
@@ -151,7 +146,6 @@ def export_excel_bytes() -> bytes:
         ("Progetti", payload["projects"]),
         ("Wallet", payload["wallet"]),
         ("Canone", payload["canoni"]),
-        ("Riconciliazione", payload["reconciliation"]),
         ("Anomalie", payload["anomalies"]),
     ]
     for title, rows in sheets:

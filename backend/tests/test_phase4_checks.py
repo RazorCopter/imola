@@ -40,8 +40,6 @@ EXPECTED_RULES = {
     "CHK_RESIDUAL_EXPIRING",
     "CHK_RESIDUAL_UNALLOCATED_CLOSED",
     "CHK_ALLOC_FROM_EXPIRED",
-    "CHK_RECON_DELTA",
-    "CHK_MISSING_IN_PPM",
     "CHK_DOUBLE_COUNT",
     "CHK_CANONE_UNDERUSE",
     "CHK_CANONE_OVERUSE",
@@ -52,9 +50,9 @@ EXPECTED_RULES = {
 }
 
 
-def test_catalogo_contiene_esattamente_diciotto_regole_della_spec():
+def test_catalogo_contiene_esattamente_sedici_regole_della_spec():
     assert set(RULES) == EXPECTED_RULES
-    assert len(RULES) == 18
+    assert len(RULES) == 16
 
 
 @pytest.mark.parametrize("rule_code", sorted(EXPECTED_RULES))

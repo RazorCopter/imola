@@ -42,7 +42,6 @@ from core.permissions import (
     CanEditWallet,
     CanExport,
     CanResolveAnomalies,
-    CanUploadImports,
     CanValidateProjectClosure,
     IsAdmin,
     ReadOnlyOrCanCreateProjects,
@@ -53,7 +52,6 @@ from core.permissions import (
 from domain.canone_status import canone_burndown, canone_status
 from domain.cost_analysis import build_cost_analysis
 from domain.dashboard import dashboard_summary
-from domain.reconciliation import reconcile, reconciliation_summary
 from domain.residuals import residual_explanation, residual_validity
 from domain.wallet_balance import wallet_by_assignee, wallet_flow, wallet_year_balance
 from wallet.services import ensure_source_lot
@@ -574,41 +572,6 @@ class ProjectTimesheetDetailView(DocumentedAPIView):
         reversal.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
-class ProjectReviewQueueView(DocumentedAPIView):
-    """Coda di revisione progetti: 3 CHIUSO senza data + 9 DA_VERIFICARE (D-03)."""
-
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(responses={200: dict})
-    def get(self, request):
-        from datetime import date
-
-        from domain.residuals import review_queue_projects
-
-        as_of = None
-        as_of_param = request.query_params.get("as_of") or request.query_params.get(
-            "reference_date"
-        )
-        if as_of_param:
-            try:
-                as_of = date.fromisoformat(as_of_param)
-            except ValueError:
-                pass
-
-        items = review_queue_projects(as_of=as_of)
-        return Response(
-            {
-                "results": items,
-                "count": len(items),
-                "chiuso_senza_data_count": sum(
-                    1 for x in items if x["tipo_revisione"] == "CHIUSO_SENZA_DATA"
-                ),
-                "da_verificare_count": sum(
-                    1 for x in items if x["tipo_revisione"] == "DA_VERIFICARE"
-                ),
-            }
-        )
 
 
 class AnomalyListView(DocumentedAPIView):
@@ -1334,6 +1297,7 @@ class CanoneSubactivityTimesheetListView(DocumentedAPIView):
     @transaction.atomic
     def post(self, request, pk, subactivity_pk):
         from decimal import Decimal, InvalidOperation
+
         from timesheets.models import TimesheetEntry, TimesheetSource
 
         row = get_object_or_404(
@@ -1352,7 +1316,7 @@ class CanoneSubactivityTimesheetListView(DocumentedAPIView):
             return Response({"giornate": ["Le giornate devono essere maggiori di zero."]}, status=400)
         if not description:
             return Response({"descrizione": ["La descrizione è obbligatoria."]}, status=400)
-        if row.start_date and entry_date < row.start_date or row.end_date and entry_date > row.end_date:
+        if (row.start_date and entry_date < row.start_date) or (row.end_date and entry_date > row.end_date):
             return Response({"data": ["La data deve rientrare nel periodo dell'attività."]}, status=400)
         consumed = row.timesheet_entries.aggregate(total=Sum("days"))["total"] or 0
         if consumed + days > row.reserved_days:
@@ -1390,6 +1354,7 @@ class CanoneSubactivityTimesheetDetailView(DocumentedAPIView):
     @transaction.atomic
     def patch(self, request, pk, subactivity_pk, entry_pk):
         from decimal import Decimal, InvalidOperation
+
         from timesheets.models import TimesheetEntry, TimesheetSource
 
         entry = self.get_entry(pk, subactivity_pk, entry_pk)
@@ -1402,7 +1367,7 @@ class CanoneSubactivityTimesheetDetailView(DocumentedAPIView):
         description = str(request.data.get("descrizione", entry.note)).strip()
         if days <= 0 or not description:
             return Response({"detail": "Giornate positive e descrizione sono obbligatorie."}, status=400)
-        if row.start_date and entry_date < row.start_date or row.end_date and entry_date > row.end_date:
+        if (row.start_date and entry_date < row.start_date) or (row.end_date and entry_date > row.end_date):
             return Response({"data": ["La data deve rientrare nel periodo dell'attività."]}, status=400)
         consumed_without_entry = (row.timesheet_entries.aggregate(total=Sum("days"))["total"] or 0) - entry.days
         if consumed_without_entry + days > row.reserved_days:
@@ -1545,25 +1510,6 @@ class CanoneStatusView(DocumentedAPIView):
         status_data["burndown"] = canone_burndown(canone)
         return Response(status_data)
 
-
-class ReconciliationView(DocumentedAPIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        settings_obj = current_settings()
-        tolerance = settings_obj.reconciliation_tolerance_days
-        rows = reconcile(tolerance=tolerance)
-        return Response(
-            {
-                "riepilogo": reconciliation_summary(tolerance, rows=rows),
-                "tolleranza": tolerance,
-                "results": [
-                    {**row.as_dict(), "spiegazione": row.explanation}
-                    for row in rows
-                    if row.internal_days or not row.missing_in_ppm
-                ],
-            }
-        )
 
 
 class ProjectDeleteBlocked(DomainError):
@@ -2367,35 +2313,3 @@ class AuditHistoryView(DocumentedAPIView):
         return Response({"results": rows, "count": len(rows)})
 
 
-class PpmImportUploadView(DocumentedAPIView):
-    permission_classes = [CanUploadImports]
-
-    @extend_schema(request=dict, responses={200: dict})
-    def post(self, request):
-        import tempfile
-        from pathlib import Path
-
-        from core import roles
-        from importers.ppm import apply_ppm, dry_run_ppm
-
-        upload = request.FILES.get("file")
-        if upload is None:
-            return Response({"detail": "File non fornito."}, status=status.HTTP_400_BAD_REQUEST)
-        suffix = Path(upload.name).suffix
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            for chunk in upload.chunks():
-                tmp.write(chunk)
-            tmp_path = Path(tmp.name)
-        try:
-            is_supplier = roles.has_role(
-                request.user, roles.SUPPLIER
-            ) and not roles.can_write_ledger(request.user)
-            wants_apply = request.data.get("apply") in (True, "true", "1") and not is_supplier
-            if wants_apply:
-                report = apply_ppm(tmp_path, user=request.user)
-            else:
-                report = dry_run_ppm(tmp_path)
-            return Response(report.as_dict())
-        finally:
-            if tmp_path.exists():
-                tmp_path.unlink()

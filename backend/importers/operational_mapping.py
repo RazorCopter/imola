@@ -394,7 +394,15 @@ class Resolver:
         un utente disattivato non potrebbe ricevere consuntivi. L'accesso resta impossibile
         perché la password è inutilizzabile e l'unico backend configurato è a password.
         """
-        full_name = titlecase_name(_invert_surname_first(raw))
+        # L'anagrafica è la fonte autorevole del nome: `comparison_key` ordina i token,
+        # quindi "Vignati Pier Mauro" trova "Pier Mauro Vignati" anche se l'ordine
+        # differisce. Senza questo passaggio si creerebbe un utente con il nome nell'ordine
+        # dell'Excel, divergente dalla persona già censita.
+        persona = Person.objects.by_name(raw).first()
+        if persona is not None:
+            full_name = persona.full_name
+        else:
+            full_name = titlecase_name(_invert_surname_first(raw))
         first, _, last = full_name.partition(" ")
         user = User(
             username=_available_username(full_name),
@@ -407,11 +415,11 @@ class Resolver:
         group, _ = Group.objects.get_or_create(name=roles.SUPPLIER)
         user.groups.add(group)
 
-        organization, _ = Organization.objects.get_or_create(
-            code=SUPPLIER_ORG_CODE,
-            defaults={"name": "Imola Informatica", "kind": OrganizationKind.SUPPLIER},
-        )
-        if not Person.objects.by_name(full_name, organization).exists():
+        if persona is None:
+            organization, _ = Organization.objects.get_or_create(
+                code=SUPPLIER_ORG_CODE,
+                defaults={"name": "Imola Informatica", "kind": OrganizationKind.SUPPLIER},
+            )
             Person.objects.create(
                 full_name=full_name,
                 organization=organization,
