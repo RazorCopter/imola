@@ -21,6 +21,8 @@ PROJECT_EDITABLE_FIELDS = {
     "planned_end_date",
     "rda_code",
     "reliability",
+    "single_billing",
+    "single_billing_date",
     "start_date",
     "supplier_owner",
     "timesheet_status",

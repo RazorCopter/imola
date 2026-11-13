@@ -275,6 +275,12 @@ export function ProjectDetailPage() {
                       ["Codice RDA", details.data.rda_code],
                       ["Deliverable", details.data.deliverable],
                       ["Data chiusura effettiva", details.data.actual_closure_date],
+                      [
+                        "Fatturazione unica",
+                        details.data.single_billing
+                          ? (details.data.single_billing_date ?? "data non indicata")
+                          : "No",
+                      ],
                     ].map(([label, value]) => (
                       <div key={label}>
                         <dt className="text-xs uppercase text-muted-foreground">{label}</dt>
@@ -312,7 +318,9 @@ export function ProjectDetailPage() {
                                   ? "Prima tranche"
                                   : item.slot === "END"
                                     ? "Seconda tranche"
-                                    : "Milestone"}
+                                    : item.slot === "SINGLE"
+                                      ? "Fatturazione unica"
+                                      : "Milestone"}
                               </td>
                               <td className="py-3 pr-4">{item.planned_date || "?"}</td>
                               <td className="py-3 pr-4">

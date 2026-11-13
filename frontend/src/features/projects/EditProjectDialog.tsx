@@ -25,6 +25,8 @@ export interface ProjectFormData {
   budget_days: string;
   start_date: string | null;
   planned_end_date: string | null;
+  single_billing: boolean;
+  single_billing_date: string | null;
   actual_closure_date: string | null;
   offer_status: string;
   timesheet_status: string;
@@ -63,6 +65,8 @@ interface FormValues {
   budget_days: string;
   start_date: string;
   planned_end_date: string;
+  single_billing: boolean;
+  single_billing_date: string;
   actual_closure_date: string;
   offer_status: string;
   timesheet_status: string;
@@ -138,6 +142,10 @@ export function EditProjectDialog({
         budget_days: project.budget_days ?? "0.0000",
         start_date: project.start_date ?? "",
         planned_end_date: project.planned_end_date ?? "",
+        single_billing: project.single_billing ?? false,
+        single_billing_date: project.single_billing_date
+          ? project.single_billing_date.slice(0, 7)
+          : "",
         actual_closure_date: project.actual_closure_date ?? "",
         offer_status: project.offer_status ?? "INVIATA",
         timesheet_status: project.timesheet_status ?? "NON_AVVIATO",
@@ -150,6 +158,7 @@ export function EditProjectDialog({
   }, [project, reset]);
 
   const watchedTimesheetStatus = watch("timesheet_status");
+  const watchedSingleBilling = watch("single_billing");
 
   const clientPeople = useMemo(
     () => optionsQuery.data?.people.filter((p) => p.organization_kind === "CLIENT") ?? [],
@@ -191,6 +200,12 @@ export function EditProjectDialog({
         payload.budget_days = values.budget_days;
         payload.start_date = values.start_date || null;
         payload.planned_end_date = values.planned_end_date || null;
+        payload.single_billing = values.single_billing;
+        payload.single_billing_date = values.single_billing
+          ? values.single_billing_date
+            ? `${values.single_billing_date}-01`
+            : null
+          : null;
         payload.actual_closure_date = values.actual_closure_date || null;
         payload.offer_status = values.offer_status;
         payload.timesheet_status = values.timesheet_status;
@@ -666,6 +681,47 @@ export function EditProjectDialog({
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Fatturazione unica */}
+              <div className="rounded-md border border-border bg-muted/20 p-3">
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <input
+                    type="checkbox"
+                    {...register("single_billing")}
+                    disabled={!isFullEdit}
+                    className="h-4 w-4 rounded border-border"
+                    data-testid="single-billing-checkbox"
+                  />
+                  Una sola fatturazione
+                </label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Sostituisce le tranche di inizio e fine con un&apos;unica fatturazione nel mese
+                  indicato: tipico di importi piccoli fatturati in blocco all&apos;accettazione o
+                  alla chiusura.
+                </p>
+                {watchedSingleBilling && (
+                  <div className="mt-3">
+                    <label
+                      className="text-xs font-medium text-foreground"
+                      htmlFor={`${formId}-single_billing_date`}
+                    >
+                      Mese di fatturazione
+                    </label>
+                    <Input
+                      type="month"
+                      id={`${formId}-single_billing_date`}
+                      {...register("single_billing_date")}
+                      disabled={!isFullEdit}
+                      className="mt-1 w-full max-w-xs rounded-md border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
+                    />
+                    {errors.single_billing_date && (
+                      <p className="mt-0.5 text-xs text-destructive">
+                        {errors.single_billing_date.message}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Note */}

@@ -106,6 +106,84 @@ def test_creazione_progetto_genera_due_tranche_a_fine_mese():
     ]
 
 
+def test_creazione_progetto_con_fatturazione_unica_usa_una_sola_tranche_a_fine_mese():
+    client, _ = make_client_for_role(roles.ADMIN)
+
+    response = client.post(
+        "/api/v1/projects",
+        {
+            "code": "IM-BILLING-SINGLE",
+            "title": "Fatturazione unica",
+            "contract_type": ContractType.CORPO,
+            "budget_days": "3.0000",
+            "start_date": "2026-10-27",
+            "planned_end_date": "2026-12-31",
+            "single_billing": True,
+            "single_billing_date": "2026-11-01",
+            "billing_status": BillingStatus.DA_FATTURARE,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201, response.data
+    project = Project.objects.get(pk=response.json()["id"])
+    assert project.single_billing is True
+    assert project.single_billing_date == date(2026, 11, 1)
+    milestones = list(project.milestones.all())
+    assert [(row.schedule_slot, row.planned_date, row.status) for row in milestones] == [
+        (BillingScheduleSlot.SINGLE, date(2026, 11, 30), MilestoneStatus.PIANIFICATA),
+    ]
+
+    detail = client.get(f"/api/v1/projects/{project.id}").json()
+    assert detail["single_billing"] is True
+    assert detail["single_billing_date"] == "2026-11-01"
+
+
+def test_flag_fatturazione_unica_senza_data_e_rifiutato():
+    client, _ = make_client_for_role(roles.ADMIN)
+
+    response = client.post(
+        "/api/v1/projects",
+        {
+            "code": "IM-BILLING-NODATE",
+            "title": "Fatturazione unica senza data",
+            "contract_type": ContractType.CORPO,
+            "budget_days": "3.0000",
+            "single_billing": True,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "single_billing_date" in response.json()
+
+
+def test_togliere_il_flag_fatturazione_unica_ripristina_le_due_tranche():
+    client, _ = make_client_for_role(roles.ADMIN)
+    project = ProjectFactory(
+        code="IM-BILLING-SWITCH",
+        start_date=date(2026, 10, 27),
+        planned_end_date=date(2026, 12, 31),
+        single_billing=True,
+        single_billing_date=date(2026, 11, 1),
+        billing_status=BillingStatus.DA_FATTURARE,
+    )
+
+    response = client.patch(
+        f"/api/v1/projects/{project.id}",
+        {
+            "expected_version": project.version,
+            "single_billing": False,
+            "single_billing_date": None,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200, response.data
+    slots = sorted(project.milestones.values_list("schedule_slot", flat=True))
+    assert slots == [BillingScheduleSlot.END, BillingScheduleSlot.START]
+
+
 def test_stato_parziale_segna_prima_tranche_fatturata_e_lascia_aperta_la_seconda():
     client, _ = make_client_for_role(roles.ADMIN)
     project = ProjectFactory(

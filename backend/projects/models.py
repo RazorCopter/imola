@@ -59,6 +59,7 @@ class MilestoneStatus(models.TextChoices):
 class BillingScheduleSlot(models.TextChoices):
     START = "START", "Avvio progetto"
     END = "END", "Fine progetto"
+    SINGLE = "SINGLE", "Fatturazione unica"
 
 
 class Project(TrackedModel, VerifiableMixin, ImportedRecordMixin):
@@ -103,6 +104,20 @@ class Project(TrackedModel, VerifiableMixin, ImportedRecordMixin):
         null=True,
         blank=True,
         verbose_name="chiusura consuntivazione",
+    )
+    single_billing = models.BooleanField(
+        default=False,
+        verbose_name="una sola fatturazione",
+        help_text=(
+            "Fatturazione unica su un mese: sostituisce le tranche di avvio e fine, "
+            "tipica di importi piccoli fatturati in blocco all'accettazione o alla chiusura."
+        ),
+    )
+    single_billing_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="data fatturazione unica",
+        help_text="Mese di fatturazione: il piano usa la fine del mese.",
     )
 
     offer_status = models.CharField(
@@ -223,6 +238,10 @@ class Project(TrackedModel, VerifiableMixin, ImportedRecordMixin):
             and (self.actual_closure_date < self.start_date)
         ):
             errors["actual_closure_date"] = "La chiusura non può precedere l'inizio."
+        if self.single_billing and self.single_billing_date is None:
+            errors["single_billing_date"] = (
+                "Indicare il mese di fatturazione quando è attiva 'Una sola fatturazione'."
+            )
         if errors:
             raise ValidationError(errors)
 

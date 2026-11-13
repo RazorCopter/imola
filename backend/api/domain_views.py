@@ -265,6 +265,8 @@ class ProjectListCreateView(DocumentedAPIView):
             "budget_days",
             "start_date",
             "planned_end_date",
+            "single_billing",
+            "single_billing_date",
             "offer_status",
             "timesheet_status",
             "billing_status",
@@ -1609,6 +1611,10 @@ def project_detail_payload(project, user) -> dict:
         "budget_days": str(project.budget_days),
         "start_date": str(project.start_date) if project.start_date else None,
         "planned_end_date": str(project.planned_end_date) if project.planned_end_date else None,
+        "single_billing": project.single_billing,
+        "single_billing_date": (
+            str(project.single_billing_date) if project.single_billing_date else None
+        ),
         "actual_closure_date": (
             str(project.actual_closure_date) if project.actual_closure_date else None
         ),

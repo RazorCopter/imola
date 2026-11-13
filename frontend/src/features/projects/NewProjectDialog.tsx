@@ -13,6 +13,8 @@ interface FormValues {
   budget_days: string;
   start_date: string;
   planned_end_date: string;
+  single_billing: boolean;
+  single_billing_date: string;
 }
 
 export function NewProjectDialog() {
@@ -28,7 +30,15 @@ export function NewProjectDialog() {
     reset,
   } = useForm<FormValues>({ defaultValues: { contract_type: "AQL", budget_days: "0" } });
   const mutation = useMutation({
-    mutationFn: (values: FormValues) => api.post<{ id: string }>("/projects", values),
+    mutationFn: (values: FormValues) =>
+      api.post<{ id: string }>("/projects", {
+        ...values,
+        single_billing: Boolean(values.single_billing),
+        single_billing_date:
+          values.single_billing && values.single_billing_date
+            ? `${values.single_billing_date}-01`
+            : null,
+      }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       reset();
@@ -43,6 +53,7 @@ export function NewProjectDialog() {
     },
   });
   const values = watch();
+  const singleBilling = values.single_billing;
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
@@ -110,6 +121,35 @@ export function NewProjectDialog() {
                 <Field label="Fine prevista">
                   <Input {...register("planned_end_date")} type="date" className="input" />
                 </Field>
+                <div className="rounded-md border border-border bg-muted/20 p-3 sm:col-span-2">
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <input
+                      type="checkbox"
+                      {...register("single_billing")}
+                      className="h-4 w-4 rounded border-border"
+                      data-testid="single-billing-checkbox"
+                    />
+                    Una sola fatturazione
+                  </label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Sostituisce le tranche di inizio e fine con un&apos;unica fatturazione nel mese
+                    indicato.
+                  </p>
+                  {singleBilling && (
+                    <div className="mt-3">
+                      <Field label="Mese di fatturazione">
+                        <Input
+                          {...register("single_billing_date", {
+                            required: singleBilling ? "Campo obbligatorio" : false,
+                          })}
+                          type="month"
+                          className="input max-w-xs"
+                          aria-invalid={Boolean(errors.single_billing_date)}
+                        />
+                      </Field>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             {step === 3 && (
@@ -121,8 +161,11 @@ export function NewProjectDialog() {
                   {values.contract_type} · budget {values.budget_days} gg
                 </p>
                 <p>
-                  {values.start_date || "Inizio non indicato"} →{" "}
-                  {values.planned_end_date || "Fine non indicata"}
+                  {values.single_billing && values.single_billing_date
+                    ? `Fatturazione unica: ${values.single_billing_date}`
+                    : `${values.start_date || "Inizio non indicato"} → ${
+                        values.planned_end_date || "Fine non indicata"
+                      }`}
                 </p>
               </div>
             )}
