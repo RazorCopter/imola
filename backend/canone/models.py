@@ -166,6 +166,14 @@ class CanoneSubactivity(TrackedModel, ImportedRecordMixin):
         verbose_name="da revisionare",
         help_text="Sotto-attività creata da un import PPM: ufficio da assegnare.",
     )
+    declared_open = models.BooleanField(
+        default=False,
+        verbose_name="forzata aperta",
+        help_text=(
+            "Lo stato è dichiarativo: un'attività al 100% delle giornate è chiusa, ma "
+            "può essere forzata aperta per far emergere nel report un eventuale sforamento."
+        ),
+    )
     history = HistoricalRecords()
 
     class Meta:

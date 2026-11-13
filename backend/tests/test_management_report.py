@@ -72,6 +72,34 @@ def test_report_scope_e_valori():
     assert body["activities"][0]["title"] == sub.title
 
 
+def test_report_includi_attivita_sforata_forzata_aperta():
+    """Un'attività al 100% (o oltre) e forzata aperta deve figurare nel report."""
+    client, _ = make_client_for_role(roles.ADMIN)
+    canone = CanoneFactory(start_date=date(2026, 7, 1), end_date=date(2026, 12, 31))
+    sforata = CanoneSubactivityFactory(
+        canone=canone,
+        office="EA",
+        title="Sforata forzata aperta",
+        reserved_days=Decimal("5"),
+        declared_open=True,
+    )
+    TimesheetEntryFactory(canone_subactivity=sforata, days=Decimal("6"))
+    # Stessa situazione ma chiusa automaticamente: resta fuori dal report.
+    chiusa = CanoneSubactivityFactory(
+        canone=canone, office="EA", title="Sforata chiusa", reserved_days=Decimal("5")
+    )
+    TimesheetEntryFactory(canone_subactivity=chiusa, days=Decimal("6"))
+
+    with patch("api.management_report.timezone.localdate", return_value=date(2026, 10, 29)):
+        body = client.get("/api/v1/admin/management-report").json()
+
+    titles = [x["title"] for x in body["activities"]]
+    assert "Sforata forzata aperta" in titles
+    assert "Sforata chiusa" not in titles
+    row = next(x for x in body["activities"] if x["title"] == "Sforata forzata aperta")
+    assert Decimal(row["remaining"]) == Decimal("-1")
+
+
 def test_report_annual_costs_exclude_history_and_future():
     from core.models import AppSettings
 

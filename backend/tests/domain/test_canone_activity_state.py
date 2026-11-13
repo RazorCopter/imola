@@ -17,3 +17,9 @@ from domain.canone_status import subactivity_state
 )
 def test_stato_attivita_derivato(reserved, consumed, expected):
     assert subactivity_state(Decimal(reserved), Decimal(consumed)) == expected
+
+
+def test_stato_dichiarato_aperto_vince_sul_derivato():
+    """Un'attività forzata aperta resta IN_CORSO anche a consuntivo esaurito o superato."""
+    assert subactivity_state(Decimal("10"), Decimal("10"), declared_open=True) == "IN_CORSO"
+    assert subactivity_state(Decimal("10"), Decimal("12"), declared_open=True) == "IN_CORSO"

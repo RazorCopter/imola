@@ -1226,7 +1226,10 @@ def _canone_detail(canone, office: str = "", search: str = "") -> dict:
                 "start_date": row.start_date,
                 "end_date": row.end_date,
                 "remaining_reserved_days": row.reserved_days - row.consumed_days,
-                "stato": subactivity_state(row.reserved_days, row.consumed_days),
+                "stato": subactivity_state(
+                    row.reserved_days, row.consumed_days, declared_open=row.declared_open
+                ),
+                "declared_open": row.declared_open,
                 "sforata": row.consumed_days > row.reserved_days,
                 "redmine_ref": row.redmine_ref,
                 "quarter_estimate_days": row.quarter_estimate_days,

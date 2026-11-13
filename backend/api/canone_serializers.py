@@ -80,6 +80,7 @@ class CanoneSubactivityWriteSerializer(serializers.ModelSerializer):
         fields = (
             "office", "title", "reserved_days", "start_date", "end_date", "redmine_ref",
             "quarter_estimate_days", "forecast_remaining_days", "notes", "needs_review",
+            "declared_open",
         )
 
     def validate(self, attrs):

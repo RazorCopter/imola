@@ -104,7 +104,12 @@ class ManagementReportView(APIView):
             domains[domain]["reserved"] += a.reserved_days
             domains[domain]["consumed"] += consumed
             domains[domain]["count"] += 1
-            if subactivity_state(a.reserved_days, consumed) == "CHIUSO":
+            state = subactivity_state(
+                a.reserved_days,
+                consumed,
+                declared_open=a.declared_open,
+            )
+            if state == "CHIUSO":
                 continue
             activities.append(
                 {

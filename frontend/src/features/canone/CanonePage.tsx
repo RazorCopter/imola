@@ -76,6 +76,7 @@ interface Subactivity {
   needs_review: boolean;
   consuntivato: string;
   stato: "IN_CORSO" | "CHIUSO";
+  declared_open: boolean;
   sforata: boolean;
   timesheet_count: number;
   consuntivi: TimesheetRow[];
@@ -227,6 +228,7 @@ export function CanonePage() {
     quarter_estimate_days: "",
     forecast_remaining_days: "",
     notes: "",
+    declared_open: false,
   });
   const [editingSubactivity, setEditingSubactivity] = useState<Subactivity | null>(null);
   const [creatingActivity, setCreatingActivity] = useState(false);
@@ -414,6 +416,7 @@ export function CanonePage() {
         quarter_estimate_days: "",
         forecast_remaining_days: "",
         notes: "",
+        declared_open: false,
       });
       setEditingSubactivity(null);
       setCreatingActivity(false);
@@ -1110,6 +1113,7 @@ export function CanonePage() {
                                             forecast_remaining_days:
                                               row.forecast_remaining_days ?? "",
                                             notes: row.notes,
+                                            declared_open: row.declared_open,
                                           });
                                         }}
                                       >
@@ -1152,6 +1156,11 @@ export function CanonePage() {
                                 {row.sforata && (
                                   <span className="inline-flex items-center rounded-full border border-warn/50 bg-warn/10 px-2 py-0.5 text-xs font-semibold text-warn">
                                     {t("canone.overrunBadge")}
+                                  </span>
+                                )}
+                                {row.declared_open && (
+                                  <span className="inline-flex items-center rounded-full border border-accent/50 bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent">
+                                    {t("canone.forcedOpenBadge")}
                                   </span>
                                 )}
                               </div>
@@ -1212,6 +1221,7 @@ export function CanonePage() {
                                               quarter_estimate_days: "",
                                               forecast_remaining_days: "",
                                               notes: "",
+                                              declared_open: false,
                                             });
                                           }}
                                         >
@@ -1276,6 +1286,20 @@ export function CanonePage() {
                                           setSubForm({ ...subForm, end_date: e.target.value })
                                         }
                                       />
+                                      <label className="flex items-center gap-2 text-sm">
+                                        <input
+                                          type="checkbox"
+                                          aria-label="Forzata aperta"
+                                          checked={subForm.declared_open}
+                                          onChange={(e) =>
+                                            setSubForm({
+                                              ...subForm,
+                                              declared_open: e.target.checked,
+                                            })
+                                          }
+                                        />
+                                        Forzata aperta
+                                      </label>
                                       <Button
                                         className={buttonClass}
                                         onClick={() => addSub.mutate()}

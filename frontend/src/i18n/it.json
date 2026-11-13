@@ -129,6 +129,7 @@
     "overrunWarningsHint": "Attività oltre il forecast: residuo negativo da gestire.",
     "overrunWarningsNone": "Nessuna attività oltre il forecast.",
     "overrunBadge": "Oltre il forecast",
+    "forcedOpenBadge": "Forzata aperta",
     "search": "Ricerca",
     "period": "Periodo",
     "domain": "Dominio",

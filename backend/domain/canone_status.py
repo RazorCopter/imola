@@ -24,8 +24,18 @@ DAYS_OUTPUT = DecimalField(max_digits=12, decimal_places=4)
 UNDERUSE_THRESHOLD = Decimal("0.95")
 
 
-def subactivity_state(reserved_days: Decimal, consumed_days: Decimal) -> str:
-    """Stato derivato dal totale netto dei consuntivi, inclusi gli storni."""
+def subactivity_state(
+    reserved_days: Decimal, consumed_days: Decimal, *, declared_open: bool = False
+) -> str:
+    """Stato dell'attività.
+
+    Di norma derivato dal totale netto dei consuntivi (inclusi gli storni): al 100% delle
+    giornate l'attività è chiusa. Lo stato è però dichiarativo: se l'utente la forza aperta
+    (`declared_open`), resta IN_CORSO anche a consuntivo esaurito o superato, così un
+    eventuale sforamento può emergere nel report invece di sparire tra le attività chiuse.
+    """
+    if declared_open:
+        return "IN_CORSO"
     return "IN_CORSO" if consumed_days < reserved_days else "CHIUSO"
 
 
