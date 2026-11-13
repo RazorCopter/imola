@@ -1,4 +1,4 @@
-"""Export leggibili e versionati del Supplier Ledger."""
+"""Export leggibili e versionati del SupplyHub."""
 
 from __future__ import annotations
 

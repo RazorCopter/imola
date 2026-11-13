@@ -73,9 +73,11 @@ export function AppShell({ onOpenCommandPalette }: { onOpenCommandPalette: () =>
         )}
       >
         <div className="flex h-16 items-center gap-3 border-b border-border px-4">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-bold text-accent-foreground">
-            SL
-          </span>
+          <img
+            src="/supplyhub-logo.png"
+            alt="SupplyHub"
+            className="size-8 shrink-0 rounded-lg object-contain"
+          />
           {!collapsed && (
             <span className="hidden truncate text-sm font-semibold tracking-tight md:block">
               {t("app.name")}

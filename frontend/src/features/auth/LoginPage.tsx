@@ -53,7 +53,16 @@ export function LoginPage() {
             maskImage: "linear-gradient(to bottom, transparent 10%, black 90%)",
           }}
         />
-        <div className="relative flex items-center gap-5">
+        <div className="relative flex flex-wrap items-center gap-5">
+          <div className="flex items-center gap-3">
+            <img
+              src="/supplyhub-logo.png"
+              alt="SupplyHub"
+              className="size-10 rounded-xl object-contain shadow-lg"
+            />
+            <span className="text-lg font-semibold tracking-tight text-white">{t("app.name")}</span>
+          </div>
+          <div className="hidden h-9 w-px bg-white/20 sm:block" />
           <div className="rounded-xl bg-white px-4 py-3 shadow-lg">
             <img
               src="/banca-mediolanum.svg"
@@ -61,10 +70,6 @@ export function LoginPage() {
               className="h-auto w-40 sm:w-48"
             />
           </div>
-          <div className="hidden h-9 w-px bg-white/20 sm:block" />
-          <span className="hidden text-xs font-semibold uppercase tracking-[0.16em] text-blue-100 sm:block">
-            Architetture IT
-          </span>
         </div>
         <div className="relative z-10 my-12 max-w-xl lg:my-auto lg:py-20">
           <p className="mb-5 text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">

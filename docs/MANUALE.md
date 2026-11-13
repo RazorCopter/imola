@@ -1,4 +1,4 @@
-# Manuale operativo — Supplier Ledger
+# Manuale operativo — SupplyHub
 
 > Le immagini e gli esempi di questo manuale usano esclusivamente una fixture dimostrativa sintetica. Non contengono codici progetto, persone o valori provenienti da ambienti reali.
 

@@ -149,7 +149,7 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Supplier Ledger API",
+    "TITLE": "SupplyHub API",
     "DESCRIPTION": "Consuntivazione, wallet e canone del fornitore Imola Informatica.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
