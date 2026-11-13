@@ -245,7 +245,8 @@ def test_canone_indipendente_attivita_e_consuntivi_append_only():
         {"data": "2027-07-16", "giornate": "8", "descrizione": "Eccesso"},
         format="json",
     )
-    assert overflow.status_code == 400
+    # Sull'Organico Allargato lo sforo è consentito: il residuo va in negativo.
+    assert overflow.status_code == 201, overflow.data
 
     corrected = supplier.patch(
         f"/api/v1/canoni/{canone_id}/subactivities/{activity_id}/timesheets/{entry_id}",
@@ -253,4 +254,5 @@ def test_canone_indipendente_attivita_e_consuntivi_append_only():
         format="json",
     )
     assert corrected.status_code == 200, corrected.data
-    assert corrected.json()["subactivities"][0]["consuntivato"] == "2.0000"
+    # 2 gg corretti + 8 gg dell'overflow: lo sforo resta ammesso.
+    assert corrected.json()["subactivities"][0]["consuntivato"] == "10.0000"

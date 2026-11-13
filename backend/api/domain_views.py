@@ -1349,9 +1349,6 @@ class CanoneSubactivityTimesheetListView(DocumentedAPIView):
             return Response({"descrizione": ["La descrizione è obbligatoria."]}, status=400)
         if (row.start_date and entry_date < row.start_date) or (row.end_date and entry_date > row.end_date):
             return Response({"data": ["La data deve rientrare nel periodo dell'attività."]}, status=400)
-        consumed = row.timesheet_entries.aggregate(total=Sum("days"))["total"] or 0
-        if consumed + days > row.reserved_days:
-            return Response({"giornate": ["Il consuntivo supera le giornate riservate all'attività."]}, status=400)
         try:
             author = resolve_author(request)
         except DjangoValidationError as exc:
@@ -1400,9 +1397,6 @@ class CanoneSubactivityTimesheetDetailView(DocumentedAPIView):
             return Response({"detail": "Giornate positive e descrizione sono obbligatorie."}, status=400)
         if (row.start_date and entry_date < row.start_date) or (row.end_date and entry_date > row.end_date):
             return Response({"data": ["La data deve rientrare nel periodo dell'attività."]}, status=400)
-        consumed_without_entry = (row.timesheet_entries.aggregate(total=Sum("days"))["total"] or 0) - entry.days
-        if consumed_without_entry + days > row.reserved_days:
-            return Response({"giornate": ["Il consuntivo supera le giornate riservate all'attività."]}, status=400)
         try:
             author = resolve_author(request, default=entry.created_by)
         except DjangoValidationError as exc:
