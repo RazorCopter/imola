@@ -106,18 +106,35 @@ class CanoneSubactivityWriteSerializer(serializers.ModelSerializer):
             attrs["end_date"] = end_date
         if start_date and end_date and end_date < start_date:
             raise serializers.ValidationError({"end_date": "La data fine precede la data inizio."})
-        allocated = canone.subactivities.all()
-        if self.instance:
-            allocated = allocated.exclude(pk=self.instance.pk)
-        allocated_total = allocated.aggregate(total=Sum("reserved_days"))["total"] or 0
-        if allocated_total + reserved > canone.total_days:
-            raise serializers.ValidationError(
-                {"reserved_days": "La riserva supera le giornate ancora disponibili sul canone."}
-            )
-        if self.instance:
-            consumed = self.instance.timesheet_entries.aggregate(total=Sum("days"))["total"] or 0
-            if reserved < consumed:
+        # Con lo stato "forzata aperta" i controlli di capienza saltano: l'attività può
+        # andare in negativo consuntivando oltre il previsto, per poi compensare quando
+        # arriva budget più avanti. I vincoli sulla riserva valgono solo quando l'attività
+        # non è forzata aperta.
+        declared_open = attrs.get("declared_open", getattr(self.instance, "declared_open", False))
+        if not declared_open:
+            allocated = canone.subactivities.all()
+            if self.instance:
+                allocated = allocated.exclude(pk=self.instance.pk)
+            allocated_total = allocated.aggregate(total=Sum("reserved_days"))["total"] or 0
+            if "reserved_days" in attrs and allocated_total + reserved > canone.total_days:
                 raise serializers.ValidationError(
-                    {"reserved_days": "La riserva non può essere inferiore alle giornate già consuntivate."}
+                    {
+                        "reserved_days": (
+                            "La riserva supera le giornate ancora disponibili sul canone."
+                        )
+                    }
                 )
+            if self.instance:
+                consumed = (
+                    self.instance.timesheet_entries.aggregate(total=Sum("days"))["total"] or 0
+                )
+                if "reserved_days" in attrs and reserved < consumed:
+                    raise serializers.ValidationError(
+                        {
+                            "reserved_days": (
+                                "La riserva non può essere inferiore alle giornate già "
+                                "consuntivate. Per consentirlo, attiva 'Forzata aperta'."
+                            )
+                        }
+                    )
         return attrs

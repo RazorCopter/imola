@@ -121,6 +121,66 @@ def test_sottoattivita_sforate_contano_i_warning_di_capienza():
     assert sforate == {"Oltre forecast": True, "In linea": False}
 
 
+def test_si_puo_forzare_aperta_un_attivita_gia_sforata():
+    """Un'attività con reserved < consumed può essere salvata per forzarla aperta."""
+    canone = CanoneFactory(semester="2026-S2", total_days=Decimal("10"))
+    sforata = CanoneSubactivity.objects.create(
+        canone=canone, title="Sforata", office="EA", reserved_days=Decimal("4")
+    )
+    TimesheetEntryFactory(canone_subactivity=sforata, days=Decimal("5"))
+    client = client_for(roles.MANAGER)
+
+    response = client.patch(
+        f"/api/v1/canoni/{canone.id}/subactivities/{sforata.id}",
+        {"declared_open": True, "expected_version": sforata.version},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.data
+    sforata.refresh_from_db()
+    assert sforata.declared_open is True
+    row = next(s for s in response.json()["subactivities"] if s["id"] == str(sforata.id))
+    assert row["stato"] == "IN_CORSO"
+    assert row["sforata"] is True
+
+
+def test_ridurre_la_riserva_sotto_il_consuntivato_resta_bloccato():
+    canone = CanoneFactory(semester="2026-S2", total_days=Decimal("10"))
+    sub = CanoneSubactivity.objects.create(
+        canone=canone, title="Con consuntivi", office="EA", reserved_days=Decimal("5")
+    )
+    TimesheetEntryFactory(canone_subactivity=sub, days=Decimal("4"))
+
+    response = client_for(roles.MANAGER).patch(
+        f"/api/v1/canoni/{canone.id}/subactivities/{sub.id}",
+        {"reserved_days": "3", "expected_version": sub.version},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    fields = {e["campo"] for e in response.json().get("errors", [])}
+    assert "reserved_days" in fields
+
+
+def test_con_forzata_aperta_i_controlli_di_riserva_saltano():
+    """Con 'Forzata aperta' si può consuntivare in negativo senza vincoli di riserva."""
+    canone = CanoneFactory(semester="2026-S2", total_days=Decimal("10"))
+    sub = CanoneSubactivity.objects.create(
+        canone=canone, title="Da compensare", office="EA", reserved_days=Decimal("5")
+    )
+    TimesheetEntryFactory(canone_subactivity=sub, days=Decimal("4"))
+
+    response = client_for(roles.MANAGER).patch(
+        f"/api/v1/canoni/{canone.id}/subactivities/{sub.id}",
+        {"declared_open": True, "reserved_days": "3", "expected_version": sub.version},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.data
+    sub.refresh_from_db()
+    assert sub.reserved_days == Decimal("3.0000")
+
+
 def test_crud_lock_permission_audit_e_delete_sicura():
     project = ProjectFactory(code="CAN-CRUD")
     manager = client_for(roles.MANAGER)
