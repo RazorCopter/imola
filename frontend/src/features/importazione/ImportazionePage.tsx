@@ -208,11 +208,7 @@ function WorkflowStepper({
           ? `${erroriCount} anomalie`
           : "Integrità verificata"
         : "In attesa file",
-      state: !hasAnalysis
-        ? "upcoming"
-        : erroriCount > 0
-          ? "warning"
-          : "done",
+      state: !hasAnalysis ? "upcoming" : erroriCount > 0 ? "warning" : "done",
     },
     {
       id: "riconciliazione",
@@ -222,11 +218,7 @@ function WorkflowStepper({
         : daAssociareCount > 0
           ? `${daAssociareCount} da associare`
           : "Completata",
-      state: !hasAnalysis
-        ? "upcoming"
-        : daAssociareCount > 0
-          ? "action_required"
-          : "done",
+      state: !hasAnalysis ? "upcoming" : daAssociareCount > 0 ? "action_required" : "done",
     },
     {
       id: "anteprima",
@@ -276,7 +268,7 @@ function WorkflowStepper({
                 {s.label}
               </span>
               {isDone && <CheckCircle2 className="size-4 shrink-0 text-ok" />}
-              {isAction && <AlertTriangle className="size-4 shrink-0 text-warn animate-pulse" />}
+              {isAction && <AlertTriangle className="size-4 shrink-0 animate-pulse text-warn" />}
               {isWarning && <AlertCircle className="size-4 shrink-0 text-danger" />}
               {isReady && <Sparkles className="size-4 shrink-0 text-accent" />}
             </div>
@@ -360,9 +352,9 @@ function SezioneRiconciliazioneInline({
             </span>
           </div>
           <p className="mt-1.5 max-w-2xl text-xs text-muted-foreground">
-            I valori rilevati nell'Excel non corrispondono a voci attualmente censite.
-            Assegna la corretta destinazione: l'associazione verrà memorizzata nel registro e
-            applicata in automatico a tutte le importazioni successive.
+            I valori rilevati nell'Excel non corrispondono a voci attualmente censite. Assegna la
+            corretta destinazione: l'associazione verrà memorizzata nel registro e applicata in
+            automatico a tutte le importazioni successive.
           </p>
         </div>
 
@@ -416,7 +408,8 @@ function SezioneRiconciliazioneInline({
                       </span>
                     )}
                     <span className="text-xs text-muted-foreground">
-                      · {g.righe.length} {g.righe.length === 1 ? "riga" : "righe"} ({g.righe.slice(0, 4).join(", ")}
+                      · {g.righe.length} {g.righe.length === 1 ? "riga" : "righe"} (
+                      {g.righe.slice(0, 4).join(", ")}
                       {g.righe.length > 4 ? "…" : ""})
                     </span>
                   </div>
@@ -438,8 +431,8 @@ function SezioneRiconciliazioneInline({
                     <div className="flex items-center gap-2 rounded-lg border border-danger/30 bg-danger-subtle p-2.5 text-xs text-danger">
                       <AlertCircle className="size-4 shrink-0" />
                       <span>
-                        Nessuna voce censita nel sistema a cui associare questo valore. Creala
-                        prima nell'apposita sezione, poi riesegui l'analisi del file.
+                        Nessuna voce censita nel sistema a cui associare questo valore. Creala prima
+                        nell'apposita sezione, poi riesegui l'analisi del file.
                       </span>
                     </div>
                   ) : (
@@ -458,7 +451,7 @@ function SezioneRiconciliazioneInline({
                               onClick={() =>
                                 setScelte((p) => ({ ...p, [g.chiave]: g.suggerito as string }))
                               }
-                              className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent-subtle px-2.5 py-0.5 text-xs font-medium text-accent hover:bg-accent/20 transition-colors"
+                              className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent-subtle px-2.5 py-0.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
                             >
                               <Sparkles className="size-3" />
                               Usa "{candidatoSuggerito.etichetta}"
@@ -473,17 +466,13 @@ function SezioneRiconciliazioneInline({
                           placeholder="Filtra le opzioni…"
                           value={filtri[g.chiave] ?? ""}
                           aria-label={`Filtra le destinazioni per ${g.valore}`}
-                          onChange={(e) =>
-                            setFiltri((p) => ({ ...p, [g.chiave]: e.target.value }))
-                          }
+                          onChange={(e) => setFiltri((p) => ({ ...p, [g.chiave]: e.target.value }))}
                           className="text-xs"
                         />
                         <Select
                           value={scelto}
                           aria-label={`Destinazione per ${g.valore}`}
-                          onChange={(e) =>
-                            setScelte((p) => ({ ...p, [g.chiave]: e.target.value }))
-                          }
+                          onChange={(e) => setScelte((p) => ({ ...p, [g.chiave]: e.target.value }))}
                           className={cn(
                             "text-xs font-medium",
                             scelto ? "border-ok/40 text-foreground" : "text-muted-foreground",
@@ -569,10 +558,7 @@ function ConsoleDeiProblemi({
 
   const copiaProblemi = () => {
     const testo = problemi
-      .map(
-        (p) =>
-          `[${p.livello}] ${p.foglio}${p.cella ? `!${p.cella}` : ""}: ${p.messaggio}`,
-      )
+      .map((p) => `[${p.livello}] ${p.foglio}${p.cella ? `!${p.cella}` : ""}: ${p.messaggio}`)
       .join("\n");
     void navigator.clipboard.writeText(testo);
     setCopiato(true);
@@ -621,7 +607,11 @@ function ConsoleDeiProblemi({
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {liv === "TUTTI" ? `Tutti (${problemi.length})` : liv === "ERROR" ? `Errori (${errori})` : `Avvisi (${avvisi})`}
+                  {liv === "TUTTI"
+                    ? `Tutti (${problemi.length})`
+                    : liv === "ERROR"
+                      ? `Errori (${errori})`
+                      : `Avvisi (${avvisi})`}
                 </button>
               ))}
             </div>
@@ -629,7 +619,7 @@ function ConsoleDeiProblemi({
             <Button
               type="button"
               variant="secondary"
-              className="text-xs h-8 px-2.5"
+              className="h-8 px-2.5 text-xs"
               onClick={copiaProblemi}
               title="Copia l'elenco dei problemi negli appunti per la correzione dell'Excel"
             >
@@ -681,19 +671,18 @@ function ConsoleDeiProblemi({
               ) : (
                 problemiFiltrati.map((p, i) => {
                   const isError = p.livello === "ERROR";
-                  const cellaLabel = p.foglio && p.cella ? `${p.foglio}!${p.cella}` : p.foglio || "Globale";
+                  const cellaLabel =
+                    p.foglio && p.cella ? `${p.foglio}!${p.cella}` : p.foglio || "Globale";
 
                   return (
                     <li
                       key={`${p.foglio}-${p.cella}-${i}`}
-                      className="flex items-start gap-3 p-2.5 hover:bg-muted/40 transition-colors"
+                      className="flex items-start gap-3 p-2.5 transition-colors hover:bg-muted/40"
                     >
                       <span
                         className={cn(
                           "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase",
-                          isError
-                            ? "bg-danger/15 text-danger"
-                            : "bg-warn/15 text-warn",
+                          isError ? "bg-danger/15 text-danger" : "bg-warn/15 text-warn",
                         )}
                       >
                         {isError ? "Errore" : "Avviso"}
@@ -702,15 +691,13 @@ function ConsoleDeiProblemi({
                       <button
                         type="button"
                         onClick={() => onFiltraCella?.(p.foglio, p.riga)}
-                        className="shrink-0 rounded border border-border bg-card px-1.5 py-0.5 font-mono text-[11px] font-semibold text-muted-foreground hover:border-accent hover:text-accent transition-colors"
+                        className="shrink-0 rounded border border-border bg-card px-1.5 py-0.5 font-mono text-[11px] font-semibold text-muted-foreground transition-colors hover:border-accent hover:text-accent"
                         title="Clicca per evidenziare nell'anteprima"
                       >
                         {cellaLabel}
                       </button>
 
-                      <span className="flex-1 text-foreground leading-relaxed">
-                        {p.messaggio}
-                      </span>
+                      <span className="flex-1 leading-relaxed text-foreground">{p.messaggio}</span>
                     </li>
                   );
                 })
@@ -749,7 +736,9 @@ export function ImportazionePage() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [batch, setBatch] = useState<Batch | null>(null);
   const [sezione, setSezione] = useState<SezioneId>("PROGETTI");
-  const [filtroStatoRiga, setFiltroStatoRiga] = useState<"TUTTE" | "PRONTA" | "DA_ASSOCIARE" | "ERRORE">("TUTTE");
+  const [filtroStatoRiga, setFiltroStatoRiga] = useState<
+    "TUTTE" | "PRONTA" | "DA_ASSOCIARE" | "ERRORE"
+  >("TUTTE");
   const [ricercaRiga, setRicercaRiga] = useState("");
   const [storicoAperto, setStoricoAperto] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
@@ -830,7 +819,8 @@ export function ImportazionePage() {
       if (filtroStatoRiga !== "TUTTE" && r.stato !== filtroStatoRiga) return false;
       if (ricercaRiga.trim()) {
         const query = ricercaRiga.toLowerCase();
-        const testo = `${r.destinazione_excel} ${r.destinazione_risolta ?? ""} ${r.collaboratore_excel} ${r.utente ?? ""} ${r.descrizione}`.toLowerCase();
+        const testo =
+          `${r.destinazione_excel} ${r.destinazione_risolta ?? ""} ${r.collaboratore_excel} ${r.utente ?? ""} ${r.descrizione}`.toLowerCase();
         return testo.includes(query);
       }
       return true;
@@ -881,11 +871,7 @@ export function ImportazionePage() {
       />
 
       {/* Stepper di Avanzamento */}
-      <WorkflowStepper
-        batch={batch}
-        daAssociareCount={daAssociare.length}
-        erroriCount={errori}
-      />
+      <WorkflowStepper batch={batch} daAssociareCount={daAssociare.length} erroriCount={errori} />
 
       {/* Passaggio 1 — Selezione e caricamento del file */}
       <div className="rounded-xl border border-border bg-card p-5 shadow-subtle">
@@ -924,7 +910,7 @@ export function ImportazionePage() {
             className={cn(
               "mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-all",
               isDragOver
-                ? "border-accent bg-accent-subtle/50 scale-[0.99]"
+                ? "scale-[0.99] border-accent bg-accent-subtle/50"
                 : "border-border/80 bg-muted/20 hover:border-accent/60 hover:bg-muted/40",
             )}
           >
@@ -940,7 +926,7 @@ export function ImportazionePage() {
             <Button
               type="button"
               variant="secondary"
-              className="mt-4 pointer-events-none"
+              className="pointer-events-none mt-4"
               tabIndex={-1}
             >
               <FileSpreadsheet className="size-4" /> Sfoglia file
@@ -991,18 +977,18 @@ export function ImportazionePage() {
 
       {/* Messaggio di errore analisi */}
       {errore && (
-        <div className="rounded-xl border border-danger/30 bg-danger-subtle p-4 text-sm text-danger flex items-start gap-3">
-          <AlertCircle className="size-5 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-xl border border-danger/30 bg-danger-subtle p-4 text-sm text-danger">
+          <AlertCircle className="mt-0.5 size-5 shrink-0" />
           <div>
             <p className="font-semibold">Errore durante l'elaborazione del file</p>
-            <p className="text-xs mt-0.5">{errore}</p>
+            <p className="mt-0.5 text-xs">{errore}</p>
           </div>
         </div>
       )}
 
       {/* Indicatore di caricamento analisi */}
       {analizza.isPending && (
-        <div className="rounded-xl border border-border bg-card p-8 shadow-subtle text-center">
+        <div className="rounded-xl border border-border bg-card p-8 text-center shadow-subtle">
           <LoadingState rows={3} />
           <p className="mt-4 text-sm font-medium text-muted-foreground">
             Lettura dei fogli Excel, analisi formule e confronto con l'anagrafica in corso…
@@ -1039,7 +1025,13 @@ export function ImportazionePage() {
                         ? `${daAssociare.length} Da Riconciliare`
                         : `${errori} Errori`
                 }
-                tone={applicato || batch.confermabile ? "ok" : daAssociare.length > 0 ? "warn" : "danger"}
+                tone={
+                  applicato || batch.confermabile
+                    ? "ok"
+                    : daAssociare.length > 0
+                      ? "warn"
+                      : "danger"
+                }
                 hint={
                   applicato
                     ? "Movimenti salvati nel ledger"
@@ -1062,8 +1054,7 @@ export function ImportazionePage() {
             <div className="grid gap-3 md:grid-cols-3">
               {(report?.sezioni ?? []).map((s) => {
                 const isSelected = sezione === s.sezione;
-                const SezioneIcon =
-                  SEZIONI.find((x) => x.id === s.sezione)?.icon ?? FolderGit2;
+                const SezioneIcon = SEZIONI.find((x) => x.id === s.sezione)?.icon ?? FolderGit2;
 
                 // Controlla se la sezione ha errori bloccanti associati al suo foglio
                 const erroriSezione = problemi.filter(
@@ -1071,8 +1062,7 @@ export function ImportazionePage() {
                     p.livello === "ERROR" &&
                     (p.foglio.toLowerCase().includes(s.etichetta.toLowerCase()) ||
                       p.foglio.toLowerCase().includes(s.sezione.toLowerCase()) ||
-                      (s.sezione === "ORGANICO" &&
-                        p.foglio.toLowerCase().includes("organico"))),
+                      (s.sezione === "ORGANICO" && p.foglio.toLowerCase().includes("organico"))),
                 );
                 const hasErroriBloccanti = erroriSezione.length > 0;
 
@@ -1103,7 +1093,7 @@ export function ImportazionePage() {
                         >
                           <SezioneIcon className="size-4" />
                         </span>
-                        <h3 className="font-semibold text-foreground text-sm">{s.etichetta}</h3>
+                        <h3 className="text-sm font-semibold text-foreground">{s.etichetta}</h3>
                       </div>
                       <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
                         {formatDays(s.giornate)}
@@ -1112,7 +1102,11 @@ export function ImportazionePage() {
 
                     <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                       <span>{s.righe_lette} righe totali</span>
-                      <span className={cn(hasErroriBloccanti ? "text-danger font-medium" : "text-ok font-medium")}>
+                      <span
+                        className={cn(
+                          hasErroriBloccanti ? "font-medium text-danger" : "font-medium text-ok",
+                        )}
+                      >
                         {s.righe_importabili} pronte
                       </span>
                     </div>
@@ -1141,7 +1135,7 @@ export function ImportazionePage() {
 
                     <div className="mt-2.5 flex items-center gap-2 text-[11px]">
                       {hasErroriBloccanti ? (
-                        <span className="text-danger flex items-center gap-1 font-semibold">
+                        <span className="flex items-center gap-1 font-semibold text-danger">
                           <AlertCircle className="size-3" />
                           {erroriSezione.length}{" "}
                           {erroriSezione.length === 1 ? "blocco capienza" : "blocchi capienza"}
@@ -1159,7 +1153,7 @@ export function ImportazionePage() {
                             </span>
                           )}
                           {s.righe_da_associare === 0 && s.righe_in_errore === 0 && (
-                            <span className="text-ok flex items-center gap-1 font-medium">
+                            <span className="flex items-center gap-1 font-medium text-ok">
                               <Check className="size-3" /> Tutte conformi
                             </span>
                           )}
@@ -1178,7 +1172,9 @@ export function ImportazionePage() {
             collaboratoriCensiti={report?.collaboratori_censiti}
             onFiltraCella={(foglio) => {
               const matchedSezione = SEZIONI.find(
-                (s) => s.label.toLowerCase() === foglio.toLowerCase() || s.id.toLowerCase() === foglio.toLowerCase(),
+                (s) =>
+                  s.label.toLowerCase() === foglio.toLowerCase() ||
+                  s.id.toLowerCase() === foglio.toLowerCase(),
               );
               if (matchedSezione) {
                 switchSezioneAndScroll(matchedSezione.id);
@@ -1233,7 +1229,7 @@ export function ImportazionePage() {
                       {s.label}
                       <span
                         className={cn(
-                          "rounded-full px-1.5 py-0.2 text-[10px]",
+                          "py-0.2 rounded-full px-1.5 text-[10px]",
                           isActive ? "bg-accent/15 text-accent" : "bg-muted text-muted-foreground",
                         )}
                       >
@@ -1247,7 +1243,7 @@ export function ImportazionePage() {
 
             {/* Toolbar di ricerca e filtro per stato riga */}
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="relative min-w-[16rem] flex-1 max-w-sm">
+              <div className="relative min-w-[16rem] max-w-sm flex-1">
                 <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
@@ -1325,30 +1321,30 @@ export function ImportazionePage() {
             ) : (
               <div className="mt-4 overflow-x-auto rounded-lg border border-border">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-muted/40 uppercase tracking-wider text-muted-foreground font-semibold">
+                  <thead className="bg-muted/40 font-semibold uppercase tracking-wider text-muted-foreground">
                     <tr>
-                      <th className="py-2.5 px-3">Cella</th>
-                      <th className="py-2.5 px-3">Destinazione Excel</th>
-                      <th className="py-2.5 px-3">Destinazione Risolta</th>
-                      <th className="py-2.5 px-3">Collaboratore</th>
-                      <th className="py-2.5 px-3">Data</th>
-                      <th className="py-2.5 px-3 text-right">Giornate</th>
-                      <th className="py-2.5 px-3">Descrizione</th>
-                      <th className="py-2.5 px-3 text-center">Stato</th>
+                      <th className="px-3 py-2.5">Cella</th>
+                      <th className="px-3 py-2.5">Destinazione Excel</th>
+                      <th className="px-3 py-2.5">Destinazione Risolta</th>
+                      <th className="px-3 py-2.5">Collaboratore</th>
+                      <th className="px-3 py-2.5">Data</th>
+                      <th className="px-3 py-2.5 text-right">Giornate</th>
+                      <th className="px-3 py-2.5">Descrizione</th>
+                      <th className="px-3 py-2.5 text-center">Stato</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {righeSezione.map((r) => {
                       const cfg = STATO_RIGA_CONFIG[r.stato];
                       return (
-                        <tr key={r.id} className="hover:bg-muted/20 transition-colors">
-                          <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
+                        <tr key={r.id} className="transition-colors hover:bg-muted/20">
+                          <td className="px-3 py-2.5 font-mono text-[11px] text-muted-foreground">
                             {r.foglio}!{r.riga_excel}
                           </td>
-                          <td className="py-2.5 px-3 font-medium text-foreground">
+                          <td className="px-3 py-2.5 font-medium text-foreground">
                             {r.destinazione_excel || "—"}
                           </td>
-                          <td className="py-2.5 px-3">
+                          <td className="px-3 py-2.5">
                             {r.destinazione_risolta ? (
                               <span className="font-medium text-foreground">
                                 {r.destinazione_risolta}
@@ -1359,7 +1355,7 @@ export function ImportazionePage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-2.5 px-3">
+                          <td className="px-3 py-2.5">
                             <span className="font-medium text-foreground">
                               {r.collaboratore_excel}
                             </span>
@@ -1369,16 +1365,19 @@ export function ImportazionePage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-2.5 px-3 whitespace-nowrap text-muted-foreground">
+                          <td className="whitespace-nowrap px-3 py-2.5 text-muted-foreground">
                             {formatData(r.data)}
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono font-semibold tabular-nums text-foreground">
+                          <td className="px-3 py-2.5 text-right font-mono font-semibold tabular-nums text-foreground">
                             {formatDays(r.giornate)}
                           </td>
-                          <td className="py-2.5 px-3 max-w-xs truncate text-muted-foreground" title={r.descrizione}>
+                          <td
+                            className="max-w-xs truncate px-3 py-2.5 text-muted-foreground"
+                            title={r.descrizione}
+                          >
                             {r.descrizione || "—"}
                           </td>
-                          <td className="py-2.5 px-3 text-center">
+                          <td className="px-3 py-2.5 text-center">
                             <span
                               className={cn(
                                 "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
@@ -1423,9 +1422,10 @@ export function ImportazionePage() {
                       Importazione applicata con successo!
                     </h3>
                     {batch.report?.applicato && (
-                      <p className="text-xs text-foreground mt-0.5">
-                        Registrati <strong>{batch.report.applicato.movimenti}</strong> consuntivi per un
-                        totale di <strong>{formatDays(batch.report.applicato.giornate)}</strong> da{" "}
+                      <p className="mt-0.5 text-xs text-foreground">
+                        Registrati <strong>{batch.report.applicato.movimenti}</strong> consuntivi
+                        per un totale di{" "}
+                        <strong>{formatDays(batch.report.applicato.giornate)}</strong> da{" "}
                         <strong>{batch.report.applicato.operatore}</strong> in data{" "}
                         {formatIstante(batch.report.applicato.istante)}.
                       </p>
@@ -1455,7 +1455,7 @@ export function ImportazionePage() {
                         <AlertCircle className="size-4 shrink-0" />
                         <span>Blocchi contabili che impediscono la conferma:</span>
                       </div>
-                      <ul className="mt-2.5 space-y-1.5 text-xs text-foreground list-disc pl-5">
+                      <ul className="mt-2.5 list-disc space-y-1.5 pl-5 text-xs text-foreground">
                         {daAssociare.length > 0 && (
                           <li>
                             <strong>{daAssociare.length}</strong>{" "}
@@ -1482,24 +1482,35 @@ export function ImportazionePage() {
 
                     {/* Guida all'azione per l'utente */}
                     <div className="rounded-xl border border-border bg-muted/30 p-4 text-xs">
-                      <p className="font-semibold text-foreground flex items-center gap-1.5">
+                      <p className="flex items-center gap-1.5 font-semibold text-foreground">
                         <Info className="size-3.5 text-accent" />
                         Cosa fare per sbloccare la conferma:
                       </p>
-                      <ul className="mt-2 space-y-1 text-muted-foreground list-disc pl-5">
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
                         {bloccanti.some((b) => b.includes("Capienza superata")) && (
                           <>
                             <li>
-                              <strong className="text-foreground">Verifica duplicati nell'Excel:</strong> molti consuntivi potrebbero essere già stati caricati a sistema (vedi avvisi <em>"Riga già presente"</em> nella Console). Rimuovere le righe duplicate dall'Excel e ricaricare il file.
+                              <strong className="text-foreground">
+                                Verifica duplicati nell'Excel:
+                              </strong>{" "}
+                              molti consuntivi potrebbero essere già stati caricati a sistema (vedi
+                              avvisi <em>"Riga già presente"</em> nella Console). Rimuovere le righe
+                              duplicate dall'Excel e ricaricare il file.
                             </li>
                             <li>
-                              <strong className="text-foreground">Aumento budget / capienza:</strong> se il consumo extra è autorizzato, incrementare il budget del progetto nella sezione <em>Progetti</em> o la capienza dell'allocazione nella sezione <em>Wallet</em>, poi ripetere l'analisi.
+                              <strong className="text-foreground">
+                                Aumento budget / capienza:
+                              </strong>{" "}
+                              se il consumo extra è autorizzato, incrementare il budget del progetto
+                              nella sezione <em>Progetti</em> o la capienza dell'allocazione nella
+                              sezione <em>Wallet</em>, poi ripetere l'analisi.
                             </li>
                           </>
                         )}
                         {daAssociare.length > 0 && (
                           <li>
-                            <strong className="text-foreground">Riconciliazione:</strong> completare le associazioni delle voci mancanti al passaggio 3.
+                            <strong className="text-foreground">Riconciliazione:</strong> completare
+                            le associazioni delle voci mancanti al passaggio 3.
                           </li>
                         )}
                       </ul>
@@ -1528,7 +1539,7 @@ export function ImportazionePage() {
                   </Button>
 
                   {!batch.confermabile && (
-                    <span className="text-xs text-danger font-medium flex items-center gap-1">
+                    <span className="flex items-center gap-1 text-xs font-medium text-danger">
                       <AlertCircle className="size-3.5 shrink-0" />
                       Importazione bloccata da errori contabili di capienza.
                     </span>
@@ -1541,11 +1552,11 @@ export function ImportazionePage() {
       )}
 
       {/* Storico delle Importazioni Pregresse */}
-      <div className="rounded-xl border border-border bg-card shadow-subtle overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-subtle">
         <button
           type="button"
           onClick={() => setStoricoAperto((p) => !p)}
-          className="w-full flex items-center justify-between p-5 text-left hover:bg-muted/20 transition-colors"
+          className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-muted/20"
         >
           <div className="flex items-center gap-2.5">
             <span className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
@@ -1580,23 +1591,21 @@ export function ImportazionePage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="text-muted-foreground uppercase tracking-wider font-semibold border-b border-border">
+                  <thead className="border-b border-border font-semibold uppercase tracking-wider text-muted-foreground">
                     <tr>
-                      <th className="py-2 px-3">File Excel</th>
-                      <th className="py-2 px-3">Stato</th>
-                      <th className="py-2 px-3">Caricato il</th>
-                      <th className="py-2 px-3">Operatore</th>
-                      <th className="py-2 px-3">Applicato il</th>
-                      <th className="py-2 px-3 text-right">Movimenti</th>
+                      <th className="px-3 py-2">File Excel</th>
+                      <th className="px-3 py-2">Stato</th>
+                      <th className="px-3 py-2">Caricato il</th>
+                      <th className="px-3 py-2">Operatore</th>
+                      <th className="px-3 py-2">Applicato il</th>
+                      <th className="px-3 py-2 text-right">Movimenti</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {(storico.data?.importazioni ?? []).map((b) => (
-                      <tr key={b.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="py-2.5 px-3 font-medium text-foreground">
-                          {b.file || "—"}
-                        </td>
-                        <td className="py-2.5 px-3">
+                      <tr key={b.id} className="transition-colors hover:bg-muted/20">
+                        <td className="px-3 py-2.5 font-medium text-foreground">{b.file || "—"}</td>
+                        <td className="px-3 py-2.5">
                           <span
                             className={cn(
                               "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold",
@@ -1610,14 +1619,14 @@ export function ImportazionePage() {
                             {b.stato_etichetta}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 whitespace-nowrap text-muted-foreground">
+                        <td className="whitespace-nowrap px-3 py-2.5 text-muted-foreground">
                           {formatIstante(b.creato_il)}
                         </td>
-                        <td className="py-2.5 px-3 text-muted-foreground">{b.operatore ?? "—"}</td>
-                        <td className="py-2.5 px-3 whitespace-nowrap text-muted-foreground">
+                        <td className="px-3 py-2.5 text-muted-foreground">{b.operatore ?? "—"}</td>
+                        <td className="whitespace-nowrap px-3 py-2.5 text-muted-foreground">
                           {formatIstante(b.applicato_il)}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-semibold tabular-nums text-foreground">
+                        <td className="px-3 py-2.5 text-right font-mono font-semibold tabular-nums text-foreground">
                           {b.report?.applicato?.movimenti ?? "—"}
                         </td>
                       </tr>

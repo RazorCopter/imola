@@ -10,7 +10,18 @@ from datetime import date
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
-from django.db.models import Count, DecimalField, Max, OuterRef, Q, Subquery, Sum, Value
+from django.db.models import (
+    Count,
+    DecimalField,
+    F,
+    IntegerField,
+    Max,
+    OuterRef,
+    Q,
+    Subquery,
+    Sum,
+    Value,
+)
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -987,6 +998,7 @@ def _canone_row(row) -> dict:
         "residuo": row.total_days - consumed,
         "stato": _canone_state(row.total_days, consumed),
         "sottoattivita_count": row.subactivity_count,
+        "sottoattivita_sforate": row.exceeded_count,
         "ultimo_movimento": row.last_movement,
     }
 
@@ -997,6 +1009,19 @@ def _canone_queryset():
         .order_by()
         .values("canone")
         .annotate(total=Sum("reserved_days", output_field=CANONE_DAYS))
+        .values("total")[:1]
+    )
+    # Sotto-attività con residuo negativo (consuntivato oltre le giornate riservate):
+    # sono i warning da gestire con fornitore e referente.
+    exceeded = (
+        CanoneSubactivity.objects.filter(canone=OuterRef("pk"))
+        .annotate(
+            consumed=Coalesce(Sum("timesheet_entries__days"), Value(0, output_field=CANONE_DAYS))
+        )
+        .filter(consumed__gt=F("reserved_days"))
+        .order_by()
+        .values("canone")
+        .annotate(total=Count("pk"))
         .values("total")[:1]
     )
     return (
@@ -1011,6 +1036,10 @@ def _canone_queryset():
                 Value(0, output_field=CANONE_DAYS),
             ),
             subactivity_count=Count("subactivities", distinct=True),
+            exceeded_count=Coalesce(
+                Subquery(exceeded, output_field=IntegerField()),
+                Value(0),
+            ),
             last_movement=Max("subactivities__timesheet_entries__period"),
         )
         .order_by("-semester", "name")
@@ -1103,6 +1132,7 @@ class CanoneListView(DocumentedAPIView):
                     "consuntivato": sum((row.consumed_days for row in rows), 0),
                     "residuo": sum((row.total_days - row.consumed_days for row in rows), 0),
                     "sottoattivita": sum((row.subactivity_count for row in rows), 0),
+                    "sottoattivita_sforate": sum((row.exceeded_count for row in rows), 0),
                 },
                 "filters": {
                     "semestri": sorted({row.semester for row in all_rows}, reverse=True),
@@ -1195,6 +1225,7 @@ def _canone_detail(canone, office: str = "", search: str = "") -> dict:
                 "end_date": row.end_date,
                 "remaining_reserved_days": row.reserved_days - row.consumed_days,
                 "stato": subactivity_state(row.reserved_days, row.consumed_days),
+                "sforata": row.consumed_days > row.reserved_days,
                 "redmine_ref": row.redmine_ref,
                 "quarter_estimate_days": row.quarter_estimate_days,
                 "forecast_remaining_days": row.forecast_remaining_days,

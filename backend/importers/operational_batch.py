@@ -450,13 +450,30 @@ def _capacity_problems(resolutions: list[Resolution]) -> list[Problem]:
             group = rows_by_target[(kind, target_id)]
             anchor = group[0].row if group else None
             if capacity.exceeded:
-                problems.append(
-                    Problem(
-                        Level.ERROR,
+                # Sull'Organico Allargato lo sfondamento è un warning, non un errore
+                # bloccante: il monte delle sotto-attività è una previsione, e consuntivare
+                # oltre serve proprio a far emergere lo scostamento da gestire con il
+                # fornitore e il referente. Il residuo va in negativo e resta visibile.
+                # Su progetti e wallet lo sfondamento resta bloccante.
+                soglia = Level.WARNING if kind == "subactivity" else Level.ERROR
+                if kind == "subactivity":
+                    message = (
+                        f"Capienza superata \u2014 {capacity.label}: il batch porta "
+                        f"{capacity.incoming} gg ma il residuo è {capacity.residual_before} gg "
+                        f"({capacity.limit} riservate, {capacity.consumed} già consuntivate). "
+                        f"Il residuo andrà in negativo di {abs(capacity.residual_after)} gg."
+                    )
+                else:
+                    message = (
                         f"Capienza superata \u2014 {capacity.label}: il batch porta "
                         f"{capacity.incoming} gg ma il "
                         f"residuo è {capacity.residual_before} gg "
-                        f"({capacity.limit} disponibili, {capacity.consumed} già usate).",
+                        f"({capacity.limit} disponibili, {capacity.consumed} già usate)."
+                    )
+                problems.append(
+                    Problem(
+                        soglia,
+                        message,
                         sheet=anchor.sheet if anchor else "",
                         cell=anchor.cell_of("days") if anchor else "",
                         excel_row=anchor.excel_row if anchor else None,
@@ -656,13 +673,9 @@ def _recheck_targets(rows: list[OperationalImportRow]) -> None:
             )
 
     for subactivity in CanoneSubactivity.objects.select_for_update().filter(pk__in=subactivities):
-        capacity = _subactivity_capacity(subactivity)
-        capacity.incoming = subactivities[subactivity.pk]
-        if capacity.exceeded:
-            raise ApplyError(
-                f"{capacity.label}: {capacity.incoming} gg da importare oltre il residuo "
-                f"di {capacity.residual_before} gg."
-            )
+        # Lo sfondamento delle sotto-attività dell'Organico Allargato non blocca l'apply:
+        # è già stato segnalato come warning in fase di analisi e il residuo va in
+        # negativo, per gestire lo scostamento con il fornitore e il referente.
         for row in rows:
             if row.canone_subactivity_id != subactivity.pk:
                 continue

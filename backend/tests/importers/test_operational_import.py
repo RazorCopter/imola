@@ -804,7 +804,13 @@ def test_resolver_non_interroga_il_database_per_ogni_riga(operatore, django_asse
     assert all(r.project is not None for r in resolutions)
 
 
-def test_sotto_attivita_senza_capienza_e_un_errore(operatore):
+def test_sotto_attivita_oltre_la_capienza_e_un_avviso_non_bloccante(operatore):
+    """Sull'Organico Allargato lo sfondamento avvisa ma non blocca: il residuo va in negativo.
+
+    Il monte delle sotto-attività è una previsione: consuntivare oltre serve proprio a far
+    emergere lo scostamento da gestire con fornitore e referente. Progetti e wallet
+    restano invece bloccanti.
+    """
     canone = CanoneFactory(
         semester="2026-S2", start_date=dt.date(2026, 7, 1), end_date=dt.date(2026, 12, 31)
     )
@@ -825,8 +831,20 @@ def test_sotto_attivita_senza_capienza_e_un_errore(operatore):
         operatore,
     )
 
-    assert any("Attività Attività satura" in m for m in messages(result, Level.ERROR))
-    assert CanoneSubactivity.objects.get().timesheet_entries.count() == 0
+    assert result.errors == []
+    assert any("Attività Attività satura" in m for m in messages(result, Level.WARNING))
+    assert any("andrà in negativo di 0.4" in m for m in messages(result, Level.WARNING))
+    assert result.can_apply is True
+
+    from importers.operational_batch import apply_batch
+
+    batch = apply_batch(batch_id=result.batch.pk, user=operatore)
+    entry = TimesheetEntry.objects.get()
+    assert entry.days == Decimal("0.5")
+    subactivity = CanoneSubactivity.objects.get()
+    residuo = subactivity.reserved_days - sum(e.days for e in subactivity.timesheet_entries.all())
+    assert residuo == Decimal("-0.4000")
+    assert batch.status == ImportStatus.APPLIED
 
 
 def test_nome_preso_dall_anagrafica_quando_la_persona_esiste(operatore):

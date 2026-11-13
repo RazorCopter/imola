@@ -51,6 +51,7 @@ const list = {
       residuo: "75.0000",
       stato: "IN_CORSO",
       sottoattivita_count: 1,
+      sottoattivita_sforate: 0,
     },
   ],
   summary: {
@@ -60,6 +61,7 @@ const list = {
     consuntivato: "25.0000",
     residuo: "75.0000",
     sottoattivita: 1,
+    sottoattivita_sforate: 0,
   },
   filters: {
     semestri: ["2026-S1"],
@@ -107,6 +109,7 @@ const detail = {
       needs_review: false,
       consuntivato: "25.0000",
       timesheet_count: 2,
+      sforata: false,
       consuntivi: [],
     },
     {
@@ -144,6 +147,7 @@ const detail = {
       needs_review: false,
       consuntivato: "10.0000",
       stato: "CHIUSO",
+      sforata: true,
       timesheet_count: 1,
       consuntivi: [],
     },

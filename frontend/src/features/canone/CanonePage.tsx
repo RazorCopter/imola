@@ -35,6 +35,7 @@ interface CanoneRow {
   residuo: string;
   stato: string;
   sottoattivita_count: number;
+  sottoattivita_sforate: number;
 }
 interface CanoneList {
   results: CanoneRow[];
@@ -46,6 +47,7 @@ interface CanoneList {
     consuntivato: string;
     residuo: string;
     sottoattivita: number;
+    sottoattivita_sforate: number;
   };
   filters: { semestri: string[]; stati: string[]; domini: string[] };
 }
@@ -74,6 +76,7 @@ interface Subactivity {
   needs_review: boolean;
   consuntivato: string;
   stato: "IN_CORSO" | "CHIUSO";
+  sforata: boolean;
   timesheet_count: number;
   consuntivi: TimesheetRow[];
 }
@@ -513,7 +516,7 @@ export function CanonePage() {
       />
       {!activityFocus && (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
             <KpiCard
               label={t("canone.plannedTotal")}
               value={<DaysValue value={data.summary.pianificato} />}
@@ -546,6 +549,17 @@ export function CanonePage() {
               label={t("canone.activities")}
               value={data.summary.sottoattivita}
               tooltip={t("canone.activitiesTooltip")}
+            />
+            <KpiCard
+              label={t("canone.overrunWarnings")}
+              value={data.summary.sottoattivita_sforate}
+              tone={data.summary.sottoattivita_sforate > 0 ? "warn" : "ok"}
+              hint={
+                data.summary.sottoattivita_sforate > 0
+                  ? t("canone.overrunWarningsHint")
+                  : t("canone.overrunWarningsNone")
+              }
+              tooltip={t("canone.overrunWarningsTooltip")}
             />
           </div>
           <div
@@ -1135,6 +1149,11 @@ export function CanonePage() {
                                       : "CHIUSO")
                                   }
                                 />
+                                {row.sforata && (
+                                  <span className="inline-flex items-center rounded-full border border-warn/50 bg-warn/10 px-2 py-0.5 text-xs font-semibold text-warn">
+                                    {t("canone.overrunBadge")}
+                                  </span>
+                                )}
                               </div>
                               <div className="max-w-md">
                                 <ActivityProgress activity={row} />

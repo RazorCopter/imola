@@ -100,6 +100,27 @@ def test_lista_aggregata_filtri_e_dettaglio():
     assert excluded.json()["count"] == 0
 
 
+def test_sottoattivita_sforate_contano_i_warning_di_capienza():
+    """Le attività con residuo negativo alimentano il KPI di warning della dashboard."""
+    canone = CanoneFactory(semester="2026-S2", total_days=Decimal("10"))
+    sforata = CanoneSubactivity.objects.create(
+        canone=canone, title="Oltre forecast", office="EA", reserved_days=Decimal("1")
+    )
+    TimesheetEntryFactory(canone_subactivity=sforata, days=Decimal("2.5"))
+    in_linea = CanoneSubactivity.objects.create(
+        canone=canone, title="In linea", office="SA", reserved_days=Decimal("3")
+    )
+    TimesheetEntryFactory(canone_subactivity=in_linea, days=Decimal("1"))
+
+    body = client_for().get("/api/v1/canoni?management=1").json()
+    assert body["summary"]["sottoattivita_sforate"] == 1
+    assert body["results"][0]["sottoattivita_sforate"] == 1
+
+    detail = client_for().get(f"/api/v1/canoni/{canone.id}").json()
+    sforate = {s["title"]: s["sforata"] for s in detail["subactivities"]}
+    assert sforate == {"Oltre forecast": True, "In linea": False}
+
+
 def test_crud_lock_permission_audit_e_delete_sicura():
     project = ProjectFactory(code="CAN-CRUD")
     manager = client_for(roles.MANAGER)

@@ -73,7 +73,7 @@ describe("ImportazionePage", () => {
     });
   });
 
-  it("renderizza correttamente l'intestazione, lo stepper e la dropzone di caricamento", async () => {
+  it("renderizza correttamente l'intestazione, lo stepper e la dropzone di caricamento", () => {
     renderPage();
 
     expect(screen.getByText("Importazione Estratto Operativo")).toBeInTheDocument();
@@ -188,10 +188,7 @@ describe("ImportazionePage", () => {
     await user.click(screen.getByRole("button", { name: "Analizza estratto" }));
 
     await waitFor(() => {
-      expect(postMock).toHaveBeenCalledWith(
-        "/imports/operational/preview",
-        expect.any(FormData),
-      );
+      expect(postMock).toHaveBeenCalledWith("/imports/operational/preview", expect.any(FormData));
     });
 
     // KPI cards renderizzate
@@ -284,13 +281,9 @@ describe("ImportazionePage", () => {
     await user.click(screen.getByRole("button", { name: "Analizza estratto" }));
 
     // Sezione Riconciliazione visibile
-    expect(
-      await screen.findByText("3. Riconciliazione Voci Excel Mancanti"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("3. Riconciliazione Voci Excel Mancanti")).toBeInTheDocument();
     expect(screen.getByText("PRJ-UNKNOWN")).toBeInTheDocument();
-    expect(
-      screen.getByText('Suggerito: "Progetto Alpha" (preselezionato)'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Suggerito: "Progetto Alpha" (preselezionato)')).toBeInTheDocument();
 
     // Se l'utente resetta la scelta, appare il pulsante rapido per riapplicare il suggerimento
     const select = screen.getByRole("combobox", {
@@ -377,16 +370,13 @@ describe("ImportazionePage", () => {
     await user.click(confirmBtn);
 
     await waitFor(() => {
-      expect(postMock).toHaveBeenCalledWith(
-        "/imports/operational/batch-ready-1/apply",
-        { impronta: "impronta-ok-123" },
-      );
+      expect(postMock).toHaveBeenCalledWith("/imports/operational/batch-ready-1/apply", {
+        impronta: "impronta-ok-123",
+      });
     });
 
     // Ricevuta di successo
-    expect(
-      await screen.findByText("Importazione applicata con successo!"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Importazione applicata con successo!")).toBeInTheDocument();
     expect(screen.getByText("ID Batch: batch-ready-1")).toBeInTheDocument();
   });
 });
