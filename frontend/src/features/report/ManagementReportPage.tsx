@@ -63,6 +63,17 @@ const euro = (value: number | string) =>
     currency: "EUR",
     maximumFractionDigits: 0,
   }).format(Number(value));
+/** Soglia sotto la quale il residuo è considerato critico (evidenza gialla). */
+const LOW_RESIDUAL_DAYS = 2;
+/**
+ * Criticità di una riga a colpo d'occhio: saldo negativo (rosso) o residuo sotto
+ * le 2 giornate (giallo). `remaining` è il residuo in giornate.
+ */
+function rowTone(remaining: number): "over" | "low" | undefined {
+  if (remaining < 0) return "over";
+  if (remaining < LOW_RESIDUAL_DAYS) return "low";
+  return undefined;
+}
 function Gauge({ consumed, total }: { consumed: number; total: number }) {
   const percent = total > 0 ? (consumed / total) * 100 : 0;
   return (
@@ -194,7 +205,13 @@ function Masthead({ date }: { date: string }) {
     </header>
   );
 }
-function Table({ headings, rows }: { headings: string[]; rows: ReactNode[][] }) {
+function Table({
+  headings,
+  rows,
+}: {
+  headings: string[];
+  rows: { cells: ReactNode[]; tone?: "over" | "low" }[];
+}) {
   return rows.length ? (
     <div className="report-table-scroll">
       <table>
@@ -209,8 +226,8 @@ function Table({ headings, rows }: { headings: string[]; rows: ReactNode[][] }) 
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={index}>
-              {row.map((cell, i) => (
+            <tr key={index} className={row.tone ? `report-row-${row.tone}` : undefined}>
+              {row.cells.map((cell, i) => (
                 <td key={i}>{cell}</td>
               ))}
             </tr>
@@ -479,6 +496,16 @@ export function ManagementReportPage() {
               <span>progetti senza referente BMED</span>
             </div>
           </div>
+          <div className="report-legend" aria-label="Legenda criticità">
+            <span className="report-legend-item">
+              <i className="report-legend-swatch report-legend-over" aria-hidden="true" />
+              Saldo negativo o budget superato
+            </span>
+            <span className="report-legend-item">
+              <i className="report-legend-swatch report-legend-low" aria-hidden="true" />
+              Meno di 2 giornate disponibili
+            </span>
+          </div>
           <p className="report-footnote">
             Dati al {data.date.split("-").reverse().join("/")}. Progetti attivi; allocazioni wallet
             aperte non tecniche; dettaglio delle sole attività in corso dei canoni nel periodo
@@ -510,16 +537,19 @@ export function ManagementReportPage() {
               "Consumo gg",
               "Consumo budget",
             ]}
-            rows={data.projects.map((x) => [
-              <Identity
-                title={x.title}
-                subtitle={`${x.code} / Fine: ${x.end ? x.end.split("-").reverse().join("/") : "Non definita"}`}
-              />,
-              x.owner || "Non assegnato",
-              num(x.budget),
-              num(x.consumed),
-              <Effort consumed={x.consumed} total={x.budget} />,
-            ])}
+            rows={data.projects.map((x) => ({
+              tone: rowTone(Number(x.budget) - Number(x.consumed)),
+              cells: [
+                <Identity
+                  title={x.title}
+                  subtitle={`${x.code} / Fine: ${x.end ? x.end.split("-").reverse().join("/") : "Non definita"}`}
+                />,
+                x.owner || "Non assegnato",
+                num(x.budget),
+                num(x.consumed),
+                <Effort consumed={x.consumed} total={x.budget} />,
+              ],
+            }))}
           />
         </DetailSection>
         <DetailSection
@@ -546,13 +576,16 @@ export function ManagementReportPage() {
               "Erose / residue gg",
               "Consumo riserva",
             ]}
-            rows={data.wallet.map((x) => [
-              <Identity title={x.title} subtitle={`${x.code} / ${x.year}`} />,
-              x.assignee || x.owner || "Non assegnato",
-              num(x.allocated),
-              <Identity title={num(x.consumed)} subtitle={`${num(x.remaining)} residue`} />,
-              <Effort consumed={x.consumed} total={x.allocated} />,
-            ])}
+            rows={data.wallet.map((x) => ({
+              tone: rowTone(Number(x.remaining)),
+              cells: [
+                <Identity title={x.title} subtitle={`${x.code} / ${x.year}`} />,
+                x.assignee || x.owner || "Non assegnato",
+                num(x.allocated),
+                <Identity title={num(x.consumed)} subtitle={`${num(x.remaining)} residue`} />,
+                <Effort consumed={x.consumed} total={x.allocated} />,
+              ],
+            }))}
           />
         </DetailSection>
         <DetailSection
@@ -582,13 +615,16 @@ export function ManagementReportPage() {
               "Erose / residue gg",
               "Consumo riserva",
             ]}
-            rows={data.activities.map((x) => [
-              <Identity title={x.title} subtitle={x.period} />,
-              x.domain,
-              num(x.reserved),
-              <Identity title={num(x.consumed)} subtitle={`${num(x.remaining)} residue`} />,
-              <Effort consumed={x.consumed} total={x.reserved} />,
-            ])}
+            rows={data.activities.map((x) => ({
+              tone: rowTone(Number(x.remaining)),
+              cells: [
+                <Identity title={x.title} subtitle={x.period} />,
+                x.domain,
+                num(x.reserved),
+                <Identity title={num(x.consumed)} subtitle={`${num(x.remaining)} residue`} />,
+                <Effort consumed={x.consumed} total={x.reserved} />,
+              ],
+            }))}
           />
         </DetailSection>
       </main>

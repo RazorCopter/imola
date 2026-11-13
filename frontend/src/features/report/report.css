@@ -785,3 +785,70 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* Evidenziazione premium delle criticità a colpo d'occhio. */
+.report-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #dce6f2;
+  font-size: 10px;
+  color: #526581;
+}
+.report-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.report-legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.report-legend-over {
+  background: linear-gradient(135deg, #c0392b, #f3c0b7);
+}
+.report-legend-low {
+  background: linear-gradient(135deg, #d9962b, #f7e2ad);
+}
+.report-details tbody tr.report-row-over {
+  background: linear-gradient(90deg, #fdecea 0%, #fff6f5 55%, #ffffff 100%);
+  box-shadow: inset 4px 0 0 #c0392b;
+}
+.report-details tbody tr.report-row-over td:first-child {
+  border-left: 2px solid #c0392b;
+}
+.report-details tbody tr.report-row-over .report-identity strong,
+.report-details tbody tr.report-row-over .report-effort-label strong {
+  color: #a5281a;
+}
+.report-details tbody tr.report-row-low {
+  background: linear-gradient(90deg, #fdf6e3 0%, #fffdf5 55%, #ffffff 100%);
+  box-shadow: inset 4px 0 0 #d9962b;
+}
+.report-details tbody tr.report-row-low td:first-child {
+  border-left: 2px solid #d9962b;
+}
+.report-details tbody tr.report-row-low .report-identity strong,
+.report-details tbody tr.report-row-low .report-effort-label strong {
+  color: #8a5a0f;
+}
+.report-details tbody tr.report-row-over .report-effort-over,
+.report-details tbody tr.report-row-low .report-effort-full,
+.report-details tbody tr.report-row-low .report-effort-over {
+  color: inherit;
+}
+@media print {
+  .report-details tbody tr.report-row-over {
+    background: #fbe4e1 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .report-details tbody tr.report-row-low {
+    background: #fbf1d6 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
