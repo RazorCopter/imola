@@ -35,6 +35,7 @@ from importers.operational_excel import (
 )
 from importers.operational_mapping import (
     SECTION_TO_ROW_SECTION,
+    SUGGESTION_THRESHOLD,
     Resolution,
     Resolver,
     find_overlaps,
@@ -47,6 +48,7 @@ from imports.models import (
     ImportRowSection,
     ImportRowStatus,
     ImportStatus,
+    MappingKind,
     OperationalImportRow,
 )
 from projects.models import Project, TimesheetStatus
@@ -91,7 +93,7 @@ class PreviewResult:
     batch: ImportBatch
     problems: list[Problem] = field(default_factory=list)
     summaries: list[SectionSummary] = field(default_factory=list)
-    candidates: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    candidates: list[dict[str, Any]] = field(default_factory=list)
     created_collaborators: list[str] = field(default_factory=list)
 
     @property
@@ -125,6 +127,10 @@ class PreviewResult:
                 for p in self.problems
             ],
             "collaboratori_censiti": self.created_collaborators,
+            # Le associazioni mancanti stanno nel report, non solo nella risposta della
+            # preview: riaprendo un batch dallo storico la pagina deve poterle ancora
+            # proporre senza ricaricare il file.
+            "da_associare": self.candidates,
             "confermabile": self.can_apply,
         }
 
@@ -296,25 +302,63 @@ def _summaries(parsed: ParsedWorkbook, resolutions: list[Resolution]) -> list[Se
     return list(by_section.values())
 
 
-def _candidates(resolutions: list[Resolution]) -> dict[str, list[dict[str, Any]]]:
-    """Candidati per la Riconciliazione, raggruppati per valore Excel non agganciato."""
-    grouped: dict[str, list[dict[str, Any]]] = {}
+def _candidates(resolutions: list[Resolution]) -> list[dict[str, Any]]:
+    """Le associazioni che la pagina deve far completare, una per valore non agganciato.
+
+    Raggruppate per (tipo, valore, contesto): lo stesso codice ripetuto su cinque righe è
+    una sola decisione per l'utente, e una volta confermata vale anche per le settimane
+    dopo. Il contesto viaggia con il gruppo perché è parte della chiave del registro
+    (`ImportMapping`): senza anno o semestre l'associazione non verrebbe più ritrovata.
+    """
+    field_to_kind = {
+        "project": MappingKind.PROGETTO,
+        "wallet_allocation": MappingKind.WALLET_ALLOCATION,
+        "canone_subactivity": MappingKind.CANONE_SUBACTIVITY,
+        "author": MappingKind.COLLABORATORE,
+    }
+    grouped: dict[tuple[str, str, int | None, str], dict[str, Any]] = {}
     for resolution in resolutions:
+        row = resolution.row
         for field_name, candidates in resolution.candidates.items():
-            row = resolution.row
+            kind = field_to_kind.get(field_name)
+            if kind is None:
+                continue
             raw = {
                 "project": row.project,
                 "wallet_allocation": row.subproject,
                 "canone_subactivity": row.subproject,
                 "author": row.collaborator,
             }.get(field_name, "")
-            key = f"{field_name}:{raw}"
-            if key in grouped:
-                continue
-            grouped[key] = [
-                {"id": c.id, "etichetta": c.label, "dettaglio": c.detail} for c in candidates
-            ]
-    return grouped
+            year = None if field_name == "author" else resolution.context_year
+            semester = "" if field_name == "author" else resolution.context_semester
+            key = (kind.value, raw, year, semester)
+            group = grouped.get(key)
+            if group is None:
+                best = candidates[0].score if candidates else 0.0
+                group = grouped[key] = {
+                    "chiave": "|".join((kind.value, raw, str(year or ""), semester)),
+                    "tipo": kind.value,
+                    "tipo_etichetta": kind.label,
+                    "sezione": SECTION_TO_ROW_SECTION[row.section].value,
+                    "valore": raw,
+                    "anno": year,
+                    "semestre": semester,
+                    "righe": [],
+                    "suggerito": (
+                        candidates[0].id if candidates and best >= SUGGESTION_THRESHOLD else None
+                    ),
+                    "candidati": [
+                        {
+                            "id": c.id,
+                            "etichetta": c.label,
+                            "dettaglio": c.detail,
+                            "somiglianza": c.score,
+                        }
+                        for c in candidates
+                    ],
+                }
+            group["righe"].append(f"{row.sheet}!{row.excel_row}")
+    return sorted(grouped.values(), key=lambda g: (g["tipo"], g["valore"]))
 
 
 def _overlap_problems(resolutions: list[Resolution]) -> list[Problem]:
@@ -409,7 +453,8 @@ def _capacity_problems(resolutions: list[Resolution]) -> list[Problem]:
                 problems.append(
                     Problem(
                         Level.ERROR,
-                        f"{capacity.label}: il batch porta {capacity.incoming} gg ma il "
+                        f"Capienza superata \u2014 {capacity.label}: il batch porta "
+                        f"{capacity.incoming} gg ma il "
                         f"residuo è {capacity.residual_before} gg "
                         f"({capacity.limit} disponibili, {capacity.consumed} già usate).",
                         sheet=anchor.sheet if anchor else "",

@@ -30,6 +30,7 @@ from importers.operational_excel import WorkbookStructureError, normalize_key
 from importers.operational_mapping import semester_of
 from imports.models import (
     ImportBatch,
+    ImportIssueLevel,
     ImportKind,
     ImportMapping,
     ImportRowStatus,
@@ -122,6 +123,7 @@ def _batch_payload(batch: ImportBatch, *, rows: bool = False) -> dict[str, Any]:
         "errore": batch.error,
         "report": batch.report,
         "confermabile": batch.can_apply and not _blocking_errors(batch),
+        "errori_bloccanti": _blocking_messages(batch) if batch.can_apply else [],
     }
     if rows:
         payload["righe"] = [
@@ -134,7 +136,25 @@ def _batch_payload(batch: ImportBatch, *, rows: bool = False) -> dict[str, Any]:
 
 
 def _blocking_errors(batch: ImportBatch) -> bool:
-    return batch.operational_rows.exclude(status=ImportRowStatus.PRONTA).exists()
+    """Qualunque cosa impedisca alla conferma di andare a buon fine.
+
+    Non bastano le righe non pronte: le capienze sono cumulative sulla destinazione, non
+    una proprietà della singola riga (§10), quindi un batch le cui righe sono tutte
+    `PRONTA` può ancora sfondare il budget di un progetto. Quegli errori stanno negli
+    `ImportIssue` di livello ERROR, che sono gli stessi mostrati nella console dei
+    problemi. Ignorarli abilitava il pulsante su un apply che `_recheck_targets` rifiuta
+    sotto lock: un clic che non poteva funzionare.
+    """
+    if batch.operational_rows.exclude(status=ImportRowStatus.PRONTA).exists():
+        return True
+    return batch.issues.filter(level=ImportIssueLevel.ERROR).exists()
+
+
+def _blocking_messages(batch: ImportBatch) -> list[str]:
+    """Gli errori che bloccano la conferma, per dirlo accanto al pulsante."""
+    return list(
+        batch.issues.filter(level=ImportIssueLevel.ERROR).values_list("message", flat=True)[:20]
+    )
 
 
 class OperationalImportPreviewView(APIView):

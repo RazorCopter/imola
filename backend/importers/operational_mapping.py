@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 
 from django.contrib.auth.models import Group, User
 from django.db.models import Q
@@ -51,6 +52,48 @@ class Candidate:
     id: str
     label: str
     detail: str = ""
+    score: float = 0.0
+
+
+# Soglia oltre la quale un candidato viene proposto preselezionato nella pagina. Sotto
+# questo valore la somiglianza serve solo a ordinare: la scelta resta tutta dell'utente.
+SUGGESTION_THRESHOLD = 0.6
+
+
+def rank_candidates(raw: str, candidates: list[Candidate]) -> list[Candidate]:
+    """Ordina i candidati per somiglianza al testo dell'Excel, senza agganciare nulla.
+
+    Il §3 vieta l'aggancio euristico sui nomi simili, e questa funzione non aggancia: la
+    riga resta `DA_ASSOCIARE` e l'associazione nasce solo da una conferma dell'utente.
+    L'ordine serve perché l'elenco censito può essere lungo e il nome applicativo contiene
+    spesso il valore dell'Excel dentro di sé — `ASSET SEDE E RETE (144659 - RdA dinamico
+    (TE200 asset sede e rete))` contro `144659 - RdA dinamico (TE200 asset sede e rete)`:
+    senza ordinamento l'utente dovrebbe cercarlo a occhio.
+    """
+    needle = normalize_key(raw)
+    if not needle:
+        return candidates
+    ranked = []
+    for candidate in candidates:
+        haystack = normalize_key(f"{candidate.label} {candidate.detail}")
+        if not haystack:
+            score = 0.0
+        elif needle in haystack or haystack in needle:
+            # Contenimento pieno: è il caso tipico del codice ripetuto nel titolo, e la
+            # somiglianza grezza lo penalizzerebbe per la differenza di lunghezza.
+            score = 1.0
+        else:
+            score = SequenceMatcher(None, needle, haystack).ratio()
+        ranked.append(
+            Candidate(
+                id=candidate.id,
+                label=candidate.label,
+                detail=candidate.detail,
+                score=round(score, 4),
+            )
+        )
+    ranked.sort(key=lambda c: (-c.score, c.label))
+    return ranked
 
 
 @dataclass
@@ -65,6 +108,11 @@ class Resolution:
     problems: list[Problem] = field(default_factory=list)
     candidates: dict[str, list[Candidate]] = field(default_factory=dict)
     created_collaborator: User | None = None
+    # Contesto che l'associazione deve portarsi dietro: lo stesso testo punta a voci
+    # diverse secondo il periodo (wallet per anno, canone per semestre). Se la pagina
+    # salvasse senza contesto, la settimana dopo l'associazione non verrebbe ritrovata.
+    context_year: int | None = None
+    context_semester: str = ""
 
     @property
     def errors(self) -> list[Problem]:
@@ -202,18 +250,21 @@ class Resolver:
                     row,
                     "project",
                     f"Progetto '{row.project}' non trovato fra i codici censiti: "
-                    "associarlo in Riconciliazione.",
+                    "associarlo nel passaggio «Associazioni da completare».",
                 )
             )
-            resolution.candidates["project"] = self._project_candidates()
+            resolution.candidates["project"] = self._project_candidates(row.project)
             return
         resolution.project = project
 
-    def _project_candidates(self) -> list[Candidate]:
-        return [
-            Candidate(id=str(p.pk), label=p.code, detail=p.title)
-            for p in sorted(self._projects.values(), key=lambda p: p.code)
-        ]
+    def _project_candidates(self, raw: str = "") -> list[Candidate]:
+        return rank_candidates(
+            raw,
+            [
+                Candidate(id=str(p.pk), label=p.code, detail=p.title)
+                for p in sorted(self._projects.values(), key=lambda p: p.code)
+            ],
+        )
 
     # ---------------------------------------------------------------- wallet
 
@@ -232,7 +283,8 @@ class Resolver:
         if not matches:
             message = (
                 f"Sottoprogetto wallet '{row.subproject}' non trovato fra le allocazioni "
-                f"aperte del wallet {year}: associarlo in Riconciliazione."
+                f"aperte del wallet {year}: associarlo nel passaggio "
+                "«Associazioni da completare»."
             )
         else:
             titoli = ", ".join(sorted(str(m) for m in matches))
@@ -241,26 +293,34 @@ class Resolver:
                 f"del wallet {year} ({titoli}): scegliere quella corretta."
             )
         resolution.problems.append(self._problem(row, "subproject", message))
-        resolution.candidates["wallet_allocation"] = self._allocation_candidates(year, matches)
+        resolution.context_year = year
+        resolution.candidates["wallet_allocation"] = self._allocation_candidates(
+            year, matches, raw=row.subproject
+        )
 
-    def _allocation_candidates(self, year: int, matches: list[WalletAllocation]) -> list[Candidate]:
+    def _allocation_candidates(
+        self, year: int, matches: list[WalletAllocation], *, raw: str = ""
+    ) -> list[Candidate]:
         pool = matches or [
             allocation
             for bucket in self._allocations.get(year, {}).values()
             for allocation in bucket
         ]
         unique = {allocation.pk: allocation for allocation in pool}
-        return [
-            Candidate(
-                id=str(allocation.pk),
-                label=allocation.activity.title,
-                detail=(
-                    f"Wallet {allocation.wallet_year.year} · "
-                    f"{allocation.allocated_days} gg allocate"
-                ),
-            )
-            for allocation in sorted(unique.values(), key=lambda a: a.activity.title)
-        ]
+        return rank_candidates(
+            raw,
+            [
+                Candidate(
+                    id=str(allocation.pk),
+                    label=allocation.activity.title,
+                    detail=(
+                        f"Wallet {allocation.wallet_year.year} · "
+                        f"{allocation.allocated_days} gg allocate"
+                    ),
+                )
+                for allocation in sorted(unique.values(), key=lambda a: a.activity.title)
+            ],
+        )
 
     # ------------------------------------------------------ organico allargato
 
@@ -279,7 +339,7 @@ class Resolver:
         if not matches:
             message = (
                 f"Attività '{row.subproject}' non trovata nel canone {semester}: "
-                "associarla in Riconciliazione."
+                "associarla nel passaggio «Associazioni da completare»."
             )
         else:
             message = (
@@ -287,8 +347,9 @@ class Resolver:
                 "scegliere quella corretta."
             )
         resolution.problems.append(self._problem(row, "subproject", message))
+        resolution.context_semester = semester
         resolution.candidates["canone_subactivity"] = self._subactivity_candidates(
-            semester, matches
+            semester, matches, raw=row.subproject
         )
 
     def _semester_for(self, period: dt.date) -> str:
@@ -306,7 +367,7 @@ class Resolver:
         return semester_of(period)
 
     def _subactivity_candidates(
-        self, semester: str, matches: list[CanoneSubactivity]
+        self, semester: str, matches: list[CanoneSubactivity], *, raw: str = ""
     ) -> list[Candidate]:
         pool = matches or [
             subactivity
@@ -314,14 +375,20 @@ class Resolver:
             for subactivity in bucket
         ]
         unique = {subactivity.pk: subactivity for subactivity in pool}
-        return [
-            Candidate(
-                id=str(subactivity.pk),
-                label=subactivity.title,
-                detail=f"{subactivity.canone.semester} · {subactivity.reserved_days} gg riservate",
-            )
-            for subactivity in sorted(unique.values(), key=lambda s: s.title)
-        ]
+        return rank_candidates(
+            raw,
+            [
+                Candidate(
+                    id=str(subactivity.pk),
+                    label=subactivity.title,
+                    detail=(
+                        f"{subactivity.canone.semester} · "
+                        f"{subactivity.reserved_days} gg riservate"
+                    ),
+                )
+                for subactivity in sorted(unique.values(), key=lambda s: s.title)
+            ],
+        )
 
     # --------------------------------------------------------- collaboratori
 
@@ -353,14 +420,17 @@ class Resolver:
                     "scegliere quello corretto.",
                 )
             )
-            resolution.candidates["author"] = [
-                Candidate(
-                    id=str(u.pk),
-                    label=u.get_full_name() or u.username,
-                    detail=u.username,
-                )
-                for u in sorted(matches, key=lambda u: u.username)
-            ]
+            resolution.candidates["author"] = rank_candidates(
+                raw,
+                [
+                    Candidate(
+                        id=str(u.pk),
+                        label=u.get_full_name() or u.username,
+                        detail=u.username,
+                    )
+                    for u in sorted(matches, key=lambda u: u.username)
+                ],
+            )
             return
 
         if not self.create_missing_collaborators:

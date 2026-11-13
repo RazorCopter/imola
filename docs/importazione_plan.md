@@ -326,8 +326,10 @@ del testo formattato.
 
 ## 6. Riconciliazione
 
-Sezione **autonoma e permanente**, non un passaggio interno all'anteprima. Mostra le voci
-Excel non agganciate e consente di associarle a una voce dell'applicativo. L'associazione è
+Sezione **autonoma e permanente**: è il registro delle associazioni, consultabile e
+modificabile anche fuori da un'importazione. Le associazioni si creano dal passaggio 3
+della pagina Importazione (§7), dove il valore non agganciato e i suoi candidati sono sotto
+gli occhi dell'utente; qui si rivedono e si eliminano quelle sbagliate. L'associazione è
 memorizzata e riusata nelle settimane successive, così che il caso non si ripresenti.
 
 Registro di mapping per:
@@ -354,6 +356,13 @@ dimensione del file, pulsante "Analizza file". Cambiare file annulla l'anteprima
 informative, normalizza date e giornate, risolve destinazioni e collaboratori, verifica i
 vincoli applicativi e produce il report. La pagina mostra le associazioni mancanti o
 ambigue con rimando alla Riconciliazione. Al cambio di un'associazione, ricalcolare.
+
+**Passaggio 3 — Associazioni da completare.** Le voci Excel non agganciate si associano
+senza lasciare la pagina: un controllo per valore (non per riga), con i candidati censiti
+ordinati per somiglianza al testo dell'Excel e preselezione solo quando la somiglianza è
+alta. Confermare salva nel registro della Riconciliazione e rifà l'anteprima sul file già
+allegato al batch. L'ordinamento non è un aggancio automatico: la riga resta
+`DA_ASSOCIARE` finché non c'è una conferma dell'utente, come vuole il §3.
 
 **Passaggio 3 — Anteprima.** Tre schede, Progetti / Wallet / Organico allargato. Per ogni
 riga: numero di riga Excel, destinazione originale, destinazione risolta, collaboratore e

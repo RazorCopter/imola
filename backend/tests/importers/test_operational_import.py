@@ -127,6 +127,61 @@ def test_progetto_sconosciuto_va_in_riconciliazione(operatore):
     assert result.candidates  # la pagina deve poter proporre le destinazioni
 
 
+def test_candidati_raggruppati_per_valore_con_contesto_e_righe(operatore):
+    """La pagina deve poter mostrare un solo controllo per valore, non uno per riga."""
+    ProjectFactory(code="IM26294-ALTRO")
+    UserFactory(username="s.venturi", first_name="Simone", last_name="Venturi")
+
+    result = run_preview(
+        progetti_workbook(
+            ["IM-INESISTENTE", "Venturi Simone", dt.date(2026, 11, 3), "Lavoro", 0.25],
+            ["IM-INESISTENTE", "Venturi Simone", dt.date(2026, 11, 4), "Lavoro", 0.5],
+        ),
+        operatore,
+    )
+
+    gruppi = [g for g in result.candidates if g["tipo"] == MappingKind.PROGETTO]
+    assert len(gruppi) == 1
+    gruppo = gruppi[0]
+    assert gruppo["valore"] == "IM-INESISTENTE"
+    assert gruppo["anno"] is None and gruppo["semestre"] == ""
+    assert gruppo["righe"] == ["Progetti!2", "Progetti!3"]
+    assert [c["etichetta"] for c in gruppo["candidati"]] == ["IM26294-ALTRO"]
+    # Il report li conserva: riaprendo il batch la pagina li ripropone senza il file.
+    assert result.batch.report["da_associare"] == result.candidates
+
+
+def test_candidato_che_contiene_il_valore_excel_e_proposto_per_primo(operatore):
+    """Il nome applicativo ripete spesso il codice dell'Excel fra parentesi.
+
+    L'ordinamento non aggancia nulla — la riga resta da associare — ma deve mettere in
+    cima la voce plausibile, altrimenti l'utente la cerca a occhio in un elenco lungo.
+    """
+    atteso = ProjectFactory(
+        code="ASSET SEDE E RETE (144659 - RdA dinamico (TE200 asset sede e rete))"
+    )
+    ProjectFactory(code="IM26294-3313-BMED-ARCH-ALTRO")
+    UserFactory(username="s.venturi", first_name="Simone", last_name="Venturi")
+
+    result = run_preview(
+        progetti_workbook(
+            [
+                "144659 - RdA dinamico (TE200 asset sede e rete)",
+                "Venturi Simone",
+                dt.date(2026, 11, 3),
+                "Lavoro",
+                0.25,
+            ]
+        ),
+        operatore,
+    )
+
+    gruppo = next(g for g in result.candidates if g["tipo"] == MappingKind.PROGETTO)
+    assert gruppo["candidati"][0]["id"] == str(atteso.pk)
+    assert gruppo["suggerito"] == str(atteso.pk)
+    assert OperationalImportRow.objects.get().status == ImportRowStatus.DA_ASSOCIARE
+
+
 def test_associazione_confermata_aggancia_senza_match_esatto(operatore):
     """Una volta associato in Riconciliazione, il valore Excel non torna a chiedere."""
     project = ProjectFactory(code="IM26294-3313-BMED-ARCH-SELEZIONE-SOFTWARE-RISK")
