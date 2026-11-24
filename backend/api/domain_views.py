@@ -292,6 +292,7 @@ class ProjectBalancesView(DocumentedAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from domain.recent_imports import annotate_last_excel_import, is_recent_import
         from domain.residuals import (
             project_balance_qs,
             project_closure_ready,
@@ -300,13 +301,18 @@ class ProjectBalancesView(DocumentedAPIView):
 
         settings_obj = current_settings()
         today = timezone.localdate()
+        now = timezone.now()
+        only_new = request.query_params.get("nuovi") in {"1", "true"}
         rows = []
-        queryset = (
+        queryset = annotate_last_excel_import(
             project_balance_qs()
             .select_related("client_owner", "supplier_owner")
             .prefetch_related("wallet_allocations")
         )
         for project in queryset.order_by("code"):
+            recent = is_recent_import(project.last_excel_import_at, now)
+            if only_new and not recent:
+                continue
             validity = residual_validity(
                 timesheet_status=project.timesheet_status,
                 closure_date=project.actual_closure_date,
@@ -347,6 +353,8 @@ class ProjectBalancesView(DocumentedAPIView):
                         project.direct_consumed_days,
                         project.allocated_to_wallet_days,
                     ),
+                    "ultimo_import": project.last_excel_import_at,
+                    "nuovo_inserimento": recent,
                     "permissions": {
                         "edit": can_edit,
                         "annotate": can_annotate,

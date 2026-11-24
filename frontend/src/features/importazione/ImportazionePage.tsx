@@ -35,6 +35,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { Link } from "react-router-dom";
 
 import { Button, Input, Select } from "@/components/Controls";
 import { KpiCard } from "@/components/KpiCard";
@@ -1434,9 +1435,18 @@ export function ImportazionePage() {
                 </div>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-ok/20 pt-3 text-xs text-muted-foreground">
                   <span className="font-mono">ID Batch: {batch.id}</span>
-                  <Button type="button" variant="secondary" onClick={handleReset}>
-                    Avvia una nuova importazione
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      to="/progetti?nuovi=1"
+                      className="inline-flex min-h-9 items-center justify-center rounded-md border border-transparent bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent/85"
+                      title="Progetti aggiornati da importazioni delle ultime 24 ore"
+                    >
+                      Vedi nuovi inserimenti
+                    </Link>
+                    <Button type="button" variant="secondary" onClick={handleReset}>
+                      Avvia una nuova importazione
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : (

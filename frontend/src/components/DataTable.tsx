@@ -22,6 +22,8 @@ interface DataTableProps<T> {
   rowHeight?: number;
   onRowClick?: (row: T) => void;
   getColumnClasses?: (columnId: string) => DataTableColumnClasses | undefined;
+  /** Classi aggiuntive per riga, per esempio per evidenziare i nuovi inserimenti. */
+  getRowClassName?: (row: T) => string | undefined;
   fitWidth?: boolean;
 }
 
@@ -32,6 +34,7 @@ export function DataTable<T>({
   rowHeight = 44,
   onRowClick,
   getColumnClasses,
+  getRowClassName,
   fitWidth = false,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -114,6 +117,7 @@ export function DataTable<T>({
               className={cn(
                 "border-b border-border",
                 onRowClick && "cursor-pointer hover:bg-muted/60",
+                getRowClassName?.(row.original),
               )}
               style={{ height: rowHeight }}
               onClick={() => onRowClick?.(row.original)}

@@ -157,6 +157,83 @@ describe("ProjectsPage ed EditProjectDialog — Tranche 4", () => {
     expect(screen.getByText("5,00 gg")).toBeInTheDocument(); // residui a rischio
   });
 
+  it("evidenzia i nuovi inserimenti da import e li filtra, anche da ?nuovi=1", async () => {
+    mockSession({ roles: ["admin"], is_admin: true, can_write: true, capabilities: [] });
+    const base = {
+      tipo_contratto: "AQL",
+      budget: "10",
+      consumato_totale: "1",
+      residuo: "9",
+      stato_consuntivazione: "ATTIVO",
+      stato_operativo: "IN_CORSO",
+      stato_fatturazione: "DA_FATTURARE",
+      stato_residuo: "VALIDO",
+      residuo_motivo: "Ok",
+      spiegazione_residuo: "Ok",
+      permissions: {},
+    };
+    getMock.mockImplementation((path: string) =>
+      path === "/projects/balances"
+        ? Promise.resolve({
+            count: 2,
+            results: [
+              {
+                ...base,
+                id: "nuovo",
+                codice: "P-NEW",
+                titolo: "Progetto importato",
+                nuovo_inserimento: true,
+                ultimo_import: "2026-11-24T08:00:00Z",
+              },
+              {
+                ...base,
+                id: "vecchio",
+                codice: "P-OLD",
+                titolo: "Progetto storico",
+                nuovo_inserimento: false,
+                ultimo_import: null,
+              },
+            ],
+          })
+        : Promise.reject(new Error("Unknown path")),
+    );
+    const user = userEvent.setup();
+
+    const { unmount } = renderWithProviders(<ProjectsPage />);
+
+    expect(await screen.findByTestId("new-entry-badge-nuovo")).toHaveTextContent("Nuovo");
+    expect(screen.queryByTestId("new-entry-badge-vecchio")).not.toBeInTheDocument();
+    expect(screen.getByText("Progetto importato").closest("tr")).toHaveClass("bg-accent-subtle/60");
+    expect(screen.getByText("Progetto storico").closest("tr")).not.toHaveClass(
+      "bg-accent-subtle/60",
+    );
+
+    const toggle = screen.getByTestId("filter-new-entries");
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(toggle).toHaveTextContent("1");
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Progetto importato")).toBeInTheDocument();
+    expect(screen.queryByText("Progetto storico")).not.toBeInTheDocument();
+    expect(screen.getByText("1 risultati")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Azzera filtri" }));
+    expect(await screen.findByText("Progetto storico")).toBeInTheDocument();
+    unmount();
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/progetti?nuovi=1"]}>
+          <ProjectsPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("Progetto importato")).toBeInTheDocument();
+    expect(screen.queryByText("Progetto storico")).not.toBeInTheDocument();
+    expect(screen.getByTestId("filter-new-entries")).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("mostra il pulsante EDIT arancione per Admin su ogni progetto", async () => {
     mockSession({
       roles: ["admin"],

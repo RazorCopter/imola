@@ -3,8 +3,8 @@ import { Button, Input, Select } from "@/components/Controls";
 import { useCallback, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Search, Sparkles } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { DataTable, type DataTableColumnClasses } from "@/components/DataTable";
 import { DaysValue } from "@/components/DaysValue";
@@ -42,6 +42,10 @@ export interface ProjectBalance {
   residuo_giorni_alla_scadenza: number | null;
   residuo_motivo: string;
   spiegazione_residuo: string;
+  /** Istante dell'ultimo estratto Excel applicato che ha portato consuntivi al progetto. */
+  ultimo_import?: string | null;
+  /** Vero se quell'import è stato applicato nelle ultime 24 ore. */
+  nuovo_inserimento?: boolean;
   permissions: {
     edit?: boolean;
     annotate?: boolean;
@@ -62,6 +66,19 @@ const PROJECT_COLUMN_CLASSES: Record<string, DataTableColumnClasses> = {
   actions: { header: "text-center", cell: "text-center" },
 };
 
+export const NEW_ENTRIES_PARAM = "nuovi";
+
+const NEW_ENTRY_ROW_CLASS =
+  "bg-accent-subtle/60 hover:bg-accent-subtle shadow-[inset_3px_0_0_0_hsl(var(--accent))]";
+
+function formatImportInstant(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" });
+}
+
 function compareDays(a: unknown, b: unknown) {
   const left = typeof a === "string" && a.trim() ? Number(a) : NaN;
   const right = typeof b === "string" && b.trim() ? Number(b) : NaN;
@@ -78,6 +95,22 @@ export function ProjectsPage() {
   const [status, setStatus] = useState("");
   const [order, setOrder] = useState("original");
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  // Il filtro vive nell'URL, così l'importazione può linkare direttamente /progetti?nuovi=1.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const onlyNew = searchParams.get(NEW_ENTRIES_PARAM) === "1";
+  const setOnlyNew = useCallback(
+    (value: boolean) =>
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (value) next.set(NEW_ENTRIES_PARAM, "1");
+          else next.delete(NEW_ENTRIES_PARAM);
+          return next;
+        },
+        { replace: true },
+      ),
+    [setSearchParams],
+  );
 
   const canGlobalEdit = canEditProjects(session);
   const canValidateClosure = canValidateProjectClosure(session);
@@ -114,6 +147,16 @@ export function ProjectsPage() {
             >
               {row.original.codice}
             </div>
+            {row.original.nuovo_inserimento && (
+              <span
+                className="mt-1 inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/10 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-accent"
+                title={`Nuovi consuntivi dall'importazione del ${formatImportInstant(row.original.ultimo_import)}`}
+                data-testid={`new-entry-badge-${row.original.id}`}
+              >
+                <Sparkles className="size-3" aria-hidden />
+                Nuovo
+              </span>
+            )}
           </div>
         ),
       },
@@ -265,7 +308,8 @@ export function ProjectsPage() {
           return (
             (!needle ||
               `${project.codice} ${project.titolo}`.toLocaleLowerCase("it").includes(needle)) &&
-            (!status || (project.stato_operativo ?? project.stato_consuntivazione) === status)
+            (!status || (project.stato_operativo ?? project.stato_consuntivazione) === status) &&
+            (!onlyNew || Boolean(project.nuovo_inserimento))
           );
         })
         .sort((a, b) =>
@@ -275,7 +319,15 @@ export function ProjectsPage() {
               ? a.titolo.localeCompare(b.titolo, "it")
               : 0,
         ),
-    [query.data, search, status, order],
+    [query.data, search, status, order, onlyNew],
+  );
+  const newEntriesCount = useMemo(
+    () => (query.data?.results ?? []).filter((project) => project.nuovo_inserimento).length,
+    [query.data],
+  );
+  const getProjectRowClassName = useCallback(
+    (project: ProjectBalance) => (project.nuovo_inserimento ? NEW_ENTRY_ROW_CLASS : undefined),
+    [],
   );
 
   /**
@@ -407,16 +459,41 @@ export function ProjectsPage() {
           <option value="title">Titolo A–Z</option>
           <option value="code">Codice A–Z</option>
         </Select>
+        <Button
+          type="button"
+          aria-pressed={onlyNew}
+          onClick={() => setOnlyNew(!onlyNew)}
+          title="Progetti con consuntivi arrivati da un'importazione Excel nelle ultime 24 ore"
+          data-testid="filter-new-entries"
+          className={
+            onlyNew
+              ? "inline-flex h-9 items-center gap-1.5 rounded-md border border-accent bg-accent px-3 text-sm font-medium text-accent-foreground"
+              : "inline-flex h-9 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm text-foreground hover:bg-muted"
+          }
+        >
+          <Sparkles className="size-4" aria-hidden />
+          Nuovi inserimenti
+          <span
+            className={
+              onlyNew
+                ? "rounded-full bg-accent-foreground/20 px-1.5 text-xs tabular-nums"
+                : "rounded-full bg-accent-subtle px-1.5 text-xs tabular-nums text-accent"
+            }
+          >
+            {newEntriesCount}
+          </span>
+        </Button>
         <span className="self-center text-sm text-muted-foreground">
           {filtered.length} risultati
         </span>
-        {(search || status) && (
+        {(search || status || onlyNew) && (
           <Button
             type="button"
             className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
             onClick={() => {
               setSearch("");
               setStatus("");
+              setOnlyNew(false);
             }}
           >
             Azzera filtri
@@ -442,9 +519,14 @@ export function ProjectsPage() {
           key={order}
           data={filtered}
           columns={columns}
-          emptyLabel="Nessun progetto corrisponde ai filtri."
+          emptyLabel={
+            onlyNew && newEntriesCount === 0
+              ? "Nessun progetto aggiornato da un'importazione nelle ultime 24 ore."
+              : "Nessun progetto corrisponde ai filtri."
+          }
           onRowClick={(project) => navigate(`/progetti/${project.id}`)}
           getColumnClasses={getProjectColumnClasses}
+          getRowClassName={getProjectRowClassName}
           fitWidth
           rowHeight={72}
         />

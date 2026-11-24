@@ -56,4 +56,19 @@ describe("DataTable", () => {
     );
     expect(screen.getByText("PRJ-001").closest("td")).toHaveClass("whitespace-nowrap");
   });
+
+  it("applica classi per riga senza perdere quelle di base", () => {
+    const rows = [rowData, { code: "PRJ-002", description: "Altra riga" }];
+    render(
+      <DataTable
+        data={rows}
+        columns={columns}
+        emptyLabel="No rows"
+        getRowClassName={(row) => (row.code === "PRJ-002" ? "bg-accent-subtle" : undefined)}
+      />,
+    );
+
+    expect(screen.getByText("PRJ-002").closest("tr")).toHaveClass("bg-accent-subtle", "border-b");
+    expect(screen.getByText("PRJ-001").closest("tr")).not.toHaveClass("bg-accent-subtle");
+  });
 });
