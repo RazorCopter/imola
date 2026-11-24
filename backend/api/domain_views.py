@@ -505,19 +505,23 @@ class ProjectLedgerView(DocumentedAPIView):
 
 
 class ProjectTimesheetDetailView(DocumentedAPIView):
-    """Rettifica o annulla un consuntivo manuale diretto con timesheets.edit."""
+    """Rettifica o annulla un consuntivo diretto con timesheets.edit.
+
+    Ogni origine è ammessa, compresi i consuntivi arrivati da importazione: una
+    riga doppia importata per errore va poter essere annullata prima di riconfermare
+    l'importazione. Lo storno resta l'unica forma di modifica (append-only).
+    """
 
     permission_classes = [CanEditTimesheets]
 
     @staticmethod
     def get_entry(project_pk, entry_pk):
-        from timesheets.models import TimesheetEntry, TimesheetSource
+        from timesheets.models import TimesheetEntry
 
         return get_object_or_404(
             TimesheetEntry,
             pk=entry_pk,
             project_id=project_pk,
-            source=TimesheetSource.MANUALE,
             reversals__isnull=True,
         )
 
@@ -1385,10 +1389,13 @@ class CanoneSubactivityTimesheetDetailView(DocumentedAPIView):
     permission_classes = [CanEditTimesheets]
 
     def get_entry(self, pk, subactivity_pk, entry_pk):
-        from timesheets.models import TimesheetEntry, TimesheetSource
+        from timesheets.models import TimesheetEntry
+
         return get_object_or_404(
-            TimesheetEntry, pk=entry_pk, canone_subactivity_id=subactivity_pk,
-            canone_subactivity__canone_id=pk, source=TimesheetSource.MANUALE,
+            TimesheetEntry,
+            pk=entry_pk,
+            canone_subactivity_id=subactivity_pk,
+            canone_subactivity__canone_id=pk,
             reversals__isnull=True,
         )
 

@@ -316,3 +316,23 @@ def test_canone_indipendente_attivita_e_consuntivi_append_only():
     assert corrected.status_code == 200, corrected.data
     # 2 gg corretti + 8 gg dell'overflow: lo sforo resta ammesso.
     assert corrected.json()["subactivities"][0]["consuntivato"] == "10.0000"
+
+
+def test_consuntivo_importato_su_sottoattivita_puo_essere_eliminato():
+    from timesheets.models import TimesheetSource
+
+    manager = client_for(roles.MANAGER)
+    canone = CanoneFactory()
+    subactivity = CanoneSubactivity.objects.create(
+        canone=canone, title="Assessment importato", office="SA"
+    )
+    entry = TimesheetEntryFactory(
+        canone_subactivity=subactivity, days=Decimal("2"), source=TimesheetSource.EXCEL_IMPORT
+    )
+
+    response = manager.delete(
+        f"/api/v1/canoni/{canone.id}/subactivities/{subactivity.id}/timesheets/{entry.id}"
+    )
+
+    assert response.status_code == 204, response.data
+    assert entry.reversals.exists()

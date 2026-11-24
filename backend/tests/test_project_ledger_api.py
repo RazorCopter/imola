@@ -103,6 +103,22 @@ def test_admin_elimina_consuntivo_tramite_storno_e_non_admin_riceve_403():
     assert admin_client.get(f"/api/v1/projects/{project.id}/ledger").json()["consuntivi"] == []
 
 
+def test_admin_elimina_anche_consuntivi_importati_non_solo_manuali():
+    admin_client, _admin = make_client_for_role(roles.ADMIN)
+    project = ProjectFactory(code="PRJ-DELETE-IMPORT", budget_days=Decimal("10.0000"))
+    entry = TimesheetEntryFactory(
+        project=project,
+        days=Decimal("2.0000"),
+        source=TimesheetSource.EXCEL_IMPORT,
+    )
+
+    response = admin_client.delete(f"/api/v1/projects/{project.id}/ledger/{entry.id}")
+
+    assert response.status_code == 204, response.data
+    assert TimesheetEntry.objects.filter(reverses=entry, days=Decimal("-2.0000")).exists()
+    assert admin_client.get(f"/api/v1/projects/{project.id}/ledger").json()["consuntivi"] == []
+
+
 def test_ledger_progetto_espone_attivita_wallet_figlie_e_rimanente_allocato():
     client, _user = make_client_for_role(roles.MANAGER)
     project = ProjectFactory(code="PRJ-WALLET", budget_days=Decimal("10.0000"))
