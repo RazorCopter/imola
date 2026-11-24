@@ -1205,12 +1205,18 @@ class CanoneDetailView(DocumentedAPIView):
 
 def _canone_detail(canone, office: str = "", search: str = "") -> dict:
     from domain.canone_status import subactivity_state
+    from domain.recent_imports import annotate_last_excel_import_subactivity, is_recent_import
 
     balance = canone_status(canone).as_dict()
+    now = timezone.now()
     all_subactivities = list(
-        canone.subactivities.annotate(
-            consumed_days=Coalesce(Sum("timesheet_entries__days"), Value(0, output_field=CANONE_DAYS)),
-            timesheet_count=Count("timesheet_entries"),
+        annotate_last_excel_import_subactivity(
+            canone.subactivities.annotate(
+                consumed_days=Coalesce(
+                    Sum("timesheet_entries__days"), Value(0, output_field=CANONE_DAYS)
+                ),
+                timesheet_count=Count("timesheet_entries"),
+            )
         ).order_by("office", "title")
     )
     filtered_subactivities = all_subactivities
@@ -1250,6 +1256,8 @@ def _canone_detail(canone, office: str = "", search: str = "") -> dict:
                 "needs_review": row.needs_review,
                 "consuntivato": row.consumed_days,
                 "timesheet_count": row.timesheet_count,
+                "ultimo_import": row.last_excel_import_at,
+                "nuovo_inserimento": is_recent_import(row.last_excel_import_at, now),
                 "consuntivi": [
                     {
                         "id": entry.id,

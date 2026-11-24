@@ -12,6 +12,8 @@ from core import roles
 from domain.recent_imports import is_recent_import
 from imports.models import ImportKind, ImportStatus
 from tests.factories import (
+    CanoneFactory,
+    CanoneSubactivityFactory,
     ImportBatchFactory,
     ProjectFactory,
     TimesheetEntryFactory,
@@ -97,6 +99,30 @@ def test_batch_annullati_altri_tipi_e_consuntivi_stornati_non_contano():
     for code in ("PRJ-ANNULLATO", "PRJ-SEED", "PRJ-STORNATO"):
         assert rows[code]["nuovo_inserimento"] is False, code
     assert _balances(client, "?nuovi=1") == {}
+
+
+def test_sottoattivita_canone_con_import_recente_e_evidenziata():
+    client, _user = make_client_for_role(roles.ADMIN)
+    recent = _batch(hours_ago=1)
+    old = _batch(hours_ago=48)
+
+    canone = CanoneFactory()
+    touched = CanoneSubactivityFactory(canone=canone, title="Con consuntivo importato")
+    _imported_entry(recent, canone_subactivity=touched)
+
+    stale = CanoneSubactivityFactory(canone=canone, title="Import vecchio")
+    _imported_entry(old, canone_subactivity=stale)
+
+    CanoneSubactivityFactory(canone=canone, title="Senza import")
+
+    response = client.get(f"/api/v1/canoni/{canone.id}")
+    assert response.status_code == 200
+    by_title = {row["title"]: row for row in response.json()["subactivities"]}
+    assert by_title["Con consuntivo importato"]["nuovo_inserimento"] is True
+    assert by_title["Con consuntivo importato"]["ultimo_import"] is not None
+    assert by_title["Import vecchio"]["nuovo_inserimento"] is False
+    assert by_title["Senza import"]["nuovo_inserimento"] is False
+    assert by_title["Senza import"]["ultimo_import"] is None
 
 
 def test_is_recent_import_finestra_24_ore():

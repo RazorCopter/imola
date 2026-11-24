@@ -177,6 +177,35 @@ describe("CanonePage", () => {
     );
   });
 
+  it("evidenzia e filtra le attività con consuntivi da import recente", async () => {
+    const user = userEvent.setup();
+    const detailWithNew = {
+      ...detail,
+      subactivities: detail.subactivities.map((row) =>
+        row.id === "s1"
+          ? { ...row, nuovo_inserimento: true, ultimo_import: "2026-11-24T08:00:00Z" }
+          : row,
+      ),
+    };
+    getMock.mockImplementation(
+      (url) => Promise.resolve(url.startsWith("/canoni/one") ? detailWithNew : list) as never,
+    );
+    renderPage();
+
+    expect(await screen.findByTestId("new-entry-badge-s1")).toHaveTextContent("Nuovo");
+    expect(screen.queryByTestId("new-entry-badge-s2")).not.toBeInTheDocument();
+
+    const toggle = screen.getByTestId("canone-filter-new-entries");
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /Analisi/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Disegno Solution/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Azzera filtri" }));
+    expect(await screen.findByRole("button", { name: /Disegno Solution/ })).toBeInTheDocument();
+  });
+
   it("correla KPI, grafico, lista e dettaglio ed espone selezione da tastiera", async () => {
     const user = userEvent.setup();
     renderPage();

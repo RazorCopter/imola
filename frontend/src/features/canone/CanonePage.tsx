@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Search } from "lucide-react";
+import { Search, Sparkles } from "lucide-react";
 import { AccessibleBarChart, CHART_PALETTE } from "@/components/AccessibleBarChart";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { DaysValue } from "@/components/DaysValue";
@@ -79,6 +79,8 @@ interface Subactivity {
   declared_open: boolean;
   sforata: boolean;
   timesheet_count: number;
+  ultimo_import?: string | null;
+  nuovo_inserimento?: boolean;
   consuntivi: TimesheetRow[];
 }
 interface Detail {
@@ -236,6 +238,7 @@ export function CanonePage() {
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
   const [activityDomain, setActivityDomain] = useState("");
   const [activityStatus, setActivityStatus] = useState("");
+  const [activityOnlyNew, setActivityOnlyNew] = useState(false);
   const [activitySearch, setActivitySearch] = useState("");
   const [timesheetActivity, setTimesheetActivity] = useState<string | null>(null);
   /** `utente` vuoto: il consuntivo resta intestato a chi sta scrivendo. */
@@ -314,6 +317,9 @@ export function CanonePage() {
         if (activityStatus && effectiveStatus !== activityStatus) {
           return false;
         }
+        if (activityOnlyNew && !row.nuovo_inserimento) {
+          return false;
+        }
         const needle = activitySearch.trim().toLocaleLowerCase("it");
         if (needle) {
           // Gli stessi campi su cui cerca il filtro lato server del canone.
@@ -324,7 +330,7 @@ export function CanonePage() {
         }
         return true;
       }),
-    [filteredSubactivities, activityDomain, activityStatus, activitySearch],
+    [filteredSubactivities, activityDomain, activityStatus, activityOnlyNew, activitySearch],
   );
   const detailIsCurrent = detail.data?.id === canoneId;
   /**
@@ -337,6 +343,7 @@ export function CanonePage() {
     setSelectedActivity(null);
     setActivityDomain("");
     setActivityStatus("");
+    setActivityOnlyNew(false);
     setActivitySearch("");
     setCreatingActivity(false);
     setTimesheetActivity(null);
@@ -989,6 +996,17 @@ export function CanonePage() {
                           </Button>
                         ))}
                       </div>
+                      <Button
+                        type="button"
+                        aria-pressed={activityOnlyNew}
+                        onClick={() => setActivityOnlyNew((value) => !value)}
+                        title="Attività con consuntivi arrivati da un'importazione Excel nelle ultime 24 ore"
+                        data-testid="canone-filter-new-entries"
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${activityOnlyNew ? "border-accent bg-accent text-accent-foreground" : "border-border bg-card text-muted-foreground hover:bg-muted"}`}
+                      >
+                        <Sparkles className="size-3.5" aria-hidden />
+                        Nuovi inserimenti
+                      </Button>
                       <label className="flex min-w-56 flex-1 items-center gap-2 rounded-md border border-input px-3">
                         <Search className="size-4 text-muted-foreground" aria-hidden />
                         <span className="sr-only">Cerca attività del canone</span>
@@ -1002,13 +1020,14 @@ export function CanonePage() {
                       <span className="ml-auto text-xs text-muted-foreground" role="status">
                         {visibleSubactivities.length} / {filteredSubactivities.length} attività
                       </span>
-                      {(activityDomain || activityStatus || activitySearch) && (
+                      {(activityDomain || activityStatus || activityOnlyNew || activitySearch) && (
                         <Button
                           type="button"
                           className="rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                           onClick={() => {
                             setActivityDomain("");
                             setActivityStatus("");
+                            setActivityOnlyNew(false);
                             setActivitySearch("");
                           }}
                         >
@@ -1053,6 +1072,16 @@ export function CanonePage() {
                                         : "CHIUSO")
                                     }
                                   />
+                                  {row.nuovo_inserimento && (
+                                    <span
+                                      className="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/10 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-accent"
+                                      title="Consuntivi arrivati da un'importazione nelle ultime 24 ore"
+                                      data-testid={`new-entry-badge-${row.id}`}
+                                    >
+                                      <Sparkles className="size-3" aria-hidden />
+                                      Nuovo
+                                    </span>
+                                  )}
                                 </span>
                                 <span className="mt-0.5 block text-xs text-muted-foreground">
                                   Dominio {row.office} · residuo{" "}

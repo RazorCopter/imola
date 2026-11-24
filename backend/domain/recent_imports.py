@@ -32,20 +32,20 @@ def imported_entries() -> models.QuerySet:
     )
 
 
+def _latest_import_subquery(lookup: str) -> models.Subquery:
+    return models.Subquery(
+        imported_entries()
+        .filter(**{lookup: models.OuterRef("pk")})
+        .order_by("-import_batch__applied_at")
+        .values("import_batch__applied_at")[:1],
+        output_field=models.DateTimeField(),
+    )
+
+
 def annotate_last_excel_import(queryset: models.QuerySet) -> models.QuerySet:
     """Annota `last_excel_import_at` sui progetti: istante dell'ultimo import che li ha toccati."""
-
-    def latest(lookup: str) -> models.Subquery:
-        return models.Subquery(
-            imported_entries()
-            .filter(**{lookup: models.OuterRef("pk")})
-            .order_by("-import_batch__applied_at")
-            .values("import_batch__applied_at")[:1],
-            output_field=models.DateTimeField(),
-        )
-
-    direct = latest("project")
-    via_wallet = latest("wallet_allocation__source_project")
+    direct = _latest_import_subquery("project")
+    via_wallet = _latest_import_subquery("wallet_allocation__source_project")
     # Greatest restituisce NULL se un argomento è NULL su alcuni backend: si normalizza.
     return queryset.annotate(
         last_excel_import_at=Greatest(
@@ -53,6 +53,11 @@ def annotate_last_excel_import(queryset: models.QuerySet) -> models.QuerySet:
             Coalesce(via_wallet, direct),
         )
     )
+
+
+def annotate_last_excel_import_subactivity(queryset: models.QuerySet) -> models.QuerySet:
+    """Annota `last_excel_import_at` sulle sotto-attività del canone."""
+    return queryset.annotate(last_excel_import_at=_latest_import_subquery("canone_subactivity"))
 
 
 def is_recent_import(applied_at: datetime | None, now: datetime | None = None) -> bool:
